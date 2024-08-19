@@ -20,7 +20,7 @@ import (
 )
 
 func (s *service) Create(ctx context.Context, image string, cmd []string, createOpt types.ContainerCreateOptions, netOpt types.NetworkOptions) (cid string, err error) {
-	// Set path to nerdctl binary required for for OCI hooks and logging
+	// Set path to nerdctl binary required for OCI hooks and logging
 	if createOpt.NerdctlCmd == "" {
 		ncExe, err := s.nctlContainerSvc.GetNerdctlExe()
 		if err != nil {

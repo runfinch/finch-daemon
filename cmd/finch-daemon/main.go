@@ -61,7 +61,7 @@ func main() {
 	rootCmd.Flags().BoolVar(&options.debug, "debug", false, "whether to print debug logs")
 	rootCmd.Flags().IntVar(&options.socketOwner, "socket-owner", -1, "UID and GID of the socket to which finch-daemon will listen."+
 		" It's useful when finch-daemon needs to be run as root to access other resources (e.g., rootful containerd socket),"+
-		" but the socket has to be owned by the lima user to make port forwarding work"+
+		" For macOS, the socket has to be owned by the lima user to make port forwarding work"+
 		" (more info: https://github.com/lima-vm/lima/blob/5a9bca3d09481ed7109b14f8d3f0074816731f43/examples/default.yaml#L340)."+
 		" -1 means no-op.")
 	if err := rootCmd.Execute(); err != nil {
