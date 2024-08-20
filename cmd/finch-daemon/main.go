@@ -44,7 +44,7 @@ const (
 
 type DaemonOptions struct {
 	debug       bool
-	socket      string
+	socketAddr  string
 	socketOwner int
 }
 
@@ -57,7 +57,7 @@ func main() {
 		RunE:         runAdapter,
 		SilenceUsage: true,
 	}
-	options.socket = defaultFinchAddr
+	rootCmd.Flags().StringVar(&options.socketAddr, "socketAddr", defaultFinchAddr, "Server listen socket address. Currently only supports UNIX socket paths.")
 	rootCmd.Flags().BoolVar(&options.debug, "debug", false, "whether to print debug logs")
 	rootCmd.Flags().IntVar(&options.socketOwner, "socket-owner", -1, "UID and GID of the socket to which finch-daemon will listen."+
 		" It's useful when finch-daemon needs to be run as root to access other resources (e.g., rootful containerd socket),"+
@@ -89,22 +89,22 @@ func run(options *DaemonOptions) error {
 	serverWg := &sync.WaitGroup{}
 	serverWg.Add(1)
 
-	listener, err := net.Listen("unix", options.socket)
+	listener, err := net.Listen("unix", options.socketAddr)
 	if err != nil {
-		return fmt.Errorf("failed to listen on %s: %w", options.socket, err)
+		return fmt.Errorf("failed to listen on %s: %w", options.socketAddr, err)
 	}
 	// TODO: Revisit this after we use systemd to manage finch-daemon.
 	// Related: https://github.com/lima-vm/lima/blob/5a9bca3d09481ed7109b14f8d3f0074816731f43/examples/podman-rootful.yaml#L44
-	if err := os.Chown(options.socket, options.socketOwner, options.socketOwner); err != nil {
+	if err := os.Chown(options.socketAddr, options.socketOwner, options.socketOwner); err != nil {
 		return fmt.Errorf("failed to chown the finch-daemon socket: %w", err)
 	}
 	server := &http.Server{
 		Handler: r,
 	}
-	handleSignal(options.socket, server, logger)
+	handleSignal(options.socketAddr, server, logger)
 
 	go func() {
-		logger.Infof("Serving on %s...", options.socket)
+		logger.Infof("Serving on %s...", options.socketAddr)
 		defer serverWg.Done()
 		// Serve will either exit with an error immediately or return
 		// http.ErrServerClosed when the server is successfully closed.
