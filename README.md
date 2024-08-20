@@ -1,6 +1,6 @@
 # finch-daemon
 
-The Finch Daemon project is a container runtime engine that enables users to seamelssly integrate their software which has programmatic dependencies on Docker RESTful APIs. This project currently implements the [Docker API Spec v1.43](https://docs.docker.com/engine/api/v1.43/).
+The Finch Daemon project is a container runtime engine that enables users to seamlessly integrate their software which has programmatic dependencies on Docker RESTful APIs. This project currently implements the [Docker API Spec v1.43](https://docs.docker.com/engine/api/v1.43/).
 
 ## Onboarding & Development
 
@@ -15,7 +15,7 @@ Note that with macOS, it is not possible to run unit tests with `make run-unit-t
 2. Add the unix socket forwarding to `/Applications/Finch/lima/data/finch/lima.yaml`:
    ```yaml
    portForwards:
-   - guestSocket: "/run/fnich.sock"
+   - guestSocket: "/run/finch.sock"
      hostSocket: "{{.Dir}}/sock/finch.sock"
    ```
 3. Init the vm to apply the changes (or restart if Finch was already running):
