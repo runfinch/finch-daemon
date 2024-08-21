@@ -9,7 +9,7 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 )
 
-// Inspect returns the Name and Id of the network given an Id or the Name
+// Inspect returns the Name and Id of the network given an Id or the Name.
 func (s *service) Inspect(ctx context.Context, networkId string) (*types.NetworkInspectResponse, error) {
 	s.logger.Infof("network inspect: network Id %s", networkId)
 	n, err := s.getNetwork(networkId)

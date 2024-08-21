@@ -40,7 +40,6 @@ func (s *service) Remove(ctx context.Context, name string, force bool) (deleted,
 		}
 	}
 
-	//delete image
 	deleted = []string{}
 	untagged = []string{}
 	for _, img := range imgs {

@@ -7,12 +7,13 @@ import (
 	"strings"
 
 	"github.com/containerd/nerdctl/pkg/inspecttypes/native"
+
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
 
 // Inspect returns a details of a volume.
 func (s *service) Inspect(name string) (*native.Volume, error) {
-	var vol, err = s.nctlVolumeSvc.GetVolume(name)
+	vol, err := s.nctlVolumeSvc.GetVolume(name)
 	if err != nil {
 		// if the volume does not exist, return a NotFound error
 		// see nerdctl code for exact error msg:

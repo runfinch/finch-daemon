@@ -14,12 +14,12 @@ import (
 
 	"github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
 	"github.com/docker/go-connections/nat"
-	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/ffs"
 	"github.com/runfinch/common-tests/option"
+
 	"github.com/runfinch/finch-daemon/e2e/client"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 )
@@ -87,7 +87,7 @@ func ContainerCreate(opt *option.Option) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// create container with duplicate name
-			statusCode, ctr = createContainer(uClient, url, testContainerName, options)
+			statusCode, _ = createContainer(uClient, url, testContainerName, options)
 			Expect(statusCode).Should(Equal(http.StatusInternalServerError))
 		})
 		It("should fail to create a container for a nonexistent image", func() {
@@ -209,7 +209,7 @@ func ContainerCreate(opt *option.Option) {
 		It("should create a container with a directory mounted from the host", func() {
 			fileContent := "hello world"
 			hostFilepath := ffs.CreateTempFile("test-file", fileContent)
-			ginkgo.DeferCleanup(os.RemoveAll, filepath.Dir(hostFilepath))
+			DeferCleanup(os.RemoveAll, filepath.Dir(hostFilepath))
 			ctrFilepath := "/tmp/test-mount/test-file"
 
 			// define options
@@ -237,7 +237,7 @@ func ContainerCreate(opt *option.Option) {
 		It("should create a container with a directory mounted from the host with read-only permissions", func() {
 			fileContent := "hello world"
 			hostFilepath := ffs.CreateTempFile("test-file", fileContent)
-			ginkgo.DeferCleanup(os.RemoveAll, filepath.Dir(hostFilepath))
+			DeferCleanup(os.RemoveAll, filepath.Dir(hostFilepath))
 			ctrFilepath := "/tmp/test-mount/test-file"
 
 			// define options
@@ -388,12 +388,12 @@ func ContainerCreate(opt *option.Option) {
 	})
 }
 
-// creates a container with given options and returns http status code and response
+// creates a container with given options and returns http status code and response.
 func createContainer(client *http.Client, url, ctrName string, ctrOptions types.ContainerCreateRequest) (int, containerCreateResponse) {
 	// send create request
 	reqBody, err := json.Marshal(ctrOptions)
 	Expect(err).Should(BeNil())
-	url = url + fmt.Sprintf("?name=%s", ctrName)
+	url += fmt.Sprintf("?name=%s", ctrName)
 	res, err := client.Post(url, "application/json", bytes.NewReader(reqBody))
 	Expect(err).Should(BeNil())
 
@@ -404,7 +404,7 @@ func createContainer(client *http.Client, url, ctrName string, ctrOptions types.
 	return res.StatusCode, ctr
 }
 
-// verifies that the container is connected to the network specified
+// verifies that the container is connected to the network specified.
 func verifyNetworkSettings(opt *option.Option, ctrName, network string) {
 	// inspect network
 	resp := command.Stdout(opt, "network", "inspect", network)

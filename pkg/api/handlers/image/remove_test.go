@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package image
 
 import (
@@ -10,6 +13,7 @@ import (
 	"github.com/gorilla/mux"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_image"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
@@ -26,7 +30,6 @@ var _ = Describe("Image Remove API", func() {
 		req      *http.Request
 	)
 	BeforeEach(func() {
-		//initialize the mocks.
 		mockCtrl = gomock.NewController(GinkgoT())
 		defer mockCtrl.Finish()
 		logger = mocks_logger.NewLogger(mockCtrl)
@@ -95,7 +98,5 @@ var _ = Describe("Image Remove API", func() {
 			h.remove(rr, req)
 			Expect(rr).Should(HaveHTTPStatus(http.StatusOK))
 		})
-
 	})
-
 })

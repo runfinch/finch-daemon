@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package network
 
 import (
@@ -6,12 +9,13 @@ import (
 
 	"github.com/containerd/containerd/namespaces"
 	"github.com/gorilla/mux"
+
 	"github.com/runfinch/finch-daemon/pkg/api/response"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
 
 // From https://github.com/moby/moby/blob/v23.0.3/api/types/types.go#L634-L638
-// NetworkConnect represents the data to be used to connect a container to the network
+// NetworkConnect represents the data to be used to connect a container to the network.
 type networkConnect struct {
 	Container string
 	// TODO: EndpointConfig *network.EndpointSettings `json:",omitempty"`

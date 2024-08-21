@@ -15,6 +15,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/api/events"
 	"github.com/runfinch/finch-daemon/pkg/api/handlers/builder"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_archive"
@@ -24,7 +25,7 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 )
 
-// Unit tests related to Build API
+// Unit tests related to Build API.
 var _ = Describe("Build API ", func() {
 	var (
 		ctx          context.Context
@@ -141,9 +142,8 @@ var _ = Describe("Build API ", func() {
 			// should stream output response with "Successfully built {id}"
 			data, err := io.ReadAll(rr.Body)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(data[:])).Should(ContainSubstring(fmt.Sprintf("Successfully built %s", imageId)))
+			Expect(string(data)).Should(ContainSubstring(fmt.Sprintf("Successfully built %s", imageId)))
 		})
-
 	})
 })
 
@@ -158,9 +158,11 @@ func expectPublishTagEvent(ctrl *gomock.Controller, tag string) *mockPublishTagE
 	}
 	return m
 }
+
 func (m *mockPublishTagEvent) PublishTagEvent(tag string) {
 	m.ctrl.Call(m, "PublishTagEvent", tag)
 }
+
 func (m *mockPublishTagEvent) Return(event *events.Event, err error) {
 	m.outputEvent = event
 	m.outputErr = err

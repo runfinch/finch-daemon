@@ -21,13 +21,13 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 )
 
-// TestBuilderHandler function is the entry point of builder handler package's unit test using ginkgo
+// TestBuilderHandler function is the entry point of builder handler package's unit test using ginkgo.
 func TestBuilderHandler(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "UnitTests - Build APIs Handler")
 }
 
-// Unit tests related to check RegisterHandlers() has configured the endpoint properly for build related API
+// Unit tests related to check RegisterHandlers() has configured the endpoint properly for build related API.
 var _ = Describe("Build API ", func() {
 	var (
 		mockCtrl *gomock.Controller
@@ -48,7 +48,6 @@ var _ = Describe("Build API ", func() {
 		RegisterHandlers(types.VersionedRouter{Router: router}, service, &conf, logger, ncBuildSvc)
 		rr = httptest.NewRecorder()
 		ncBuildSvc.EXPECT().GetBuildkitHost().Return("", nil).AnyTimes()
-
 	})
 	Context("handler", func() {
 		It("should call build method", func() {
@@ -61,5 +60,4 @@ var _ = Describe("Build API ", func() {
 			Expect(rr.Body).Should(MatchJSON(`{ "message": "error from build api"}`))
 		})
 	})
-
 })

@@ -12,6 +12,7 @@ import (
 
 	"github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
 	"github.com/containerd/nerdctl/pkg/labels"
+
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 )
 
@@ -69,7 +70,7 @@ func (s *service) Inspect(ctx context.Context, cid string) (*types.Container, er
 	}
 	updateNetworkSettings(ctx, cont.NetworkSettings, l)
 
-	//make sure it passes the default time value for time fields otherwise the goclient fails.
+	// make sure it passes the default time value for time fields otherwise the goclient fails.
 	if inspect.Created == "" {
 		cont.Created = "0001-01-01T00:00:00Z"
 	}
@@ -84,7 +85,7 @@ func (s *service) Inspect(ctx context.Context, cid string) (*types.Container, er
 // updateNetworkSettings updates the settings in the network to match that
 // of docker as docker identifies networks by their name in "NetworkSettings",
 // but nerdctl uses a sequential ordering "unknown-eth0", "unknown-eth1",...
-// we use container labels to find corresponding name for each network in "NetworkSettings"
+// we use container labels to find corresponding name for each network in "NetworkSettings".
 func updateNetworkSettings(ctx context.Context, ns *dockercompat.NetworkSettings, labels map[string]string) error {
 	if ns != nil && ns.Networks != nil {
 		networks := map[string]*dockercompat.NetworkEndpointSettings{}

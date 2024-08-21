@@ -273,13 +273,13 @@ func verifyNetworkConfig(net *netutil.NetworkConfig, networks []string, macAddre
 		return err
 	}
 	if netType != nettype.CNI {
-		return fmt.Errorf("Invalid network %s, only CNI type is supported", net.Name)
+		return fmt.Errorf("invalid network %s, only CNI type is supported", net.Name)
 	}
 	if macAddress != "" {
 		macValidNetworks := []string{"bridge", "macvlan"}
 		netMode := net.Plugins[0].Network.Type
 		if !strutil.InStringSlice(macValidNetworks, netMode) {
-			return fmt.Errorf("Network type %q is not supported when MAC address is specified, must be one of: %v", netMode, macValidNetworks)
+			return fmt.Errorf("network type %q is not supported when MAC address is specified, must be one of: %v", netMode, macValidNetworks)
 		}
 	}
 	return nil

@@ -13,6 +13,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	eventtype "github.com/runfinch/finch-daemon/pkg/api/events"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_backend"
 )
@@ -111,5 +112,4 @@ var _ = Describe("Events API ", func() {
 			Expect(filters[1]).Should(Equal(fmt.Sprintf(`topic~="/%s/%s/*"`, eventtype.CompatibleTopicPrefix, "test2")))
 		})
 	})
-
 })

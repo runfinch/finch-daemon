@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
+
 	"github.com/runfinch/finch-daemon/e2e/client"
 )
 
@@ -115,10 +116,11 @@ func ContainerAttach(opt *option.Option) {
 			time.Sleep(1 * time.Second)
 			res, err := uClient.Post(client.ConvertToFinchUrl(version, relativeUrl+opts),
 				"application/json", nil)
-			Expect(err).Should(BeNil())
+			Expect(err).ShouldNot(HaveOccurred())
 
 			time.Sleep(4 * time.Second)
 			body, err := io.ReadAll(res.Body)
+			Expect(err).ShouldNot(HaveOccurred())
 			_ = res.Body.Close()
 
 			// make assertions
@@ -148,10 +150,11 @@ func ContainerAttach(opt *option.Option) {
 			time.Sleep(1 * time.Second)
 			res, err := uClient.Post(client.ConvertToFinchUrl(version, relativeUrl+opts),
 				"application/json", nil)
-			Expect(err).Should(BeNil())
+			Expect(err).ShouldNot(HaveOccurred())
 
 			time.Sleep(4 * time.Second)
 			body, err := io.ReadAll(res.Body)
+			Expect(err).ShouldNot(HaveOccurred())
 			_ = res.Body.Close()
 
 			// make assertions

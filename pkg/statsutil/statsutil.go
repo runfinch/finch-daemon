@@ -78,7 +78,7 @@ func (s *statsUtil) GetSystemCPUUsage() (uint64, error) {
 			for _, i := range parts[1:8] {
 				v, err := strconv.ParseUint(i, 10, 64)
 				if err != nil {
-					return 0, fmt.Errorf("Unable to convert value %s to int: %s", i, err)
+					return 0, fmt.Errorf("unable to convert value %s to int: %s", i, err)
 				}
 				totalClockTicks += v
 			}
@@ -119,9 +119,9 @@ func (s *statsUtil) CollectNetworkStats(pid int, interfaces []native.NetInterfac
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve the statistics for %s in netns %s: %s", v.Name, ns, err)
 		}
-		//exclude inactive interfaces
+
 		if nlink.Attrs().Flags&net.FlagUp != 0 {
-			//exclude loopback interface
+			// exclude loopback interface
 			if nlink.Attrs().Flags&net.FlagLoopback != 0 || strings.HasPrefix(nlink.Attrs().Name, "lo") {
 				continue
 			}

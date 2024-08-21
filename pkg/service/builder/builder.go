@@ -23,12 +23,13 @@ type service struct {
 	tarExtractor   archive.TarExtractor
 }
 
-// NewService creates a service struct for build APIs
+// NewService creates a service struct for build APIs.
 func NewService(
 	client backend.ContainerdClient,
 	ncBuilderSvc NerdctlService,
 	logger flog.Logger,
-	tarExtractor archive.TarExtractor) builder.Service {
+	tarExtractor archive.TarExtractor,
+) builder.Service {
 	return &service{
 		client:         client,
 		nctlBuilderSvc: ncBuilderSvc,

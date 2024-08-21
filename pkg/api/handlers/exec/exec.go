@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package exec
 
 import (
@@ -19,7 +22,7 @@ type Service interface {
 	Inspect(ctx context.Context, conId string, execId string) (*types.ExecInspect, error)
 }
 
-// RegisterHandlers registers all the supported endpoints related to exec APIs
+// RegisterHandlers registers all the supported endpoints related to exec APIs.
 func RegisterHandlers(r types.VersionedRouter, service Service, conf *config.Config, logger flog.Logger) {
 	h := newHandler(service, conf, logger)
 
@@ -29,7 +32,7 @@ func RegisterHandlers(r types.VersionedRouter, service Service, conf *config.Con
 	r.HandleFunc("/{id:.*}/json", h.inspect, http.MethodGet)
 }
 
-// newHandler creates the handler that serves all exec APIs
+// newHandler creates the handler that serves all exec APIs.
 func newHandler(service Service, conf *config.Config, logger flog.Logger) *handler {
 	return &handler{
 		service: service,
@@ -44,7 +47,7 @@ type handler struct {
 	logger  flog.Logger
 }
 
-// parseExecId breaks down execId into a container ID and process ID
+// parseExecId breaks down execId into a container ID and process ID.
 func parseExecId(execId string) (string, string, error) {
 	splitId := strings.Split(execId, "/")
 	if len(splitId) != 2 {

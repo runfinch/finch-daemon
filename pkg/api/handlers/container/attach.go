@@ -16,6 +16,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/moby/moby/api/server/httputils"
 	"github.com/moby/moby/api/types/versions"
+
 	"github.com/runfinch/finch-daemon/pkg/api/response"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
@@ -59,7 +60,7 @@ func (h *handler) attach(w http.ResponseWriter, r *http.Request) {
 	// define setupStreams to pass the connection, the stopchannel, and the success response
 	setupStreams := func() (io.Writer, io.Writer, chan os.Signal, func(), error) {
 		return conn, conn, stopChannel, func() {
-			fmt.Fprintf(conn, successResponse)
+			fmt.Fprint(conn, successResponse)
 		}, nil
 	}
 
@@ -71,7 +72,7 @@ func (h *handler) attach(w http.ResponseWriter, r *http.Request) {
 		Logs:       httputils.BoolValue(r, "logs"),
 		Stream:     httputils.BoolValue(r, "stream"),
 		// TODO: implement DetachKeys now that David's nerdctl detachkeys is implemented
-		//DetachKeys: r.URL.Query().Get("detachKeys"),
+		// DetachKeys: r.URL.Query().Get("detachKeys"),
 		// TODO: note that MuxStreams should be used in both in checkUpgradeStatus as well as
 		// service.Attach, but since we always start containers in detached mode with tty=false,
 		// whether the stream and the output will be multiplexed will always be true
@@ -94,7 +95,7 @@ func (h *handler) attach(w http.ResponseWriter, r *http.Request) {
 }
 
 // checkUpgradeStatus checks if the connection needs to be upgraded and returns the correct
-// type and response
+// type and response.
 func checkUpgradeStatus(ctx context.Context, upgrade bool) (string, string) {
 	contentType := "application/vnd.docker.raw-stream"
 	successResponse := fmt.Sprintf("HTTP/1.1 200 OK\r\n" +
@@ -114,15 +115,12 @@ func checkUpgradeStatus(ctx context.Context, upgrade bool) (string, string) {
 // checkConnection monitors the hijacked connection and checks whether the connection is closed,
 // running a closer function when it is closed.
 //
-// TODO: Refactor when we implement stdin
+// TODO: Refactor when we implement stdin.
 func checkConnection(conn net.Conn, closer func()) {
-	//logger.Debugf("Checking if connection is still available")
 	one := make([]byte, 1)
 	if _, err := conn.Read(one); err == io.EOF {
-		//logger.Debugf("Closing connection")
 		closer()
 		conn.Close()
-		conn = nil
 		return
 	}
 }

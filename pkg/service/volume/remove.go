@@ -19,7 +19,6 @@ func (s *service) Remove(ctx context.Context, volName string, force bool) error 
 	dummyWriter := bufio.NewWriter(&buf)
 
 	err := s.nctlVolumeSvc.RemoveVolume(ctx, volName, force, dummyWriter)
-
 	if err != nil {
 		// convert the nerdctl error to a finch specific error to return the appropriate status code
 		switch {

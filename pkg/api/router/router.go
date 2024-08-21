@@ -14,6 +14,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/moby/moby/api/server/httputils"
 	"github.com/moby/moby/api/types/versions"
+
 	"github.com/runfinch/finch-daemon/pkg/api/handlers/builder"
 	"github.com/runfinch/finch-daemon/pkg/api/handlers/container"
 	"github.com/runfinch/finch-daemon/pkg/api/handlers/exec"
@@ -28,7 +29,7 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/version"
 )
 
-// Options defines the router options to be passed into the handlers
+// Options defines the router options to be passed into the handlers.
 type Options struct {
 	Config           *config.Config
 	ContainerService container.Service
@@ -62,7 +63,7 @@ func New(opts *Options) http.Handler {
 }
 
 // VersionMiddleware checks for the requested version of the api and makes sure it falls within the bounds
-// of the supported version
+// of the supported version.
 func VersionMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)

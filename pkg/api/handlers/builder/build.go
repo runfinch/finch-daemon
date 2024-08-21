@@ -12,11 +12,12 @@ import (
 
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/nerdctl/pkg/api/types"
+
 	"github.com/runfinch/finch-daemon/pkg/api/response"
 	"github.com/runfinch/finch-daemon/pkg/utility/maputility"
 )
 
-// build function is the http handler function for /build API
+// build function is the http handler function for /build API.
 func (h *handler) build(w http.ResponseWriter, r *http.Request) {
 	streamWriter := response.NewStreamWriter(w)
 
@@ -45,7 +46,7 @@ func (h *handler) build(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// getBuildOptions creates the build option parameter from http request which is requires by nerdctl build function
+// getBuildOptions creates the build option parameter from http request which is requires by nerdctl build function.
 func (h *handler) getBuildOptions(w http.ResponseWriter, r *http.Request, stream io.Writer) (*types.BuilderBuildOptions, error) {
 	bkHost, err := h.ncBuildSvc.GetBuildkitHost()
 	if err != nil {
@@ -86,7 +87,7 @@ func (h *handler) getBuildOptions(w http.ResponseWriter, r *http.Request, stream
 	return &options, nil
 }
 
-// getQueryParamStr fetch string query parameter and returns default value if empty
+// getQueryParamStr fetch string query parameter and returns default value if empty.
 func getQueryParamStr(r *http.Request, paramName string, defaultValue string) string {
 	val := r.URL.Query().Get(paramName)
 	if val == "" {
@@ -95,7 +96,7 @@ func getQueryParamStr(r *http.Request, paramName string, defaultValue string) st
 	return val
 }
 
-// getQueryParamBool fetch boolean query parameter and returns default value if empty
+// getQueryParamBool fetch boolean query parameter and returns default value if empty.
 func getQueryParamBool(r *http.Request, paramName string, defaultValue bool) bool {
 	val := r.URL.Query().Get(paramName)
 	if val == "" {
@@ -108,7 +109,7 @@ func getQueryParamBool(r *http.Request, paramName string, defaultValue bool) boo
 	}
 }
 
-// getQueryParamList fetch list of string query parameter and returns default value if empty
+// getQueryParamList fetch list of string query parameter and returns default value if empty.
 func getQueryParamList(r *http.Request, paramName string, defaultValue []string) []string {
 	params := r.URL.Query()
 	if params == nil || params[paramName] == nil {

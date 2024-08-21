@@ -179,7 +179,7 @@ func (w *NerdctlWrapper) ListVolumes(size bool, filters []string) (map[string]na
 	return vols, err
 }
 
-// GetVolume wrapper function to call nerdctl function to get the details of a volume
+// GetVolume wrapper function to call nerdctl function to get the details of a volume.
 func (w *NerdctlWrapper) GetVolume(name string) (*native.Volume, error) {
 	volStore, err := volume.Store(w.globalOptions.Namespace, w.globalOptions.DataRoot, w.globalOptions.Address)
 	if err != nil {
@@ -192,7 +192,7 @@ func (w *NerdctlWrapper) GetVolume(name string) (*native.Volume, error) {
 	return vols, err
 }
 
-// RemoveVolume wrapper function to call nerdctl function to remove a volume
+// RemoveVolume wrapper function to call nerdctl function to remove a volume.
 func (w *NerdctlWrapper) RemoveVolume(ctx context.Context, name string, force bool, stdout io.Writer) error {
 	return volume.Remove(
 		ctx,
@@ -213,7 +213,7 @@ func (w *NerdctlWrapper) InspectImage(ctx context.Context, image images.Image) (
 	return dockercompat.ImageFromNative(n)
 }
 
-// GetDockerResolver returns a new Docker config resolver from the reference host and auth credentials
+// GetDockerResolver returns a new Docker config resolver from the reference host and auth credentials.
 func (w *NerdctlWrapper) GetDockerResolver(ctx context.Context, refDomain string, creds dockerconfigresolver.AuthCreds) (remotes.Resolver, docker.StatusTracker, error) {
 	dOpts := []dockerconfigresolver.Opt{dockerconfigresolver.WithHostsDirs(w.globalOptions.HostsDir)}
 	if creds != nil {
@@ -234,7 +234,7 @@ func (w *NerdctlWrapper) GetDockerResolver(ctx context.Context, refDomain string
 	return docker.NewResolver(resolverOpts), tracker, nil
 }
 
-// PullImage pulls an image from nerdctl's imgutil library
+// PullImage pulls an image from nerdctl's imgutil library.
 func (w *NerdctlWrapper) PullImage(ctx context.Context, stdout, stderr io.Writer, resolver remotes.Resolver, ref string, platforms []ocispec.Platform) (*imgutil.EnsuredImage, error) {
 	return imgutil.PullImage(
 		ctx,
@@ -250,7 +250,7 @@ func (w *NerdctlWrapper) PullImage(ctx context.Context, stdout, stderr io.Writer
 	)
 }
 
-// PushImage pushes an image using nerdctl's imgutil library
+// PushImage pushes an image using nerdctl's imgutil library.
 func (w *NerdctlWrapper) PushImage(ctx context.Context, resolver remotes.Resolver, tracker docker.StatusTracker, stdout io.Writer, pushRef, ref string, platMC platforms.MatchComparer) error {
 	return push.Push(
 		ctx,
@@ -284,12 +284,12 @@ func (w *NerdctlWrapper) RemoveContainer(ctx context.Context, c containerd.Conta
 	return container.RemoveContainer(ctx, c, *w.globalOptions, force, removeVolumes, w.clientWrapper.client)
 }
 
-// StartContainer wrapper function to call nerdctl function to start a container
+// StartContainer wrapper function to call nerdctl function to start a container.
 func (w *NerdctlWrapper) StartContainer(ctx context.Context, container containerd.Container) error {
 	return containerutil.Start(ctx, container, false, w.clientWrapper.client, "")
 }
 
-// StopContainer wrapper function to call nerdctl function to stop a container
+// StopContainer wrapper function to call nerdctl function to stop a container.
 func (*NerdctlWrapper) StopContainer(ctx context.Context, container containerd.Container, timeout *time.Duration) error {
 	return containerutil.Stop(ctx, container, timeout)
 }
@@ -415,7 +415,7 @@ type ContainerdClientWrapper struct {
 	client *containerd.Client
 }
 
-// NewContainerdClientWrapper creates a new instance of ContainerdClientWrapper
+// NewContainerdClientWrapper creates a new instance of ContainerdClientWrapper.
 func NewContainerdClientWrapper(client *containerd.Client) *ContainerdClientWrapper {
 	return &ContainerdClientWrapper{
 		client: client,
@@ -426,7 +426,7 @@ func (w *ContainerdClientWrapper) GetClient() *containerd.Client {
 	return w.client
 }
 
-// GetContainerStatus wraps the containerd function to get the status of a container
+// GetContainerStatus wraps the containerd function to get the status of a container.
 func (w *ContainerdClientWrapper) GetContainerStatus(ctx context.Context, c containerd.Container) containerd.ProcessStatus {
 	// Just in case, there is something wrong in server.
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -451,7 +451,7 @@ func (w *ContainerdClientWrapper) GetContainerStatus(ctx context.Context, c cont
 	return status.Status
 }
 
-// SearchContainer returns the list of containers that match the prefix
+// SearchContainer returns the list of containers that match the prefix.
 func (w *ContainerdClientWrapper) SearchContainer(ctx context.Context, searchText string) (containers []containerd.Container, err error) {
 	filters := []string{
 		fmt.Sprintf("labels.%q==%s", labels.Name, searchText),
@@ -462,12 +462,12 @@ func (w *ContainerdClientWrapper) SearchContainer(ctx context.Context, searchTex
 	return containers, err
 }
 
-// GetImage returns an image with given reference
+// GetImage returns an image with given reference.
 func (w *ContainerdClientWrapper) GetImage(ctx context.Context, ref string) (containerd.Image, error) {
 	return w.client.GetImage(ctx, ref)
 }
 
-// SearchImage returns a list of images that match the search prefix
+// SearchImage returns a list of images that match the search prefix.
 func (w *ContainerdClientWrapper) SearchImage(ctx context.Context, searchText string) ([]images.Image, error) {
 	var filters []string
 	if canonicalRef, err := referenceutil.ParseAny(searchText); err == nil {
@@ -482,22 +482,22 @@ func (w *ContainerdClientWrapper) SearchImage(ctx context.Context, searchText st
 	return w.client.ImageService().List(ctx, filters...)
 }
 
-// ParsePlatform parses a platform text into an ocispec Platform type
+// ParsePlatform parses a platform text into an ocispec Platform type.
 func (*ContainerdClientWrapper) ParsePlatform(platform string) (ocispec.Platform, error) {
 	return platforms.Parse(platform)
 }
 
-// DefaultPlatformSpec returns the current platform's default platform specification
+// DefaultPlatformSpec returns the current platform's default platform specification.
 func (w *ContainerdClientWrapper) DefaultPlatformSpec() ocispec.Platform {
 	return platforms.DefaultSpec()
 }
 
-// DefaultPlatformStrict returns the strict form of current platform's default platform specification
+// DefaultPlatformStrict returns the strict form of current platform's default platform specification.
 func (w *ContainerdClientWrapper) DefaultPlatformStrict() platforms.MatchComparer {
 	return platforms.DefaultStrict()
 }
 
-// ParseDockerRef normalizes the image reference following the docker convention
+// ParseDockerRef normalizes the image reference following the docker convention.
 func (w *ContainerdClientWrapper) ParseDockerRef(rawRef string) (ref, refDomain string, err error) {
 	named, err := refdocker.ParseDockerRef(rawRef)
 	if err != nil {
@@ -508,12 +508,12 @@ func (w *ContainerdClientWrapper) ParseDockerRef(rawRef string) (ref, refDomain 
 	return
 }
 
-// DefaultDockerHost converts "docker.io" to "registry-1.docker.io"
+// DefaultDockerHost converts "docker.io" to "registry-1.docker.io".
 func (w *ContainerdClientWrapper) DefaultDockerHost(refDomain string) (string, error) {
 	return docker.DefaultHost(refDomain)
 }
 
-// GetContainerTaskWait gets the wait channel for a container in the process of doing a task
+// GetContainerTaskWait gets the wait channel for a container in the process of doing a task.
 func (*ContainerdClientWrapper) GetContainerTaskWait(ctx context.Context, attach cio.Attach, c containerd.Container) (task containerd.Task, waitCh <-chan containerd.ExitStatus, err error) {
 	task, err = c.Task(ctx, attach)
 	if err != nil {
@@ -524,7 +524,7 @@ func (*ContainerdClientWrapper) GetContainerTaskWait(ctx context.Context, attach
 	return
 }
 
-// GetContainerRemoveEvent subscribes to the remove event for the given container and returns its channel
+// GetContainerRemoveEvent subscribes to the remove event for the given container and returns its channel.
 func (w *ContainerdClientWrapper) GetContainerRemoveEvent(ctx context.Context, c containerd.Container) (<-chan *events.Envelope, <-chan error) {
 	return w.client.Subscribe(ctx,
 		fmt.Sprintf(`topic=="/containers/delete",event.id=="%s"`, c.ID()),
@@ -551,12 +551,12 @@ func (w *ContainerdClientWrapper) ConvertImage(ctx context.Context, dstRef, srcR
 	return converter.Convert(ctx, w.client, dstRef, srcRef, opts...)
 }
 
-// DeleteImage deletes an image
+// DeleteImage deletes an image.
 func (w *ContainerdClientWrapper) DeleteImage(ctx context.Context, img string) error {
 	return w.client.ImageService().Delete(ctx, img, images.SynchronousDelete())
 }
 
-// GetImageDigests returns the list of digests for a given image
+// GetImageDigests returns the list of digests for a given image.
 func (w *ContainerdClientWrapper) GetImageDigests(ctx context.Context, img *images.Image) (digests []digest.Digest, err error) {
 	cntStore := w.client.ContentStore()
 	return img.RootFS(ctx, cntStore, platforms.DefaultStrict())
@@ -607,10 +607,10 @@ func (*ContainerdClientWrapper) NewDirectCIO(ctx context.Context, fifos *cio.FIF
 	return cio.NewDirectIO(ctx, fifos)
 }
 
-func (c *ContainerdClientWrapper) SubscribeToEvents(ctx context.Context, filters ...string) (<-chan *events.Envelope, <-chan error) {
-	return c.client.EventService().Subscribe(ctx, filters...)
+func (w *ContainerdClientWrapper) SubscribeToEvents(ctx context.Context, filters ...string) (<-chan *events.Envelope, <-chan error) {
+	return w.client.EventService().Subscribe(ctx, filters...)
 }
 
-func (c *ContainerdClientWrapper) PublishEvent(ctx context.Context, topic string, event events.Event) error {
-	return c.client.EventService().Publish(ctx, topic, event)
+func (w *ContainerdClientWrapper) PublishEvent(ctx context.Context, topic string, event events.Event) error {
+	return w.client.EventService().Publish(ctx, topic, event)
 }

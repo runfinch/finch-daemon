@@ -14,20 +14,20 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
+
 	"github.com/runfinch/finch-daemon/pkg/ecc"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_ecc"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 )
 
-// TestContainerHandler function is the entry point of container handler package's unit test using ginkgo
+// TestContainerHandler function is the entry point of container handler package's unit test using ginkgo.
 func TestContainerHandler(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "UnitTests - Archive Utils")
 }
 
-// Unit tests related to check RegisterHandlers() has configured the endpoint properly for containers related API
+// Unit tests related to check RegisterHandlers() has configured the endpoint properly for containers related API.
 var _ = Describe("TarExtractor's ", func() {
-
 	Context("ExtractInTempDir method", func() {
 		var (
 			mockCtrl          *gomock.Controller
@@ -47,25 +47,25 @@ var _ = Describe("TarExtractor's ", func() {
 			dockerFileContent = "FROM alpine:latest"
 			hdr := &tar.Header{
 				Name: "Dockerfile",
-				Mode: 0600,
+				Mode: 0o600,
 				Size: int64(len(dockerFileContent)),
 			}
 			_ = tw.WriteHeader(hdr)
 			_, _ = tw.Write([]byte(dockerFileContent))
 			_ = tw.Close()
-
 		})
 		It("should be able to extract a tar file in temp folder", func() {
 			logger.EXPECT().Debugf("successfully cleaned up folder. path: %s", gomock.Any())
 
 			cmd, err := tarExtractor.ExtractInTemp(bytes.NewReader(buf.Bytes()), "unit-test")
+			Expect(err).ShouldNot(HaveOccurred())
 			defer tarExtractor.Cleanup(cmd)
 			err = cmd.Run()
-			Expect(err).Should(BeNil())
+			Expect(err).ShouldNot(HaveOccurred())
 			dockerFile := fmt.Sprintf("%s/Dockerfile", cmd.GetDir())
-			Expect(err).Should(BeNil())
+			Expect(err).ShouldNot(HaveOccurred())
 			_, err = os.Stat(dockerFile)
-			Expect(err).Should(BeNil())
+			Expect(err).ShouldNot(HaveOccurred())
 			b, _ := os.ReadFile(dockerFile)
 			Expect(string(b)).Should(Equal(dockerFileContent))
 		})
@@ -89,7 +89,7 @@ var _ = Describe("TarExtractor's ", func() {
 		})
 		AfterEach(func() {
 			mockCtrl.Finish()
-			//remove the folder if it is not deleted
+			// remove the folder if it is not deleted
 			_ = os.RemoveAll(dir)
 		})
 		It("should be able be able to clean up files", func() {

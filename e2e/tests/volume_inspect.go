@@ -12,11 +12,12 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
+
 	"github.com/runfinch/finch-daemon/e2e/client"
 	"github.com/runfinch/finch-daemon/pkg/api/response"
 )
 
-// VolumeInspect tests volume inspect API - GET /volumes/{volume_name}
+// VolumeInspect tests volume inspect API - GET /volumes/{volume_name}.
 func VolumeInspect(opt *option.Option) {
 	Describe("Inspect volume API", func() {
 		var (
@@ -61,6 +62,5 @@ func VolumeInspect(opt *option.Option) {
 			Expect(err).Should(BeNil())
 			Expect(errRes.Message).Should(Not(BeEmpty()))
 		})
-
 	})
 }

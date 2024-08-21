@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package image
 
 import (
@@ -16,6 +19,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/api/response"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_image"
@@ -34,7 +38,6 @@ var _ = Describe("Image Pull API", func() {
 		platform string
 	)
 	BeforeEach(func() {
-		//initialize mocks.
 		mockCtrl = gomock.NewController(GinkgoT())
 		defer mockCtrl.Finish()
 		logger = mocks_logger.NewLogger(mockCtrl)
@@ -212,7 +215,7 @@ var _ = Describe("Image Pull API", func() {
 		It("should return 400 status code if image is not specified", func() {
 			req, err := http.NewRequest(
 				http.MethodPost,
-				fmt.Sprintf("/images/create"),
+				"/images/create",
 				nil,
 			)
 			Expect(err).Should(BeNil())
@@ -319,5 +322,4 @@ var _ = Describe("Image Pull API", func() {
 			}))
 		})
 	})
-
 })

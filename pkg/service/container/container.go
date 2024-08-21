@@ -9,13 +9,14 @@ import (
 	"fmt"
 
 	"github.com/containerd/containerd"
+	"github.com/spf13/afero"
+
 	"github.com/runfinch/finch-daemon/pkg/api/handlers/container"
 	"github.com/runfinch/finch-daemon/pkg/archive"
 	"github.com/runfinch/finch-daemon/pkg/backend"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 	"github.com/runfinch/finch-daemon/pkg/statsutil"
-	"github.com/spf13/afero"
 )
 
 type NerdctlService interface {
@@ -33,7 +34,7 @@ type service struct {
 	stats            statsutil.StatsUtil
 }
 
-// NewService creates a new service to operate on containers
+// NewService creates a new service to operate on containers.
 func NewService(
 	client backend.ContainerdClient,
 	nerdctlContainerSvc NerdctlService,
@@ -53,7 +54,7 @@ func NewService(
 	}
 }
 
-// getContainer returns a containerd container from container id
+// getContainer returns a containerd container from container id.
 func (s *service) getContainer(ctx context.Context, cid string) (containerd.Container, error) {
 	searchResult, err := s.client.SearchContainer(ctx, cid)
 	if err != nil {

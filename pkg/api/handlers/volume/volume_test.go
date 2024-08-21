@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package volume
 
 import (
@@ -18,13 +21,13 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_volume"
 )
 
-// TestVolumesHandler function is the entry point of volumes handler package's unit test using ginkgo
+// TestVolumesHandler function is the entry point of volumes handler package's unit test using ginkgo.
 func TestVolumesHandler(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "UnitTests - Volumes APIs Handler")
 }
 
-// Unit tests related to check RegisterHandlers() has configured the endpoint properly for volume related APIs
+// Unit tests related to check RegisterHandlers() has configured the endpoint properly for volume related APIs.
 var _ = Describe("Volumes API ", func() {
 	var (
 		mockCtrl *gomock.Controller
@@ -43,7 +46,6 @@ var _ = Describe("Volumes API ", func() {
 		router = mux.NewRouter()
 		RegisterHandlers(types.VersionedRouter{Router: router}, service, &conf, logger)
 		rr = httptest.NewRecorder()
-
 	})
 	Context("handler", func() {
 		It("should call volumes list method", func() {

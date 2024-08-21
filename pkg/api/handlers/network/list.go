@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package network
 
 import (
@@ -6,7 +9,7 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/api/response"
 )
 
-// list handles the api call to list and returns a json object
+// list handles the api call to list and returns a json object.
 func (h *handler) list(w http.ResponseWriter, r *http.Request) {
 	resp, err := h.service.List(r.Context())
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/api/handlers/container"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_archive"
@@ -19,7 +20,7 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 )
 
-// Unit tests related to container start API
+// Unit tests related to container start API.
 var _ = Describe("Container Start API ", func() {
 	var (
 		ctx          context.Context
@@ -50,11 +51,11 @@ var _ = Describe("Container Start API ", func() {
 			cdClient.EXPECT().GetContainerStatus(gomock.Any(), gomock.Any()).Return(containerd.Stopped)
 			cdClient.EXPECT().SearchContainer(gomock.Any(), cid).Return(
 				[]containerd.Container{con}, nil)
-			//mock the nerdctl client to mock the start container was successful without any error.
+
 			ncClient.EXPECT().StartContainer(ctx, con).Return(nil)
 			logger.EXPECT().Debugf("starting container: %s", cid)
 			logger.EXPECT().Debugf("successfully started: %s", cid)
-			//service should not return any error
+
 			err := service.Start(ctx, cid)
 			Expect(err).Should(BeNil())
 		})
@@ -113,7 +114,5 @@ var _ = Describe("Container Start API ", func() {
 			err := service.Start(ctx, cid)
 			Expect(err).Should(Equal(expectedErr))
 		})
-
 	})
-
 })

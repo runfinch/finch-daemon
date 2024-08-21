@@ -27,7 +27,7 @@ func NewErrorFromMsg(msg string) *Error {
 	}
 }
 
-// SendErrorResponse sends a status code and a json-formatted error message (if any)
+// SendErrorResponse sends a status code and a json-formatted error message (if any).
 func SendErrorResponse(w http.ResponseWriter, code int, err error) {
 	if code == http.StatusNotModified {
 		// only set the status code as no content and not modified does not have response body
@@ -38,7 +38,7 @@ func SendErrorResponse(w http.ResponseWriter, code int, err error) {
 	}
 }
 
-// SendErrorAsInStreamResponse sends a status code and a json-formatted error message in stream response
+// SendErrorAsInStreamResponse sends a status code and a json-formatted error message in stream response.
 func SendErrorAsInStreamResponse(w http.ResponseWriter, code int, err error) error {
 	jsonErr := jsonmessage.JSONError{
 		Code:    code,
@@ -49,5 +49,4 @@ func SendErrorAsInStreamResponse(w http.ResponseWriter, code int, err error) err
 		Error:        &jsonErr,
 		ErrorMessage: err.Error(),
 	})
-
 }

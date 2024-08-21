@@ -12,11 +12,12 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
+
 	"github.com/runfinch/finch-daemon/e2e/client"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 )
 
-// NetworkList tests calling the get networks api
+// NetworkList tests calling the get networks api.
 func NetworkList(opt *option.Option) {
 	Describe("lists the networks", func() {
 		var (

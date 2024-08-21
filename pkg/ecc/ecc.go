@@ -27,8 +27,7 @@ func NewExecCmdCreator() ExecCmdCreator {
 	return &execCmdCreator{}
 }
 
-type execCmdCreator struct {
-}
+type execCmdCreator struct{}
 
 func (*execCmdCreator) Command(name string, args ...string) ExecCmd {
 	return &execCmd{
@@ -40,12 +39,12 @@ type execCmd struct {
 	cmd *exec.Cmd
 }
 
-// Run runs the command
+// Run runs the command.
 func (c *execCmd) Run() error {
 	return c.cmd.Run()
 }
 
-// SetDir sets the command's working directory
+// SetDir sets the command's working directory.
 func (c *execCmd) SetDir(path string) {
 	c.cmd.Dir = path
 }
@@ -65,7 +64,7 @@ func (c *execCmd) SetStdin(reader io.Reader) {
 	c.cmd.Stdin = reader
 }
 
-// GetDir gets the command's working directory
+// GetDir gets the command's working directory.
 func (c *execCmd) GetDir() string {
 	return c.cmd.Dir
 }

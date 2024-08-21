@@ -13,12 +13,13 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/moby/moby/api/server/httputils"
+
 	"github.com/runfinch/finch-daemon/pkg/api/response"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
 
-// logs handles the http request for attaching to a container's logs
+// logs handles the http request for attaching to a container's logs.
 func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 	// return early if neither stdout and stderr are set
 	stdout, stderr := httputils.BoolValue(r, "stdout"), httputils.BoolValue(r, "stderr")
@@ -60,7 +61,7 @@ func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 	// define setupStreams to pass the connection, the stopchannel, and the success response
 	setupStreams := func() (io.Writer, io.Writer, chan os.Signal, func(), error) {
 		return conn, conn, stopChannel, func() {
-			fmt.Fprintf(conn, successResponse)
+			fmt.Fprint(conn, successResponse)
 		}, nil
 	}
 

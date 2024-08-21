@@ -43,7 +43,6 @@ func (s *service) GetVersion(ctx context.Context) (*types.VersionInfo, error) {
 }
 
 func getCmdOutput(logger flog.Logger, name string, arg ...string) string {
-
 	out, err := exec.Command(name, arg...).Output()
 	if err != nil {
 		logger.Warnf("unable to execute command:%s, error: %v", name, err)

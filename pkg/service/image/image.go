@@ -10,13 +10,14 @@ import (
 
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/reference/docker"
+
 	"github.com/runfinch/finch-daemon/pkg/api/handlers/image"
 	"github.com/runfinch/finch-daemon/pkg/backend"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 )
 
-// setting getAuthCredsFunc as a variable to allow mocking this function for unit testing
+// setting getAuthCredsFunc as a variable to allow mocking this function for unit testing.
 var getAuthCredsFunc = (*service).getAuthCreds
 
 type service struct {

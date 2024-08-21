@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
+
 	"github.com/runfinch/finch-daemon/e2e/client"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 )
@@ -231,7 +232,7 @@ func ContainerList(opt *option.Option) {
 	})
 }
 
-// Checks that the other field for containers is non-null, then sets it to a zero value for comparison with dummy values
+// Checks that the other field for containers is non-null, then sets it to a zero value for comparison with dummy values.
 func filterContainerList(got []types.ContainerListItem) []types.ContainerListItem {
 	filtered := []types.ContainerListItem{}
 	for _, cont := range got {

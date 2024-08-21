@@ -13,7 +13,7 @@ import (
 	"github.com/docker/go-connections/nat"
 )
 
-// AttachOptions defines the available options for the container attach call
+// AttachOptions defines the available options for the container attach call.
 type AttachOptions struct {
 	GetStreams func() (io.Writer, io.Writer, chan os.Signal, func(), error)
 	UseStdin   bool
@@ -165,7 +165,7 @@ type ContainerListItem struct {
 	// TODO: Other fields
 }
 
-// LogsOptions defines the available options for the container logs call
+// LogsOptions defines the available options for the container logs call.
 type LogsOptions struct {
 	GetStreams func() (io.Writer, io.Writer, chan os.Signal, func(), error)
 	Stdout     bool

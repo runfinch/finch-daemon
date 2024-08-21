@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package network
 
 import (
@@ -10,6 +13,7 @@ import (
 	"github.com/gorilla/mux"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_network"
@@ -61,7 +65,7 @@ var _ = Describe("Network Remove API ", func() {
 			service.EXPECT().Remove(gomock.Any(), nid).Return(fmt.Errorf("server error"))
 			handler.remove(rr, req)
 			Expect(rr).Should(HaveHTTPStatus(http.StatusInternalServerError))
-			Expect(rr.Body.String()).Should(MatchJSON(fmt.Sprintf(`{"message": "server error"}`)))
+			Expect(rr.Body.String()).Should(MatchJSON(`{"message": "server error"}`))
 		})
 	})
 })

@@ -10,6 +10,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/api/handlers/volume"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_backend"
@@ -33,13 +34,12 @@ var _ = Describe("Inspect volume API", func() {
 	})
 	Context("service", func() {
 		It("should return the volume details", func() {
-			expectedVol :=
-				native.Volume{
-					Name:       name,
-					Mountpoint: "/path/to/test-volume",
-					Labels:     nil,
-					Size:       100,
-				}
+			expectedVol := native.Volume{
+				Name:       name,
+				Mountpoint: "/path/to/test-volume",
+				Labels:     nil,
+				Size:       100,
+			}
 			ncClient.EXPECT().GetVolume(name).Return(&expectedVol, nil)
 			vol, err := s.Inspect(name)
 			Expect(err).Should(BeNil())

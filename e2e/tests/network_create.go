@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
+
 	"github.com/runfinch/finch-daemon/e2e/client"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 )
@@ -35,7 +36,7 @@ func NetworkCreate(opt *option.Option) {
 			uclient = client.NewClient(GetDockerHostUrl())
 		})
 
-		var createNetwork = func(request types.NetworkCreateRequest) *http.Response {
+		createNetwork := func(request types.NetworkCreateRequest) *http.Response {
 			json, err := json.Marshal(request)
 			Expect(err).ShouldNot(HaveOccurred(), "marshalling request to JSON")
 
@@ -45,7 +46,7 @@ func NetworkCreate(opt *option.Option) {
 			return httpResponse
 		}
 
-		var unmarshallHTTPResponse = func(httpResponse *http.Response) *types.NetworkCreateResponse {
+		unmarshallHTTPResponse := func(httpResponse *http.Response) *types.NetworkCreateResponse {
 			response := &types.NetworkCreateResponse{}
 
 			body, err := io.ReadAll(httpResponse.Body)
@@ -57,7 +58,7 @@ func NetworkCreate(opt *option.Option) {
 			return response
 		}
 
-		var cleanupNetwork = func(id string) func() {
+		cleanupNetwork := func(id string) func() {
 			return func() {
 				command.Run(opt, "network", "remove", id)
 			}

@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/mux"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_container"
@@ -33,7 +34,6 @@ var _ = Describe("Container Logs API", func() {
 		req      *http.Request
 	)
 	BeforeEach(func() {
-		//initialize the mocks
 		mockCtrl = gomock.NewController(GinkgoT())
 		defer mockCtrl.Finish()
 		logger = mocks_logger.NewLogger(mockCtrl)
@@ -137,7 +137,7 @@ var _ = Describe("Container Logs API", func() {
 })
 
 // logsOptsMatcher is adapted from container create to be a wrapper type to
-// compare logs option structs when we cannot define what GetStreams will be
+// compare logs option structs when we cannot define what GetStreams will be.
 type logsOptsMatcher struct {
 	obj        *types.LogsOptions
 	mismatches []string

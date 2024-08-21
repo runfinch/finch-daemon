@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package volume
 
 import (
@@ -12,6 +15,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_volume"
@@ -32,7 +36,6 @@ var _ = Describe("Volume List API", func() {
 		respJSON     []byte
 	)
 	BeforeEach(func() {
-		//initialize the mocks.
 		mockCtrl = gomock.NewController(GinkgoT())
 		defer mockCtrl.Finish()
 		logger = mocks_logger.NewLogger(mockCtrl)
@@ -49,7 +52,7 @@ var _ = Describe("Volume List API", func() {
 		Expect(err).Should(BeNil())
 		resp = types.VolumesListResponse{
 			Volumes: []native.Volume{
-				native.Volume{
+				{
 					Name:       name,
 					Mountpoint: "/path/to/test-volume",
 					Labels:     nil,
@@ -86,5 +89,4 @@ var _ = Describe("Volume List API", func() {
 			Expect(rr).Should(HaveHTTPStatus(http.StatusInternalServerError))
 		})
 	})
-
 })

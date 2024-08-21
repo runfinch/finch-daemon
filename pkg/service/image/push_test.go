@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+
 	"github.com/runfinch/finch-daemon/pkg/api/handlers/image"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
@@ -27,7 +28,7 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 )
 
-// Unit tests related to image push API
+// Unit tests related to image push API.
 var _ = Describe("Image Push API ", func() {
 	var (
 		ctx       context.Context
@@ -233,11 +234,10 @@ var _ = Describe("Image Push API ", func() {
 		})
 	})
 
-	//TODO: need to add an authenticated push unit test.
-
+	// TODO: need to add an authenticated push unit test.
 })
 
-// dummy containerd image
+// dummy containerd image.
 type mockImage struct {
 	ImageName   string
 	ImageDigest string

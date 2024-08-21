@@ -40,7 +40,7 @@ type StreamWriter struct {
 	initializer    sync.Once
 }
 
-// NewStreamWriter creates a new StreamWriter
+// NewStreamWriter creates a new StreamWriter.
 func NewStreamWriter(w http.ResponseWriter) *StreamWriter {
 	sw := &StreamWriter{
 		responseWriter: w,
@@ -126,7 +126,7 @@ type pullJobWriter struct {
 	mx       sync.Mutex
 }
 
-// PullJobWriter is an extension of StreamWriter that sends image pull status updates from
+// NewPullJobWriter is an extension of StreamWriter that sends image pull status updates from
 // nerdctl to http response as a JSON stream. It ensures that the image is resolved before
 // writing anything to the response body, so that any resolver errors can be sent to the client
 // directly with an appropriate status code.

@@ -21,13 +21,13 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 )
 
-// TestContainerHandler function is the entry point of container handler package's unit test using ginkgo
+// TestContainerHandler function is the entry point of container handler package's unit test using ginkgo.
 func TestContainerHandler(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "UnitTests - Container APIs Handler")
 }
 
-// Unit tests related to check RegisterHandlers() has configured the endpoint properly for containers related API
+// Unit tests related to check RegisterHandlers() has configured the endpoint properly for containers related API.
 var _ = Describe("Container API", func() {
 	var (
 		mockCtrl *gomock.Controller
@@ -59,7 +59,7 @@ var _ = Describe("Container API", func() {
 			Expect(rr.Body).Should(MatchJSON(`{"message": "error from delete api"}`))
 		})
 		It("should call container start method", func() {
-			//setup mocks
+			// setup mocks
 			service.EXPECT().Start(gomock.Any(), gomock.Any()).Return(fmt.Errorf("error from start api"))
 			req, _ = http.NewRequest(http.MethodPost, "/containers/123/start", nil)
 			// call the API to check if it returns the error generated from start method
@@ -77,7 +77,7 @@ var _ = Describe("Container API", func() {
 			Expect(rr.Body).Should(MatchJSON(`{"message": "error from stop api"}`))
 		})
 		It("should call container create method", func() {
-			//setup mocks
+			// setup mocks
 			body := []byte(`{"Image": "test-image"}`)
 			service.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", fmt.Errorf("error from create api"))
 			req, _ = http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
@@ -94,7 +94,7 @@ var _ = Describe("Container API", func() {
 			Expect(rr).Should(HaveHTTPBody(`{"message":"the response writer is not a http.Hijacker"}` + "\n"))
 		})
 		It("should call container inspect method", func() {
-			//setup mocks
+			// setup mocks
 			service.EXPECT().Inspect(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error from inspect api"))
 			req, _ = http.NewRequest(http.MethodGet, "/containers/123/json", nil)
 			// call the API to check if it returns the error generated from inspect method
@@ -103,7 +103,7 @@ var _ = Describe("Container API", func() {
 			Expect(rr.Body).Should(MatchJSON(`{"message": "error from inspect api"}`))
 		})
 		It("should call container list method", func() {
-			//setup mocks
+			// setup mocks
 			service.EXPECT().List(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error from list api"))
 			req, _ = http.NewRequest(http.MethodGet, "/containers/json", nil)
 			// call the API to check if it returns the error generated from list method
@@ -112,7 +112,7 @@ var _ = Describe("Container API", func() {
 			Expect(rr.Body).Should(MatchJSON(`{"message": "error from list api"}`))
 		})
 		It("should call container rename method", func() {
-			//setup mocks
+			// setup mocks
 			service.EXPECT().Rename(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("error from rename api"))
 			req, _ = http.NewRequest(http.MethodPost, "/containers/123/rename", nil)
 			// call the API to check if it returns the error generated from list method
@@ -128,7 +128,7 @@ var _ = Describe("Container API", func() {
 			Expect(rr.Body).Should(MatchJSON(`{"message":"you must choose at least one stream"}`))
 		})
 		It("should call container stats method", func() {
-			//setup mocks
+			// setup mocks
 			service.EXPECT().Stats(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error from stats api"))
 			req, _ = http.NewRequest(http.MethodGet, "/containers/123/stats", nil)
 			// call the API to check if it returns the error generated from stats method
@@ -137,5 +137,4 @@ var _ = Describe("Container API", func() {
 			Expect(rr.Body).Should(MatchJSON(`{"message": "error from stats api"}`))
 		})
 	})
-
 })

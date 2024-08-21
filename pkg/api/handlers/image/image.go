@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package image
 
 import (
@@ -8,6 +11,7 @@ import (
 	"github.com/containerd/nerdctl/pkg/config"
 	"github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
 	dockertypes "github.com/docker/cli/cli/config/types"
+
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 )

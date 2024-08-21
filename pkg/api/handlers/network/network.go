@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package network
 
 import (
@@ -19,7 +22,7 @@ type Service interface {
 	List(ctx context.Context) ([]*types.NetworkInspectResponse, error)
 }
 
-// RegisterHandlers register all the supported endpoints related to the network APIs
+// RegisterHandlers register all the supported endpoints related to the network APIs.
 func RegisterHandlers(r types.VersionedRouter, service Service, conf *config.Config, logger flog.Logger) {
 	h := newHandler(service, conf, logger)
 

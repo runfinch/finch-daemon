@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package image
 
 import (
@@ -17,13 +20,13 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 )
 
-// TestImageHandler function is the entry point of image handler package's unit test using ginkgo
+// TestImageHandler function is the entry point of image handler package's unit test using ginkgo.
 func TestImageHandler(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "UnitTests - Image APIs Handler")
 }
 
-// Unit tests related to check RegisterHandlers() has configured the endpoint properly for image related APIs
+// Unit tests related to check RegisterHandlers() has configured the endpoint properly for image related APIs.
 var _ = Describe("Image API ", func() {
 	var (
 		mockCtrl *gomock.Controller
@@ -43,7 +46,6 @@ var _ = Describe("Image API ", func() {
 		RegisterHandlers(types.VersionedRouter{Router: router}, service, &conf, logger)
 		rr = httptest.NewRecorder()
 		logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
-
 	})
 	Context("handler", func() {
 		It("should call image inspect method", func() {

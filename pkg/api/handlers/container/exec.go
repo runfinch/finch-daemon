@@ -10,12 +10,13 @@ import (
 
 	"github.com/containerd/containerd/namespaces"
 	"github.com/gorilla/mux"
+
 	"github.com/runfinch/finch-daemon/pkg/api/response"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
 
-// exec creates a new exec instance
+// exec creates a new exec instance.
 func (h *handler) exec(w http.ResponseWriter, r *http.Request) {
 	cid, ok := mux.Vars(r)["id"]
 	if !ok {
@@ -53,5 +54,4 @@ func (h *handler) exec(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusCreated, &types.ExecCreateResponse{
 		Id: eid,
 	})
-	return
 }

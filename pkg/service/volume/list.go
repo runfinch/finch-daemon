@@ -7,12 +7,12 @@ import (
 	"context"
 
 	"github.com/containerd/nerdctl/pkg/inspecttypes/native"
+
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 )
 
 // List returns a list of volumes.
 func (s *service) List(ctx context.Context, filters []string) (*types.VolumesListResponse, error) {
-
 	// TODO: include size?
 	vols, err := s.nctlVolumeSvc.ListVolumes(false, filters)
 	if err != nil {

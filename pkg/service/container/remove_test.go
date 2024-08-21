@@ -12,6 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/api/handlers/container"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_archive"
@@ -20,7 +21,7 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 )
 
-// Unit tests related to container remove API
+// Unit tests related to container remove API.
 var _ = Describe("Container Remove API ", func() {
 	var (
 		ctx          context.Context
@@ -62,7 +63,7 @@ var _ = Describe("Container Remove API ", func() {
 		})
 		It("should return internal error", func() {
 			// set up the mock to mimic there was an error while searching for the container
-			mockErr := fmt.Errorf("some error occured during container search")
+			mockErr := fmt.Errorf("some error occurred during container search")
 			cdClient.EXPECT().SearchContainer(gomock.Any(), gomock.Any()).Return(
 				[]containerd.Container{}, mockErr)
 			logger.EXPECT().Errorf("failed to search container: %s. error: %s", cid, mockErr.Error())
@@ -123,6 +124,5 @@ var _ = Describe("Container Remove API ", func() {
 			// service should return error
 			Expect(err).Should(Not(BeNil()))
 		})
-
 	})
 })

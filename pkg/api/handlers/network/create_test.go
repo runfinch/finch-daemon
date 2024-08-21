@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package network
 
 import (
@@ -13,6 +16,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
@@ -44,13 +48,13 @@ var _ = Describe("Network Create API Handler", func() {
 		responseRecorder *httptest.ResponseRecorder
 	)
 
-	var parseableRequestBody = func(request types.NetworkCreateRequest) io.Reader {
+	parseableRequestBody := func(request types.NetworkCreateRequest) io.Reader {
 		json, err := json.Marshal(request)
 		Expect(err).ShouldNot(HaveOccurred(), "crafting request JSON")
 		return bytes.NewReader(json)
 	}
 
-	var simpleRequest = func(opts ...types.NetworkCreateOption) (io.Reader, types.NetworkCreateRequest) {
+	simpleRequest := func(opts ...types.NetworkCreateOption) (io.Reader, types.NetworkCreateRequest) {
 		request := *types.NewCreateNetworkRequest(networkName, opts...)
 		return parseableRequestBody(request), request
 	}

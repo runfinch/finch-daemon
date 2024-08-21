@@ -9,8 +9,9 @@ import (
 
 	"github.com/containerd/containerd/events"
 	"github.com/containerd/typeurl/v2"
-	eventtype "github.com/runfinch/finch-daemon/pkg/api/events"
 	"github.com/sirupsen/logrus"
+
+	eventtype "github.com/runfinch/finch-daemon/pkg/api/events"
 )
 
 func (s *service) SubscribeEvents(ctx context.Context, filters map[string][]string) (<-chan *eventtype.Event, <-chan error) {

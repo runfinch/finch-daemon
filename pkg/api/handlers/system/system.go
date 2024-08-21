@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 // Package system contains functions and structures related to system level APIs
 package system
 
@@ -7,6 +10,7 @@ import (
 
 	"github.com/containerd/nerdctl/pkg/config"
 	"github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
+
 	eventtype "github.com/runfinch/finch-daemon/pkg/api/events"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/backend"
@@ -24,13 +28,14 @@ type Service interface {
 }
 
 // RegisterHandlers sets up the handlers and assigns the handlers to the router. Both r and versionedR are used
-// as `GET /version` is called by the docker python client without the API version number
+// as `GET /version` is called by the docker python client without the API version number.
 func RegisterHandlers(
 	r types.VersionedRouter,
 	service Service,
 	conf *config.Config,
 	ncVersionSvc backend.NerdctlSystemSvc,
-	logger flog.Logger) {
+	logger flog.Logger,
+) {
 	h := newHandler(service, conf, ncVersionSvc, logger)
 	r.HandleFunc("/info", h.info, http.MethodGet)
 	r.HandleFunc("/version", h.version, http.MethodGet)

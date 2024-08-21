@@ -19,6 +19,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_archive"
 
 	"github.com/runfinch/finch-daemon/pkg/api/handlers/container"
@@ -166,7 +167,8 @@ var _ = Describe("Container Attach API ", func() {
 			testAny, _ := typeurl.MarshalAny(testJSON)
 			// continue setting up mocks
 			con.EXPECT().Extensions(gomock.Any()).Return(map[string]typeurl.Any{
-				k8slabels.ContainerMetadataExtension: testAny}, nil)
+				k8slabels.ContainerMetadataExtension: testAny,
+			}, nil)
 			cdClient.EXPECT().GetContainerStatus(gomock.Any(), gomock.Any()).Return(containerd.Running)
 			con.EXPECT().ID().Return(cid)
 			ncClient.EXPECT().LoggingInitContainerLogViewer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
@@ -201,7 +203,8 @@ var _ = Describe("Container Attach API ", func() {
 			testAny, _ := typeurl.MarshalAny(testJSON)
 			// continue setting up mocks
 			con.EXPECT().Extensions(gomock.Any()).Return(map[string]typeurl.Any{
-				k8slabels.ContainerMetadataExtension: testAny}, nil)
+				k8slabels.ContainerMetadataExtension: testAny,
+			}, nil)
 			cdClient.EXPECT().GetContainerStatus(gomock.Any(), gomock.Any()).Return(containerd.Stopped)
 			con.EXPECT().Task(gomock.Any(), nil).Return(nil, fmt.Errorf("error"))
 			con.EXPECT().ID().Return(cid)
@@ -238,7 +241,8 @@ var _ = Describe("Container Attach API ", func() {
 			testAny, _ := typeurl.MarshalAny(testJSON)
 			// continue setting up mocks
 			con.EXPECT().Extensions(gomock.Any()).Return(map[string]typeurl.Any{
-				k8slabels.ContainerMetadataExtension: testAny}, nil)
+				k8slabels.ContainerMetadataExtension: testAny,
+			}, nil)
 			cdClient.EXPECT().GetContainerStatus(gomock.Any(), gomock.Any()).Return(containerd.Running)
 			cdClient.EXPECT().GetContainerTaskWait(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil, fmt.Errorf(expErr))
 			logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).Return()

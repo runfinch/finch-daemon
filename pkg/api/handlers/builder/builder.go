@@ -11,17 +11,19 @@ import (
 
 	ncTypes "github.com/containerd/nerdctl/pkg/api/types"
 	"github.com/containerd/nerdctl/pkg/config"
+
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/backend"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 )
 
-// RegisterHandlers register all the supported endpoints related to the container APIs
+// RegisterHandlers register all the supported endpoints related to the container APIs.
 func RegisterHandlers(r types.VersionedRouter,
 	service Service,
 	conf *config.Config,
 	logger flog.Logger,
-	ncBuildSvc backend.NerdctlBuilderSvc) {
+	ncBuildSvc backend.NerdctlBuilderSvc,
+) {
 	h := newHandler(service, conf, logger, ncBuildSvc)
 	r.HandleFunc("/build", h.build, http.MethodPost)
 }
@@ -33,7 +35,7 @@ type Service interface {
 	Build(ctx context.Context, options *ncTypes.BuilderBuildOptions, tarBody io.ReadCloser) ([]types.BuildResult, error)
 }
 
-// newHandler creates the handler that serves all the container related APIs
+// newHandler creates the handler that serves all the container related APIs.
 func newHandler(service Service, conf *config.Config, logger flog.Logger, ncBuildSvc backend.NerdctlBuilderSvc) *handler {
 	return &handler{
 		service:    service,

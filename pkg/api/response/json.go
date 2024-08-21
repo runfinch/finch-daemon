@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-// Status writes the supplied HTTP status code to response header
+// Status writes the supplied HTTP status code to response header.
 func Status(w http.ResponseWriter, code int) {
 	w.WriteHeader(code)
 }

@@ -8,14 +8,16 @@ import (
 	"fmt"
 
 	ncTypes "github.com/containerd/nerdctl/pkg/api/types"
+
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
 
 // Rename function renames a running container. It returns nil when it successfully renames the container.
 func (s *service) Rename(ctx context.Context, cid string, newName string, opts ncTypes.ContainerRenameOptions) error {
-	con, err := s.getContainer(ctx, newName)
+	var err error
+	con, _ := s.getContainer(ctx, newName)
 	if con != nil {
-		err = errdefs.NewConflict(fmt.Errorf("Container with name %s already exists", newName))
+		err = errdefs.NewConflict(fmt.Errorf("container with name %s already exists", newName))
 		s.logger.Errorf("Failed to rename container: %s. Error: %v", cid, err)
 		return err
 	}

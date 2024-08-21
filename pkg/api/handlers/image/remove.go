@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package image
 
 import (
@@ -5,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+
 	"github.com/runfinch/finch-daemon/pkg/api/response"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
@@ -15,14 +19,14 @@ const (
 	removeResponseDeletedKey  = "Deleted"
 )
 
-func (i *handler) remove(w http.ResponseWriter, r *http.Request) {
+func (h *handler) remove(w http.ResponseWriter, r *http.Request) {
 	name := mux.Vars(r)["name"]
 	f := r.URL.Query().Get("force")
 	force, err := strconv.ParseBool(f)
 	if err != nil {
 		force = false
 	}
-	deleted, untagged, err := i.service.Remove(r.Context(), name, force)
+	deleted, untagged, err := h.service.Remove(r.Context(), name, force)
 	if err != nil {
 		var code int
 		switch {
@@ -36,10 +40,10 @@ func (i *handler) remove(w http.ResponseWriter, r *http.Request) {
 		response.SendErrorResponse(w, code, err)
 		return
 	}
-	response.JSON(w, http.StatusOK, i.buildRemoveResp(untagged, deleted))
+	response.JSON(w, http.StatusOK, h.buildRemoveResp(untagged, deleted))
 }
 
-func (*handler) buildRemoveResp(untagged, deleted []string) []map[string]string {
+func (handler) buildRemoveResp(untagged, deleted []string) []map[string]string {
 	resp := make([]map[string]string, 0, len(deleted)+len(untagged))
 	push := func(key string, items []string) {
 		for _, item := range items {

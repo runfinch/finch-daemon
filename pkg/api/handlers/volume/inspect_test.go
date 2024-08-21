@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package volume
 
 import (
@@ -11,6 +14,7 @@ import (
 	"github.com/gorilla/mux"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_volume"
@@ -27,7 +31,6 @@ var _ = Describe("Volume Inspect API", func() {
 		volName  string
 	)
 	BeforeEach(func() {
-		//initialize the mocks.
 		mockCtrl = gomock.NewController(GinkgoT())
 		defer mockCtrl.Finish()
 		logger = mocks_logger.NewLogger(mockCtrl)
@@ -43,13 +46,12 @@ var _ = Describe("Volume Inspect API", func() {
 	})
 	Context("handler", func() {
 		It("should successfully return volume details", func() {
-			resp :=
-				native.Volume{
-					Name:       "test-volume",
-					Mountpoint: "/path/to/test-volume",
-					Labels:     nil,
-					Size:       100,
-				}
+			resp := native.Volume{
+				Name:       "test-volume",
+				Mountpoint: "/path/to/test-volume",
+				Labels:     nil,
+				Size:       100,
+			}
 			service.EXPECT().Inspect(volName).Return(&resp, nil)
 
 			// handler should return response object with 200 status code
