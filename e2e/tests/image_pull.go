@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
+
 	"github.com/runfinch/finch-daemon/e2e/client"
 )
 
@@ -123,7 +124,7 @@ func ImagePull(opt *option.Option) {
 	})
 }
 
-// waitForResponse waits until the http response is closed with EOF
+// waitForResponse waits until the http response is closed with EOF.
 func waitForResponse(resp *http.Response) {
 	buf := make([]byte, 4096)
 	for {

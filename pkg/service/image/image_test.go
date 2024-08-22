@@ -17,13 +17,13 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_backend"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 )
 
-// TestImageHandler function is the entry point of image service package's unit test using ginkgo
+// TestImageHandler function is the entry point of image service package's unit test using ginkgo.
 func TestImageService(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "UnitTests - Image APIs Service")
@@ -58,19 +58,19 @@ var _ = Describe("Image API service common ", func() {
 		digest2 = digest.NewDigestFromBytes(digest.SHA256, []byte("abc123"))
 		img = images.Image{
 			Name: name,
-			Target: v1.Descriptor{
+			Target: ocispec.Descriptor{
 				Digest: digest1,
 			},
 		}
 		img2 = images.Image{
 			Name: name2,
-			Target: v1.Descriptor{
+			Target: ocispec.Descriptor{
 				Digest: digest1,
 			},
 		}
 		img3 = images.Image{
 			Name: name2,
-			Target: v1.Descriptor{
+			Target: ocispec.Descriptor{
 				Digest: digest2,
 			},
 		}
@@ -156,11 +156,12 @@ func (m *mockGetAuthCreds) Return(creds dockerconfigresolver.AuthCreds, err erro
 		return creds, err
 	}
 }
+
 func (m *mockGetAuthCreds) GetAuthCreds(domain string, ac dockertypes.AuthConfig) {
 	m.ctrl.Call(m, "GetAuthCreds", domain, ac)
 }
 
-// dummy remotes resolver
+// dummy remotes resolver.
 type mockResolver struct{}
 
 func (m *mockResolver) Resolve(context.Context, string) (string, ocispec.Descriptor, error) {

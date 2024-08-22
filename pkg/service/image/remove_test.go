@@ -12,13 +12,14 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+
 	"github.com/runfinch/finch-daemon/pkg/api/handlers/image"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_backend"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 )
 
-// Unit tests related to image remove API
+// Unit tests related to image remove API.
 var _ = Describe("Image Remove API", func() {
 	var (
 		ctx      context.Context
@@ -51,7 +52,7 @@ var _ = Describe("Image Remove API", func() {
 			// search image method returns one image
 			ncClient.EXPECT().SearchImage(gomock.Any(), name).Return(
 				1, 1, []*images.Image{&img}, nil)
-			//setup mock to mimic no image is being used by any container
+
 			cdClient.EXPECT().GetUsedImages(gomock.Any()).Return(
 				make(map[string]string),
 				make(map[string]string),
@@ -66,7 +67,6 @@ var _ = Describe("Image Remove API", func() {
 			Expect(untagged).Should(ContainElement("test-image:test-digest"))
 			Expect(deleted).Should(HaveLen(1))
 			Expect(deleted).Should(ContainElement("test-digest"))
-
 		})
 		It("should return NotFound error if image was not found", func() {
 			// search image method returns no image
@@ -95,7 +95,7 @@ var _ = Describe("Image Remove API", func() {
 		It("should return an error image is being used by a running container", func() {
 			// search image method returns one image
 			ncClient.EXPECT().SearchImage(gomock.Any(), name).Return(1, 1, []*images.Image{&img}, nil)
-			//setup mock to mimic no image is being used by any container
+
 			cdClient.EXPECT().GetUsedImages(gomock.Any()).Return(
 				make(map[string]string),
 				map[string]string{"test-image": "test-running-container"},
@@ -111,7 +111,7 @@ var _ = Describe("Image Remove API", func() {
 		It("should return an error image is being used by a stopped container", func() {
 			// search image method returns one image
 			ncClient.EXPECT().SearchImage(gomock.Any(), name).Return(1, 1, []*images.Image{&img}, nil)
-			//setup mock to mimic no image is being used by any container
+
 			cdClient.EXPECT().GetUsedImages(gomock.Any()).Return(
 				map[string]string{"test-image": "test-stopped-container"},
 				make(map[string]string),
@@ -127,7 +127,7 @@ var _ = Describe("Image Remove API", func() {
 		It("should successfully remove the image used by stopped container with force flag", func() {
 			// search image method returns one image
 			ncClient.EXPECT().SearchImage(gomock.Any(), name).Return(1, 1, []*images.Image{&img}, nil)
-			//setup mock to mimic no image is being used by any container
+
 			cdClient.EXPECT().GetUsedImages(gomock.Any()).Return(
 				map[string]string{"test-image": "test-stopped-container"},
 				make(map[string]string),

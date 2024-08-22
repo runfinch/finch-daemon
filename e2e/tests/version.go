@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
+
 	"github.com/runfinch/finch-daemon/e2e/client"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 )
@@ -19,9 +20,7 @@ import (
 // SystemVersion tests the `Get /version` API.
 func SystemVersion(opt *option.Option) {
 	Describe("version API", func() {
-		var (
-			uClient *http.Client
-		)
+		var uClient *http.Client
 		BeforeEach(func() {
 			// create a custom client to use http over unix sockets
 			uClient = client.NewClient(GetDockerHostUrl())
@@ -29,6 +28,7 @@ func SystemVersion(opt *option.Option) {
 		})
 		It("should successfully get the version info", func() {
 			res, err := uClient.Get(client.ConvertToFinchUrl("", "/version"))
+			Expect(err).ShouldNot(HaveOccurred())
 			jd := json.NewDecoder(res.Body)
 			var v types.VersionInfo
 			err = jd.Decode(&v)

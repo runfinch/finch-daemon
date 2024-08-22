@@ -9,9 +9,10 @@ import (
 
 	"github.com/containerd/containerd/namespaces"
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
+
 	"github.com/runfinch/finch-daemon/pkg/api/response"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
-	"github.com/sirupsen/logrus"
 )
 
 func (h *handler) remove(w http.ResponseWriter, r *http.Request) {

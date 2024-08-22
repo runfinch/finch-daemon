@@ -15,6 +15,7 @@ import (
 	"github.com/containerd/containerd/cio"
 	cerrdefs "github.com/containerd/containerd/errdefs"
 	"github.com/containerd/nerdctl/pkg/signalutil"
+
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
@@ -46,7 +47,7 @@ func (s *StdinCloser) Read(p []byte) (int, error) {
 func (s *service) Start(ctx context.Context, options *types.ExecStartOptions) error {
 	var attach cio.Attach
 	var in io.Reader
-	var stdinC = &StdinCloser{
+	stdinC := &StdinCloser{
 		Stdin: options.Stdin,
 	}
 	if !options.Detach {

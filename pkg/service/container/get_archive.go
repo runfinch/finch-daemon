@@ -12,8 +12,9 @@ import (
 
 	"github.com/containerd/containerd"
 	cerrdefs "github.com/containerd/containerd/errdefs"
-	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/spf13/afero"
+
+	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
 
 // GetPathToFilesInContainer locates files in a container. If the container is running, it will use the running container's

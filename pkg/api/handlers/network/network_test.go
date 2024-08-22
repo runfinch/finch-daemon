@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package network
 
 import (
@@ -18,7 +21,7 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_network"
 )
 
-// TestNetworkHandler function is the entry point of network handler package's unit test using ginkgo
+// TestNetworkHandler function is the entry point of network handler package's unit test using ginkgo.
 func TestNetworkHandler(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "UnitTests - Network APIs Handler")

@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package volume
 
 import (
@@ -11,6 +14,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_volume"
 )
@@ -25,7 +29,6 @@ var _ = Describe("Create Volume API", func() {
 		req      *http.Request
 	)
 	BeforeEach(func() {
-		//initialize the mocks.
 		mockCtrl = gomock.NewController(GinkgoT())
 		defer mockCtrl.Finish()
 		logger = mocks_logger.NewLogger(mockCtrl)
@@ -73,5 +76,4 @@ var _ = Describe("Create Volume API", func() {
 			Expect(rr.Body).Should(MatchJSON(`{"message": "error from create api"}`))
 		})
 	})
-
 })

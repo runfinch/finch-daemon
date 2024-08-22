@@ -22,13 +22,14 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/spf13/afero"
+
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_archive"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_backend"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_container"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
-	"github.com/spf13/afero"
 )
 
 type MockReadCloser struct {

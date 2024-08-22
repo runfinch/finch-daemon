@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// TestNetworkService is the entry point of the network service package's unit tests using ginkgo
+// TestNetworkService is the entry point of the network service package's unit tests using ginkgo.
 func TestNetworkService(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "UnitTests - Network APIs Service")

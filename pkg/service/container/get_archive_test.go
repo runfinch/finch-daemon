@@ -17,6 +17,8 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/spf13/afero"
+
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_archive"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_backend"
@@ -24,7 +26,6 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_ecc"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_http"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
-	"github.com/spf13/afero"
 )
 
 var _ = Describe("Container Get Archive API", func() {

@@ -11,6 +11,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/api/handlers/network"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_backend"
@@ -48,7 +49,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 			ncNetClient.EXPECT().FilterNetworks(gomock.Any()).Return([]*netutil.NetworkConfig{}, nil)
 			logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
 
-			var nid = networkID
+			nid := networkID
 			ncNetClient.EXPECT().CreateNetwork(gomock.Any()).Return(&netutil.NetworkConfig{
 				NerdctlID: &nid,
 			}, nil)
@@ -64,7 +65,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 			It("should return the network ID and a warning that the network exists already", func() {
 				request := types.NewCreateNetworkRequest(networkName)
 
-				var nid = networkID
+				nid := networkID
 				ncNetClient.EXPECT().FilterNetworks(gomock.Any()).Return([]*netutil.NetworkConfig{{NerdctlID: &nid}}, nil)
 
 				response, err := service.Create(ctx, *request)
@@ -171,7 +172,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 				ncNetClient.EXPECT().FilterNetworks(gomock.Any()).Return([]*netutil.NetworkConfig{}, nil)
 				logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
 
-				var nid = networkID
+				nid := networkID
 				ncNetClient.EXPECT().CreateNetwork(gomock.Any()).DoAndReturn(func(actual netutil.CreateOptions) (*netutil.NetworkConfig, error) {
 					Expect(actual.Driver).Should(Equal(defaultExpectedDriver))
 					Expect(actual.IPAMDriver).Should(Equal(defaultExpectedIPAMDriver))
@@ -193,7 +194,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 				ncNetClient.EXPECT().FilterNetworks(gomock.Any()).Return([]*netutil.NetworkConfig{}, nil)
 				logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
 
-				var nid = networkID
+				nid := networkID
 				ncNetClient.EXPECT().CreateNetwork(gomock.Any()).DoAndReturn(func(actual netutil.CreateOptions) (*netutil.NetworkConfig, error) {
 					Expect(actual.Driver).Should(Equal(overrideExpectedDriver))
 					Expect(actual.IPAMDriver).Should(Equal(overrideExpectedIPAMDriver))
@@ -234,7 +235,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 				ncNetClient.EXPECT().FilterNetworks(gomock.Any()).Return([]*netutil.NetworkConfig{}, nil)
 				logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
 
-				var nid = networkID
+				nid := networkID
 				ncNetClient.EXPECT().CreateNetwork(gomock.Any()).DoAndReturn(func(actual netutil.CreateOptions) (*netutil.NetworkConfig, error) {
 					Expect(actual.Subnets).Should(Equal(expectedSubnets))
 					Expect(actual.IPRange).Should(Equal(expectedIPRange))
@@ -264,7 +265,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 					ncNetClient.EXPECT().FilterNetworks(gomock.Any()).Return([]*netutil.NetworkConfig{}, nil)
 					logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
 
-					var nid = networkID
+					nid := networkID
 					ncNetClient.EXPECT().CreateNetwork(gomock.Any()).DoAndReturn(func(actual netutil.CreateOptions) (*netutil.NetworkConfig, error) {
 						Expect(actual.Subnets).Should(Equal(expectedSubnets))
 						Expect(actual.IPRange).Should(BeEmpty())
@@ -293,7 +294,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 					ncNetClient.EXPECT().FilterNetworks(gomock.Any()).Return([]*netutil.NetworkConfig{}, nil)
 					logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
 
-					var nid = networkID
+					nid := networkID
 					ncNetClient.EXPECT().CreateNetwork(gomock.Any()).DoAndReturn(func(actual netutil.CreateOptions) (*netutil.NetworkConfig, error) {
 						Expect(actual.Subnets).Should(BeEmpty())
 						Expect(actual.IPRange).Should(Equal(expectedIPRange))
@@ -322,7 +323,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 					ncNetClient.EXPECT().FilterNetworks(gomock.Any()).Return([]*netutil.NetworkConfig{}, nil)
 					logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
 
-					var nid = networkID
+					nid := networkID
 					ncNetClient.EXPECT().CreateNetwork(gomock.Any()).DoAndReturn(func(actual netutil.CreateOptions) (*netutil.NetworkConfig, error) {
 						Expect(actual.Subnets).Should(BeEmpty())
 						Expect(actual.IPRange).Should(BeEmpty())

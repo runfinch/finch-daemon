@@ -6,7 +6,7 @@ package tests
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
+
 	"github.com/runfinch/finch-daemon/e2e/client"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 )
@@ -45,7 +46,7 @@ func VolumeList(opt *option.Option) {
 			Expect(res.StatusCode).Should(Equal(http.StatusOK))
 
 			// Read response and ensure more than one volume listed.
-			body, err := ioutil.ReadAll(res.Body)
+			body, err := io.ReadAll(res.Body)
 			Expect(err).Should(BeNil())
 			defer res.Body.Close()
 			var volumesResp types.VolumesListResponse
@@ -64,7 +65,7 @@ func VolumeList(opt *option.Option) {
 
 			// Read response and expect len to be 1, volume name to be
 			// the testVolumeName we filtered for.
-			body, err := ioutil.ReadAll(res.Body)
+			body, err := io.ReadAll(res.Body)
 			Expect(err).Should(BeNil())
 			defer res.Body.Close()
 

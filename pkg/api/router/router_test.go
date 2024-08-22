@@ -14,18 +14,19 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_system"
 	"github.com/runfinch/finch-daemon/pkg/version"
 )
 
-// TestRouterFunctions is the entry point for unit tests in the router package
+// TestRouterFunctions is the entry point for unit tests in the router package.
 func TestRouterFunctions(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "UnitTests - Router functions")
 }
 
-// Unit tests for the version middleware
+// Unit tests for the version middleware.
 var _ = Describe("version middleware test", func() {
 	var (
 		opts     *Options
@@ -35,7 +36,7 @@ var _ = Describe("version middleware test", func() {
 		sysSvc   *mocks_system.MockService
 	)
 
-	//TODO: rethink the unit test cases for the router.
+	// TODO: rethink the unit test cases for the router.
 	BeforeEach(func() {
 		mockCtrl := gomock.NewController(GinkgoT())
 		defer mockCtrl.Finish()
@@ -71,7 +72,8 @@ var _ = Describe("version middleware test", func() {
 					Version: "v1.7.1",
 					Details: map[string]string{
 						"GitCommit": "1677a17964311325ed1c31e2c0a3589ce6d5c30d",
-					}},
+					},
+				},
 			},
 		}
 		sysSvc.EXPECT().GetVersion(gomock.Any()).Return(&expected, nil).AnyTimes()

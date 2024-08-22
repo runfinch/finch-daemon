@@ -15,6 +15,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/api/response"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
@@ -37,7 +38,6 @@ var _ = Describe("Build API", func() {
 		auxMsg     []*json.RawMessage
 	)
 	BeforeEach(func() {
-		//initialize the mocks.
 		mockCtrl = gomock.NewController(GinkgoT())
 		defer mockCtrl.Finish()
 		logger = mocks_logger.NewLogger(mockCtrl)
@@ -67,7 +67,6 @@ var _ = Describe("Build API", func() {
 			service.EXPECT().Build(gomock.Any(), gomock.Any(), gomock.Any()).Return(result, nil)
 			ncBuildSvc.EXPECT().GetBuildkitHost().Return("mocked-value", nil).AnyTimes()
 
-			//handler should return success message with 204 status code.
 			h.build(rr, req)
 			Expect(rr).Should(HaveHTTPStatus(http.StatusOK))
 
@@ -91,8 +90,6 @@ var _ = Describe("Build API", func() {
 			service.EXPECT().Build(gomock.Any(), gomock.Any(), gomock.Any()).Return(
 				nil, errdefs.NewNotFound(fmt.Errorf("some error")))
 			ncBuildSvc.EXPECT().GetBuildkitHost().Return("mocked-value", nil).AnyTimes()
-
-			//handler should return 500 status code with an error msg.
 			h.build(rr, req)
 			Expect(rr).Should(HaveHTTPStatus(http.StatusInternalServerError))
 			Expect(rr.Body).Should(MatchJSON(`{"message": "some error"}`))

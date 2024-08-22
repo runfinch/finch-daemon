@@ -10,6 +10,7 @@ import (
 
 	"github.com/containerd/nerdctl/pkg/tarutil"
 	"github.com/docker/docker/pkg/archive"
+
 	"github.com/runfinch/finch-daemon/pkg/ecc"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 )
@@ -31,7 +32,7 @@ func NewTarCreator(ecc ecc.ExecCmdCreator, logger flog.Logger) TarCreator {
 	}
 }
 
-// CreateTarCommand creates an *exec.Cmd that will output a tar archive of the provided srcPath to stdout
+// CreateTarCommand creates an *exec.Cmd that will output a tar archive of the provided srcPath to stdout.
 func (c *tarCreator) CreateTarCommand(srcPath string, slashDot bool) (ecc.ExecCmd, error) {
 	tarBinary, _, err := tarutil.FindTarBinary()
 	if err != nil {
@@ -64,13 +65,13 @@ type TarExtractor interface {
 	ExtractCompressed(tarArchive io.Reader, dest string, options *archive.TarOptions) error
 }
 
-// tarExtractor struct in an implementation of TarExtractor. It extracts uncompressed tar file
+// tarExtractor struct in an implementation of TarExtractor. It extracts uncompressed tar file.
 type tarExtractor struct {
 	ecc    ecc.ExecCmdCreator
 	logger flog.Logger
 }
 
-// NewTarExtractor creates a new UncompressedTarExtractor
+// NewTarExtractor creates a new UncompressedTarExtractor.
 func NewTarExtractor(ecc ecc.ExecCmdCreator, logger flog.Logger) TarExtractor {
 	return &tarExtractor{
 		ecc:    ecc,
@@ -78,7 +79,7 @@ func NewTarExtractor(ecc ecc.ExecCmdCreator, logger flog.Logger) TarExtractor {
 	}
 }
 
-// ExtractInTemp is implementation of TarExtractor interface. This function extracts a tar file in a dest dir
+// ExtractInTemp is implementation of TarExtractor interface. This function extracts a tar file in a dest dir.
 func (ext *tarExtractor) ExtractInTemp(reader io.Reader, dirPrefix string) (ecc.ExecCmd, error) {
 	dir, err := os.MkdirTemp(os.TempDir(), dirPrefix)
 	if err != nil {
@@ -88,7 +89,7 @@ func (ext *tarExtractor) ExtractInTemp(reader io.Reader, dirPrefix string) (ecc.
 	return ext.CreateExtractCmd(reader, dir)
 }
 
-// CreateExtractCmd is implementation of TarExtractor interface. This function extracts a tar file in a dest dir
+// CreateExtractCmd is implementation of TarExtractor interface. This function extracts a tar file in a dest dir.
 func (ext *tarExtractor) CreateExtractCmd(reader io.Reader, destDir string) (ecc.ExecCmd, error) {
 	tarBinary, _, err := tarutil.FindTarBinary()
 	if err != nil {
@@ -101,7 +102,7 @@ func (ext *tarExtractor) CreateExtractCmd(reader io.Reader, destDir string) (ecc
 	return cmd, nil
 }
 
-// Cleanup function delete the extracted directory
+// Cleanup function delete the extracted directory.
 func (ext *tarExtractor) Cleanup(cmd ecc.ExecCmd) {
 	// clean up not required
 	if cmd == nil {

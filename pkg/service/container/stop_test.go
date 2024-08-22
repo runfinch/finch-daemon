@@ -11,6 +11,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/api/handlers/container"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_archive"
@@ -19,7 +20,7 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 )
 
-// Unit tests related to container stop API
+// Unit tests related to container stop API.
 var _ = Describe("Container Stop API ", func() {
 	var (
 		ctx          context.Context
@@ -51,10 +52,10 @@ var _ = Describe("Container Stop API ", func() {
 			cdClient.EXPECT().GetContainerStatus(gomock.Any(), gomock.Any()).Return(containerd.Running)
 			cdClient.EXPECT().SearchContainer(gomock.Any(), gomock.Any()).Return(
 				[]containerd.Container{con}, nil)
-			//mock the nerdctl client to mock the stop container was successful without any error.
+
 			ncClient.EXPECT().StopContainer(ctx, con, gomock.Any())
 			logger.EXPECT().Debugf("successfully stopped: %s", cid)
-			//service should not return any error
+
 			err := service.Stop(ctx, cid, nil)
 			Expect(err).Should(BeNil())
 		})
@@ -113,5 +114,4 @@ var _ = Describe("Container Stop API ", func() {
 			Expect(err).Should(Equal(expectedErr))
 		})
 	})
-
 })

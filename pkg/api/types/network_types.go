@@ -201,7 +201,7 @@ type NetworkCreateResponse struct {
 	Warning string `json:"Warning,omitempty"`
 }
 
-// NetworkInspectResponse models a single network object in response to /networks/{id}
+// NetworkInspectResponse models a single network object in response to /networks/{id}.
 type NetworkInspectResponse struct {
 	Name string `json:"Name"`
 	ID   string `json:"Id"`

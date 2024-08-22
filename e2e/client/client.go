@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-// NewClient creates a new http client that connects to the finch-daemon server
+// NewClient creates a new http client that connects to the finch-daemon server.
 func NewClient(socketPath string) *http.Client {
 	if socketPath == "" {
 		panic("socketPath is empty")

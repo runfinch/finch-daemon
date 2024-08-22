@@ -14,6 +14,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_archive"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_backend"
@@ -21,7 +22,7 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 )
 
-// Unit tests related to container create API
+// Unit tests related to container create API.
 var _ = Describe("Container Create API ", func() {
 	var (
 		ctx            context.Context
@@ -62,7 +63,6 @@ var _ = Describe("Container Create API ", func() {
 		con.EXPECT().ID().Return(cid).AnyTimes()
 		tarExtractor = mocks_archive.NewMockTarExtractor(mockCtrl)
 
-		//service = NewService(cdClient, mockNerdctlService{ncContainerSvc, ncNetworkSvc}, logger, nil, nil, tarExtractor)
 		svc = &service{
 			client:           cdClient,
 			nctlContainerSvc: mockNerdctlService{ncContainerSvc, ncNetworkSvc},
@@ -250,7 +250,7 @@ var _ = Describe("Container Create API ", func() {
 			// FilterNetworks returns an error
 			ncNetworkSvc.EXPECT().FilterNetworks(gomock.Any()).Return(nil, mockErr)
 
-			// function should propogate the error from FilterNetworks
+			// function should propagate the error from FilterNetworks
 			err := svc.translateNetworkIds(&netOpt)
 			Expect(err).ShouldNot(BeNil())
 			Expect(err.Error()).Should(ContainSubstring(mockErr.Error()))

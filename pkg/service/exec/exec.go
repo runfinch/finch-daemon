@@ -10,6 +10,7 @@ import (
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
 	cerrdefs "github.com/containerd/containerd/errdefs"
+
 	"github.com/runfinch/finch-daemon/pkg/api/handlers/exec"
 	"github.com/runfinch/finch-daemon/pkg/backend"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
@@ -21,7 +22,7 @@ type service struct {
 	logger flog.Logger
 }
 
-// NewService creates a new service to run exec processes
+// NewService creates a new service to run exec processes.
 func NewService(
 	client backend.ContainerdClient,
 	logger flog.Logger,

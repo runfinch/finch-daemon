@@ -11,6 +11,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/api/handlers/system"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_backend"
@@ -18,7 +19,7 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/version"
 )
 
-// Unit tests related to version API
+// Unit tests related to version API.
 var _ = Describe("Version API ", func() {
 	var (
 		ctx      context.Context
@@ -79,12 +80,10 @@ var _ = Describe("Version API ", func() {
 			ncClient.EXPECT().GetServerVersion(gomock.Any()).Return(nil, expectedErr)
 			logger.EXPECT().Warnf(gomock.Any(), gomock.Any())
 
-			//service should not return any error
 			vInfo, err := service.GetVersion(ctx)
 			Expect(vInfo).Should(BeNil())
 			Expect(err).Should(HaveOccurred())
 			Expect(err).Should(MatchError(expectedErr))
 		})
 	})
-
 })

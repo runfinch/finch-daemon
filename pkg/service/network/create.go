@@ -13,6 +13,7 @@ import (
 
 	"github.com/containerd/nerdctl/pkg/lockutil"
 	"github.com/containerd/nerdctl/pkg/netutil"
+
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/utility/maputility"
@@ -115,7 +116,7 @@ func (s *service) Create(ctx context.Context, request types.NetworkCreateRequest
 	}, nil
 }
 
-// setBridgeName will override the bridge name in an existing CNI config file for a network
+// setBridgeName will override the bridge name in an existing CNI config file for a network.
 func (s *service) setBridgeName(net *netutil.NetworkConfig, bridge string) error {
 	return lockutil.WithDirLock(s.netClient.NetconfPath(), func() error {
 		// first, make sure that the bridge name is not used by any of the existing bridge networks
@@ -161,7 +162,7 @@ func (s *service) setBridgeName(net *netutil.NetworkConfig, bridge string) error
 				if err != nil {
 					return err
 				}
-				return os.WriteFile(configFilename, data, 0644)
+				return os.WriteFile(configFilename, data, 0o644)
 			}
 		}
 		return fmt.Errorf("bridge plugin not found in network config file %s", configFilename)

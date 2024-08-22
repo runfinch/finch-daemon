@@ -20,7 +20,7 @@ func (s *service) Wait(ctx context.Context, cid string, condition string) (code 
 	return int64(rawcode), err
 }
 
-// TODO: contribute to nerdctl to make this function public
+// TODO: contribute to nerdctl to make this function public.
 func waitContainer(ctx context.Context, container containerd.Container) (code uint32, err error) {
 	task, err := container.Task(ctx, nil)
 	if err != nil {

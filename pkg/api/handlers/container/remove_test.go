@@ -12,6 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_container"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
@@ -27,7 +28,6 @@ var _ = Describe("Container Remove API", func() {
 		req      *http.Request
 	)
 	BeforeEach(func() {
-		//initialize the mocks.
 		mockCtrl = gomock.NewController(GinkgoT())
 		defer mockCtrl.Finish()
 		logger = mocks_logger.NewLogger(mockCtrl)
@@ -41,7 +41,7 @@ var _ = Describe("Container Remove API", func() {
 		It("should return 204 as success response", func() {
 			// service mock returns nil to mimic handler removed the container successfully.
 			service.EXPECT().Remove(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-			//handler should return success message with 204 status code.
+
 			h.remove(rr, req)
 			Expect(rr).Should(HaveHTTPStatus(http.StatusNoContent))
 		})
@@ -51,7 +51,6 @@ var _ = Describe("Container Remove API", func() {
 			service.EXPECT().Remove(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 				errdefs.NewNotFound(fmt.Errorf("container not found")))
 
-			//handler should return 404 status code with an error msg.
 			h.remove(rr, req)
 			Expect(rr).Should(HaveHTTPStatus(http.StatusNotFound))
 			Expect(rr.Body).Should(MatchJSON(`{"message": "container not found"}`))
@@ -62,7 +61,6 @@ var _ = Describe("Container Remove API", func() {
 			service.EXPECT().Remove(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 				fmt.Errorf("multiple IDs found with provided prefix"))
 
-			//handler should return 500 status code with an error msg.
 			h.remove(rr, req)
 			Expect(rr).Should(HaveHTTPStatus(http.StatusInternalServerError))
 			Expect(rr.Body).Should(MatchJSON(`{"message": "multiple IDs found with provided prefix"}`))
@@ -72,11 +70,9 @@ var _ = Describe("Container Remove API", func() {
 			service.EXPECT().Remove(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 				errdefs.NewConflict(fmt.Errorf("container is in running")))
 
-			//handler should return 409 status code with an error msg.
 			h.remove(rr, req)
 			Expect(rr).Should(HaveHTTPStatus(http.StatusConflict))
 			Expect(rr.Body).Should(MatchJSON(`{"message": "container is in running"}`))
 		})
 	})
-
 })

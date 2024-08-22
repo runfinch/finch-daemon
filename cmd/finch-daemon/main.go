@@ -14,11 +14,16 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/nerdctl/pkg/api/types"
 	"github.com/containerd/nerdctl/pkg/config"
 	"github.com/coreos/go-systemd/v22/daemon"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/afero"
+	"github.com/spf13/cobra"
+
 	"github.com/runfinch/finch-daemon/pkg/api/router"
 	"github.com/runfinch/finch-daemon/pkg/archive"
 	"github.com/runfinch/finch-daemon/pkg/backend"
@@ -31,9 +36,6 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/service/network"
 	"github.com/runfinch/finch-daemon/pkg/service/system"
 	"github.com/runfinch/finch-daemon/pkg/service/volume"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/afero"
-	"github.com/spf13/cobra"
 )
 
 const (
@@ -99,7 +101,8 @@ func run(options *DaemonOptions) error {
 		return fmt.Errorf("failed to chown the finch-daemon socket: %w", err)
 	}
 	server := &http.Server{
-		Handler: r,
+		Handler:           r,
+		ReadHeaderTimeout: 5 * time.Minute,
 	}
 	handleSignal(options.socketAddr, server, logger)
 

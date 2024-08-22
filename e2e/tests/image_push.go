@@ -15,6 +15,7 @@ import (
 	"github.com/runfinch/common-tests/ffs"
 	"github.com/runfinch/common-tests/fnet"
 	"github.com/runfinch/common-tests/option"
+
 	"github.com/runfinch/finch-daemon/e2e/client"
 )
 
@@ -106,9 +107,9 @@ func ImagePush(opt *option.Option) {
 			Expect(err).Should(BeNil())
 			Expect(resp.StatusCode).Should(Equal(http.StatusOK))
 			data, _ := io.ReadAll(resp.Body)
-			Expect(string(data[:])).Should(ContainSubstring(`"errorDetail"`))
+			Expect(string(data)).Should(ContainSubstring(`"errorDetail"`))
 		})
 
-		//TODO: add a e2e test that push an image to ecr public which requires authentication.
+		// TODO: add a e2e test that push an image to ecr public which requires authentication.
 	})
 }

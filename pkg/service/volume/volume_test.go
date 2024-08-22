@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// TestVolumeService function is the entry point of volume service package's unit test using ginkgo
+// TestVolumeService function is the entry point of volume service package's unit test using ginkgo.
 func TestVolumeService(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "UnitTests - Volumes APIs Service")

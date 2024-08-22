@@ -14,6 +14,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_container"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
@@ -32,7 +33,6 @@ var _ = Describe("Container List API", func() {
 		err        error
 	)
 	BeforeEach(func() {
-		//initialize the mocks.
 		mockCtrl = gomock.NewController(GinkgoT())
 		defer mockCtrl.Finish()
 		logger = mocks_logger.NewLogger(mockCtrl)
@@ -56,7 +56,7 @@ var _ = Describe("Container List API", func() {
 	})
 	Context("handler", func() {
 		It("should return containers and 200 status code upon success with all query parameters", func() {
-			req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("/containers/json?all=true&limit=1&size=true&filters={\"status\": [\"paused\"]}"), nil)
+			req, err := http.NewRequest(http.MethodGet, "/containers/json?all=true&limit=1&size=true&filters={\"status\": [\"paused\"]}", nil)
 			Expect(err).Should(BeNil())
 			listOpts := ncTypes.ContainerListOptions{
 				GOptions: globalOpts,
@@ -73,7 +73,7 @@ var _ = Describe("Container List API", func() {
 			Expect(rr).Should(HaveHTTPStatus(http.StatusOK))
 		})
 		It("should return containers and 200 status code upon success with no query parameter", func() {
-			req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("/containers/json"), nil)
+			req, err := http.NewRequest(http.MethodGet, "/containers/json", nil)
 			Expect(err).Should(BeNil())
 			listOpts := ncTypes.ContainerListOptions{
 				GOptions: globalOpts,
@@ -88,10 +88,9 @@ var _ = Describe("Container List API", func() {
 			h.list(rr, req)
 			Expect(rr.Body).Should(MatchJSON(respJSON))
 			Expect(rr).Should(HaveHTTPStatus(http.StatusOK))
-
 		})
 		It("should return 400 status code when there is error parsing all", func() {
-			req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("/containers/json?all=invalid"), nil)
+			req, err := http.NewRequest(http.MethodGet, "/containers/json?all=invalid", nil)
 			Expect(err).Should(BeNil())
 			errorMsg := fmt.Sprintf("invalid query parameter \\\"all\\\": %s", fmt.Errorf("strconv.ParseBool: parsing \\\"invalid\\\": invalid syntax"))
 
@@ -100,7 +99,7 @@ var _ = Describe("Container List API", func() {
 			Expect(rr).Should(HaveHTTPStatus(http.StatusBadRequest))
 		})
 		It("should return 400 status code when there is error parsing limit", func() {
-			req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("/containers/json?limit=invalid"), nil)
+			req, err := http.NewRequest(http.MethodGet, "/containers/json?limit=invalid", nil)
 			Expect(err).Should(BeNil())
 			errorMsg := fmt.Sprintf("invalid query parameter \\\"limit\\\": %s", fmt.Errorf("strconv.ParseInt: parsing \\\"invalid\\\": invalid syntax"))
 
@@ -109,7 +108,7 @@ var _ = Describe("Container List API", func() {
 			Expect(rr).Should(HaveHTTPStatus(http.StatusBadRequest))
 		})
 		It("should return 400 status code when there is error parsing size", func() {
-			req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("/containers/json?size=invalid"), nil)
+			req, err := http.NewRequest(http.MethodGet, "/containers/json?size=invalid", nil)
 			Expect(err).Should(BeNil())
 			errorMsg := fmt.Sprintf("invalid query parameter \\\"size\\\": %s", fmt.Errorf("strconv.ParseBool: parsing \\\"invalid\\\": invalid syntax"))
 
@@ -118,7 +117,7 @@ var _ = Describe("Container List API", func() {
 			Expect(rr).Should(HaveHTTPStatus(http.StatusBadRequest))
 		})
 		It("should return 400 status code when there is error parsing filters", func() {
-			req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("/containers/json?filters=invalid"), nil)
+			req, err := http.NewRequest(http.MethodGet, "/containers/json?filters=invalid", nil)
 			Expect(err).Should(BeNil())
 			errorMsg := fmt.Sprintf("invalid query parameter \\\"filters\\\": %s", fmt.Errorf("invalid character 'i' looking for beginning of value"))
 
@@ -127,7 +126,7 @@ var _ = Describe("Container List API", func() {
 			Expect(rr).Should(HaveHTTPStatus(http.StatusBadRequest))
 		})
 		It("should return 500 status code when service returns error", func() {
-			req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("/containers/json"), nil)
+			req, err := http.NewRequest(http.MethodGet, "/containers/json", nil)
 			Expect(err).Should(BeNil())
 			listOpts := ncTypes.ContainerListOptions{
 				GOptions: globalOpts,
@@ -145,5 +144,4 @@ var _ = Describe("Container List API", func() {
 			Expect(rr).Should(HaveHTTPStatus(http.StatusInternalServerError))
 		})
 	})
-
 })

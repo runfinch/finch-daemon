@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package exec
 
 import (
@@ -7,6 +10,7 @@ import (
 
 	"github.com/containerd/containerd/namespaces"
 	"github.com/gorilla/mux"
+
 	"github.com/runfinch/finch-daemon/pkg/api/response"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
@@ -51,10 +55,9 @@ func (h *handler) resize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.Status(w, http.StatusOK)
-	return
 }
 
-// getQueryParamInt fetches an integer query parameter and throws an error if empty
+// getQueryParamInt fetches an integer query parameter and throws an error if empty.
 func getQueryParamInt(r *http.Request, paramName string) (int, error) {
 	val := r.URL.Query().Get(paramName)
 	if val == "" {

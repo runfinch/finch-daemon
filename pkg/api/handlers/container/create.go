@@ -15,10 +15,11 @@ import (
 	ncTypes "github.com/containerd/nerdctl/pkg/api/types"
 	"github.com/containerd/nerdctl/pkg/defaults"
 	"github.com/docker/go-connections/nat"
+	"github.com/sirupsen/logrus"
+
 	"github.com/runfinch/finch-daemon/pkg/api/response"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
-	"github.com/sirupsen/logrus"
 )
 
 type containerCreateResponse struct {
@@ -62,7 +63,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	// Or simply "VOLUME", where VOLUME is a user created volume.
 	volumes := req.HostConfig.Binds
 	if req.Volumes != nil {
-		for newVolume, _ := range req.Volumes {
+		for newVolume := range req.Volumes {
 			// If a volume points to one of the directories already mapped to a host path in bind mounts, it should not be added as a separate volume.
 			contained := false
 			for _, volume := range volumes {
@@ -217,7 +218,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusCreated, containerCreateResponse{cid})
 }
 
-// translate docker port mappings to go-cni port mappings
+// translate docker port mappings to go-cni port mappings.
 func translatePortMappings(portMappings nat.PortMap) ([]gocni.PortMapping, error) {
 	ports := []gocni.PortMapping{}
 	if portMappings == nil {

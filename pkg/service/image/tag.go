@@ -10,6 +10,7 @@ import (
 	cerrdefs "github.com/containerd/containerd/errdefs"
 	"github.com/containerd/nerdctl/pkg/idutil/imagewalker"
 	"github.com/containerd/nerdctl/pkg/referenceutil"
+
 	eventtype "github.com/runfinch/finch-daemon/pkg/api/events"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )

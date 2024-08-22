@@ -12,11 +12,12 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/option"
+
 	"github.com/runfinch/finch-daemon/e2e/client"
 	eventtype "github.com/runfinch/finch-daemon/pkg/api/events"
 )
 
-// SystemEvents tests streaming container events
+// SystemEvents tests streaming container events.
 func SystemEvents(opt *option.Option) {
 	Describe("stream container events", func() {
 		var (

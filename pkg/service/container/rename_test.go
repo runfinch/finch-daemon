@@ -12,6 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/api/handlers/container"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_archive"
@@ -20,7 +21,7 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 )
 
-// Unit tests related to container rename API
+// Unit tests related to container rename API.
 var _ = Describe("Container Rename API ", func() {
 	var (
 		ctx               context.Context
@@ -91,7 +92,7 @@ var _ = Describe("Container Rename API ", func() {
 			cdClient.EXPECT().SearchContainer(gomock.Any(), testContainerName).Return(
 				[]containerd.Container{con}, nil)
 
-			expectedErr := errdefs.NewConflict(fmt.Errorf("Container with name %s already exists", testContainerName))
+			expectedErr := errdefs.NewConflict(fmt.Errorf("container with name %s already exists", testContainerName))
 			logger.EXPECT().Errorf("Failed to rename container: %s. Error: %v", cid, expectedErr)
 
 			// service should return conflict error.

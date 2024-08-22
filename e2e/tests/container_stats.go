@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
+
 	"github.com/runfinch/finch-daemon/e2e/client"
 	"github.com/runfinch/finch-daemon/pkg/api/response"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
@@ -244,7 +245,7 @@ func ContainerStats(opt *option.Option) {
 	})
 }
 
-// expectValidStats ensures that the data contained in the stats object is valid
+// expectValidStats ensures that the data contained in the stats object is valid.
 func expectValidStats(st *types.StatsJSON, name, id string, numNetworks int) {
 	// verify container name and ID
 	Expect(st.Name).Should(Equal(name))
@@ -274,7 +275,7 @@ func expectValidStats(st *types.StatsJSON, name, id string, numNetworks int) {
 }
 
 // expectEmptyStats ensures that the data contained in the stats object is empty
-// which is the case with containers that are not running
+// which is the case with containers that are not running.
 func expectEmptyStats(st *types.StatsJSON, name, id string) {
 	// verify container name and ID
 	Expect(st.Name).Should(Equal(name))

@@ -51,12 +51,12 @@ func (s *service) Attach(ctx context.Context, cid string, opts *types.AttachOpti
 	}
 	// TODO: implement stdin for a full attach implementation
 	var (
-		//stdin          io.Reader
+		// stdin io.Reader
 		stdout, stderr io.Writer
 	)
-	if opts.UseStdin {
-		//stdin = inStream
-	}
+	// if opts.UseStdin {
+	// stdin = inStream
+	// }
 	if opts.UseStdout {
 		stdout = outStream
 	}
@@ -92,7 +92,7 @@ func (s *service) Attach(ctx context.Context, cid string, opts *types.AttachOpti
 
 // attachLogs sets up the logs and channels to be attached. Adapted from
 // github.com/containerd/nerdctl/pkg/cmd/container.Logs to pass a stop channel
-// and a success response message
+// and a success response message.
 func (s *service) attachLogs(
 	ctx context.Context,
 	con containerd.Container,
@@ -100,7 +100,6 @@ func (s *service) attachLogs(
 	stopChannel chan os.Signal,
 	printSuccessResp func(),
 ) error {
-
 	dataStore, err := s.nctlContainerSvc.GetDataStore()
 	if err != nil {
 		return err
@@ -176,7 +175,7 @@ func (s *service) attachLogs(
 }
 
 // getLogPath gets the log path for the container to be attached. Original from
-// github.com/containerd/nerdctl/pkg/cmd/container.getLogPath
+// github.com/containerd/nerdctl/pkg/cmd/container.getLogPath.
 func getLogPath(ctx context.Context, container containerd.Container) (string, error) {
 	extensions, err := container.Extensions(ctx)
 	if err != nil {

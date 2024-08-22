@@ -20,6 +20,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_container"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
@@ -96,13 +97,13 @@ var _ = Describe("Container Create API ", func() {
 
 			// define expected go-cni port mappings and network settings
 			portMaps := []gocni.PortMapping{
-				gocni.PortMapping{
+				{
 					HostPort:      8001,
 					ContainerPort: 8000,
 					Protocol:      "tcp",
 					HostIP:        "",
 				},
-				gocni.PortMapping{
+				{
 					HostPort:      9001,
 					ContainerPort: 9000,
 					Protocol:      "udp",
@@ -411,7 +412,7 @@ var _ = Describe("Container Create API ", func() {
 	})
 })
 
-// define default container create options
+// define default container create options.
 func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 	globalOpt := types.GlobalCommandOptions{
 		Debug:            conf.Debug,
@@ -506,7 +507,7 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 	}
 }
 
-// define default network types
+// define default network types.
 func getDefaultNetOpt() types.NetworkOptions {
 	return types.NetworkOptions{
 		Hostname:             "",
@@ -516,7 +517,7 @@ func getDefaultNetOpt() types.NetworkOptions {
 	}
 }
 
-// anyOfMatcher is a gomock matcher that returns true if the object is contained in an array slice
+// anyOfMatcher is a gomock matcher that returns true if the object is contained in an array slice.
 type anyOfMatcher struct {
 	slice []interface{}
 }
@@ -565,10 +566,7 @@ func (e *equalToMatcher) Matches(x interface{}) bool {
 				fmt.Sprintf("{%s: Got: %#v, Want: %#v}", t.Field(i).Name, f2, f1))
 		}
 	}
-	if len(e.mismatches) > 0 {
-		return false
-	}
-	return true
+	return len(e.mismatches) == 0
 }
 
 func (e *equalToMatcher) String() string {

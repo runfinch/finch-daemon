@@ -13,10 +13,11 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_http"
 )
 
-// TestAPIResponse function is the entry point of api response package's unit test using ginkgo
+// TestAPIResponse function is the entry point of api response package's unit test using ginkgo.
 func TestAPIResponse(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "UnitTests - API Response Utils")

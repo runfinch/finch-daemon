@@ -12,6 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_backend"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_container"
@@ -23,7 +24,7 @@ type mockNerdctlService struct {
 	*mocks_backend.MockNerdctlNetworkSvc
 }
 
-// TestContainerService is the entry point of container service package's unit tests using ginkgo
+// TestContainerService is the entry point of container service package's unit tests using ginkgo.
 func TestContainerService(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "UnitTests - Container APIs Service")

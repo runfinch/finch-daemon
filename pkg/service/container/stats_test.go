@@ -21,6 +21,8 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"google.golang.org/protobuf/types/known/anypb"
+
 	eventtype "github.com/runfinch/finch-daemon/pkg/api/events"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
@@ -28,10 +30,9 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_container"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_statsutil"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
-// Unit tests related to container stats API
+// Unit tests related to container stats API.
 var _ = Describe("Container Stats API ", func() {
 	var (
 		ctx         context.Context
@@ -363,7 +364,6 @@ var _ = Describe("Container Stats API ", func() {
 			Expect(num).Should(Or(Equal(2), Equal(3)))
 		})
 	})
-
 })
 
 func getDummyMetricsV1() (*cTypes.Metric, *types.StatsJSON) {

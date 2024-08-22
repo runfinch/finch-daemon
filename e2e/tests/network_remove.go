@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
+
 	"github.com/runfinch/finch-daemon/e2e/client"
 )
 
@@ -57,18 +58,19 @@ func NetworkRemove(opt *option.Option) {
 			req, err := http.NewRequest(http.MethodDelete, apiUrl, nil)
 			Expect(err).Should(BeNil())
 			res, err := uClient.Do(req)
+			Expect(err).ShouldNot(HaveOccurred())
 			defer res.Body.Close()
 			body, err := httputil.DumpResponse(res, true)
-			Expect(err).Should(BeNil())
+			Expect(err).ShouldNot(HaveOccurred())
 			Expect(body).Should(ContainSubstring("\"test-network\\\" is in use by container"))
 			Expect(res.StatusCode).Should(Equal(http.StatusForbidden))
 		})
 		It("should return an error when network is not found", func() {
 			command.Run(opt, "network", "create", "notfound")
 			req, err := http.NewRequest(http.MethodDelete, apiUrl, nil)
-			Expect(err).Should(BeNil())
+			Expect(err).ShouldNot(HaveOccurred())
 			res, err := uClient.Do(req)
-			Expect(err).Should(BeNil())
+			Expect(err).ShouldNot(HaveOccurred())
 			Expect(res.StatusCode).Should(Equal(http.StatusNotFound))
 		})
 	})

@@ -16,6 +16,7 @@ import (
 	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
 	dockertypes "github.com/docker/cli/cli/config/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
 
@@ -89,7 +90,7 @@ func toImageRef(name, tag string) string {
 	return fmt.Sprintf("%s:%s", name, tag)
 }
 
-// getAuthCreds returns authentication credentials resolver function from image reference domain and auth config
+// getAuthCreds returns authentication credentials resolver function from image reference domain and auth config.
 func (s *service) getAuthCreds(refDomain string, ac dockertypes.AuthConfig) (dockerconfigresolver.AuthCreds, error) {
 	// return nil if no credentials specified
 	if ac.Username == "" && ac.Password == "" && ac.IdentityToken == "" && ac.RegistryToken == "" {

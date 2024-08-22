@@ -11,6 +11,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_backend"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 )

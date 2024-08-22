@@ -19,10 +19,10 @@ import (
 
 const tagEventAction = "tag"
 
-// setting publishTagEventFunc as a variable to allow mocking this function for unit testing
+// setting publishTagEventFunc as a variable to allow mocking this function for unit testing.
 var publishTagEventFunc = (*service).publishTagEvent
 
-// Build function builds an image using nerdctl function based on the BuilderBuildOptions
+// Build function builds an image using nerdctl function based on the BuilderBuildOptions.
 func (s *service) Build(ctx context.Context, options *ncTypes.BuilderBuildOptions, tarBody io.ReadCloser) ([]types.BuildResult, error) {
 	tarCmd, err := s.tarExtractor.ExtractInTemp(tarBody, "build-context")
 	if err != nil {

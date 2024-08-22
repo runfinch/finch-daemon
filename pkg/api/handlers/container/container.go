@@ -36,7 +36,7 @@ type Service interface {
 	ExecCreate(ctx context.Context, cid string, config types.ExecConfig) (string, error)
 }
 
-// RegisterHandlers register all the supported endpoints related to the container APIs
+// RegisterHandlers register all the supported endpoints related to the container APIs.
 func RegisterHandlers(r types.VersionedRouter, service Service, conf *config.Config, logger flog.Logger) {
 	h := newHandler(service, conf, logger)
 
@@ -58,7 +58,7 @@ func RegisterHandlers(r types.VersionedRouter, service Service, conf *config.Con
 	r.HandleFunc("/{id:.*}/exec", h.exec, http.MethodPost)
 }
 
-// newHandler creates the handler that serves all the container related APIs
+// newHandler creates the handler that serves all the container related APIs.
 func newHandler(service Service, conf *config.Config, logger flog.Logger) *handler {
 	return &handler{
 		service: service,

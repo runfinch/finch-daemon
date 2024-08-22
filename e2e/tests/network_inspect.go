@@ -12,12 +12,13 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
+
 	"github.com/runfinch/finch-daemon/e2e/client"
 	"github.com/runfinch/finch-daemon/pkg/api/response"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 )
 
-// NetworkInspect tests `GET networks/{id}` API
+// NetworkInspect tests `GET networks/{id}` API.
 func NetworkInspect(opt *option.Option) {
 	Describe("inspect a network", func() {
 		var (
@@ -42,7 +43,7 @@ func NetworkInspect(opt *option.Option) {
 			res, err := uClient.Get(relativeUrl)
 			Expect(err).Should(BeNil())
 
-			// verify inspect reponse
+			// verify inspect response
 			Expect(res).To(HaveHTTPStatus(http.StatusOK))
 			var network types.NetworkInspectResponse
 			err = json.NewDecoder(res.Body).Decode(&network)
@@ -60,7 +61,7 @@ func NetworkInspect(opt *option.Option) {
 			res, err := uClient.Get(relativeUrl)
 			Expect(err).Should(BeNil())
 
-			// verify inspect reponse
+			// verify inspect response
 			Expect(res).To(HaveHTTPStatus(http.StatusOK))
 			var network types.NetworkInspectResponse
 			err = json.NewDecoder(res.Body).Decode(&network)
@@ -78,7 +79,7 @@ func NetworkInspect(opt *option.Option) {
 			res, err := uClient.Get(relativeUrl)
 			Expect(err).Should(BeNil())
 
-			// verify inspect reponse
+			// verify inspect response
 			Expect(res).To(HaveHTTPStatus(http.StatusOK))
 			var network types.NetworkInspectResponse
 			err = json.NewDecoder(res.Body).Decode(&network)
@@ -96,7 +97,7 @@ func NetworkInspect(opt *option.Option) {
 			res, err := uClient.Get(relativeUrl)
 			Expect(err).Should(BeNil())
 
-			// verify inspect reponse
+			// verify inspect response
 			Expect(res).To(HaveHTTPStatus(http.StatusOK))
 			var network types.NetworkInspectResponse
 			err = json.NewDecoder(res.Body).Decode(&network)
@@ -112,7 +113,7 @@ func NetworkInspect(opt *option.Option) {
 			res, err := uClient.Get(relativeUrl)
 			Expect(err).Should(BeNil())
 
-			// expect 404 reponse
+			// expect 404 response
 			Expect(res).To(HaveHTTPStatus(http.StatusNotFound))
 			var message response.Error
 			err = json.NewDecoder(res.Body).Decode(&message)

@@ -38,7 +38,7 @@ func (e *errWithType) Unwrap() error {
 	return e.wrapped
 }
 
-func new(t errType, err error) error {
+func create(t errType, err error) error {
 	return &errWithType{
 		t:       t,
 		wrapped: err,
@@ -55,7 +55,7 @@ func isType(t errType, err error) bool {
 }
 
 func NewUnauthenticated(err error) error {
-	return new(unauthenticated, err)
+	return create(unauthenticated, err)
 }
 
 func IsUnauthenticated(err error) bool {
@@ -63,7 +63,7 @@ func IsUnauthenticated(err error) bool {
 }
 
 func NewNotFound(err error) error {
-	return new(notFound, err)
+	return create(notFound, err)
 }
 
 func IsNotFound(err error) bool {
@@ -71,7 +71,7 @@ func IsNotFound(err error) bool {
 }
 
 func NewInvalidFormat(err error) error {
-	return new(invalidFormat, err)
+	return create(invalidFormat, err)
 }
 
 func IsInvalidFormat(err error) bool {
@@ -79,7 +79,7 @@ func IsInvalidFormat(err error) bool {
 }
 
 func NewConflict(err error) error {
-	return new(conflict, err)
+	return create(conflict, err)
 }
 
 func IsConflict(err error) bool {
@@ -87,14 +87,15 @@ func IsConflict(err error) bool {
 }
 
 func NewNotModified(err error) error {
-	return new(notModified, err)
+	return create(notModified, err)
 }
+
 func IsNotModified(err error) bool {
 	return isType(notModified, err)
 }
 
 func NewWrongSemantics(err error) error {
-	return new(wrongSemantics, err)
+	return create(wrongSemantics, err)
 }
 
 func IsWrongSemantics(err error) bool {
@@ -102,7 +103,7 @@ func IsWrongSemantics(err error) bool {
 }
 
 func NewForbidden(err error) error {
-	return new(forbidden, err)
+	return create(forbidden, err)
 }
 
 func IsForbiddenError(err error) bool {

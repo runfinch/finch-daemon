@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package image
 
 import (
@@ -16,6 +19,7 @@ import (
 	"github.com/gorilla/mux"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/api/auth"
 	"github.com/runfinch/finch-daemon/pkg/api/response"
 	"github.com/runfinch/finch-daemon/pkg/api/types"
@@ -38,7 +42,6 @@ var _ = Describe("Image Push API", func() {
 		auxMsg   json.RawMessage
 	)
 	BeforeEach(func() {
-		//initialize mocks.
 		mockCtrl = gomock.NewController(GinkgoT())
 		defer mockCtrl.Finish()
 		logger = mocks_logger.NewLogger(mockCtrl)
@@ -67,11 +70,9 @@ var _ = Describe("Image Push API", func() {
 		auxData, err := json.Marshal(result)
 		Expect(err).ShouldNot(HaveOccurred())
 		auxMsg = json.RawMessage(auxData)
-
 	})
 	Context("handler", func() {
 		It("should return 200 status code and stream output upon success", func() {
-
 			// expected decoded auth config
 			expectedAuthCfg := dockertypes.AuthConfig{
 				Username: "test-user",
@@ -171,8 +172,8 @@ var _ = Describe("Image Push API", func() {
 			Expect(rr).Should(HaveHTTPStatus(http.StatusOK))
 			data, err := io.ReadAll(rr.Body)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(data[:])).Should(ContainSubstring(streamMsg))
-			Expect(string(data[:])).Should(And(ContainSubstring(errMsg), ContainSubstring(`"errorDetail"`)))
+			Expect(string(data)).Should(ContainSubstring(streamMsg))
+			Expect(string(data)).Should(And(ContainSubstring(errMsg), ContainSubstring(`"errorDetail"`)))
 		})
 	})
 })

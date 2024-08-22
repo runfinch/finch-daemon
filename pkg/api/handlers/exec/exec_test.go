@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package exec
 
 import (
@@ -12,18 +15,19 @@ import (
 	"github.com/gorilla/mux"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_exec"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 )
 
-// TestExecHandler is the entry point of the exec handler package's unit tests
+// TestExecHandler is the entry point of the exec handler package's unit tests.
 func TestExecHandler(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "UnitTests - Exec APIs Handler")
 }
 
-// Unit tests related to checking whether RegisterHandlers() has correctly configured the endpoints
+// Unit tests related to checking whether RegisterHandlers() has correctly configured the endpoints.
 var _ = Describe("Exec API", func() {
 	var (
 		mockCtrl *gomock.Controller

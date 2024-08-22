@@ -17,6 +17,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/moby/moby/api/server/httputils"
+
 	"github.com/runfinch/finch-daemon/pkg/api/types"
 
 	"github.com/containerd/nerdctl/pkg/config"
@@ -24,6 +25,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
+
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_container"
 	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_http"
@@ -44,7 +46,6 @@ var _ = Describe("Container Attach API", func() {
 		req      *http.Request
 	)
 	BeforeEach(func() {
-		//initialize the mocks
 		mockCtrl = gomock.NewController(GinkgoT())
 		defer mockCtrl.Finish()
 		logger = mocks_logger.NewLogger(mockCtrl)
@@ -184,9 +185,7 @@ var _ = Describe("Container Attach API", func() {
 		})
 	})
 	Context("testing the checkConnection helper function", func() {
-		var (
-			mockConn *mocks_http.MockConn
-		)
+		var mockConn *mocks_http.MockConn
 		BeforeEach(func() {
 			mockConn = mocks_http.NewMockConn(mockCtrl)
 			mockConn.EXPECT().Close().Do(func() {
@@ -209,7 +208,6 @@ var _ = Describe("Container Attach API", func() {
 			Expect(mockConn).ShouldNot(BeNil())
 		})
 	})
-
 })
 
 func newErrorResponseRecorder() *errorResponseRecorder {
@@ -249,7 +247,7 @@ func (h *errorResponseRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 }
 
 // attachOptsMatcher is adapted from container create to be a wrapper type to
-// compare attach option structs when we cannot define what GetStreams will be
+// compare attach option structs when we cannot define what GetStreams will be.
 type attachOptsMatcher struct {
 	obj        *types.AttachOptions
 	mismatches []string

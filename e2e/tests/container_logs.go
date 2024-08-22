@@ -129,10 +129,11 @@ func ContainerLogs(opt *option.Option) {
 			// wait for container to reach steady state, then call endpoint
 			time.Sleep(1 * time.Second)
 			res, err := uClient.Get(client.ConvertToFinchUrl(version, relativeUrl+opts))
-			Expect(err).Should(BeNil())
+			Expect(err).ShouldNot(HaveOccurred())
 
 			time.Sleep(4 * time.Second)
 			body, err := io.ReadAll(res.Body)
+			Expect(err).ShouldNot(HaveOccurred())
 			_ = res.Body.Close()
 
 			// make assertions

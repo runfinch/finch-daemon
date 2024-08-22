@@ -15,8 +15,9 @@ import (
 	dockerconfig "github.com/containerd/containerd/remotes/docker/config"
 	remoteerrs "github.com/containerd/containerd/remotes/errors"
 	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
-	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"golang.org/x/net/context/ctxhttp"
+
+	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
 
 // To be consistent with nerdctl: https://github.com/containerd/nerdctl/blob/2b06050d782c27571c98947ac9fa790d5f2d0bde/cmd/nerdctl/login.go#L90
@@ -111,7 +112,7 @@ func loginRegHost(ctx context.Context, rh docker.RegistryHost) error {
 		}
 		log.Printf("trial %d, status code: %d", i, resp.StatusCode)
 		resps = append(resps, resp)
-		if resp.StatusCode == 401 {
+		if resp.StatusCode == http.StatusUnauthorized {
 			// TODO: figure out why the first request is always 401, and suddenly the second request will be 200.
 			// Maybe AddResponses does some magic.
 			if err := rh.Authorizer.AddResponses(ctx, resps); err != nil {

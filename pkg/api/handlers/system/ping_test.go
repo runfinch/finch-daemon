@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package system
 
 import (
@@ -7,10 +10,11 @@ import (
 	"github.com/containerd/nerdctl/pkg/config"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/runfinch/finch-daemon/pkg/version"
 )
 
-// Unit tests for the ping api
+// Unit tests for the ping api.
 var _ = Describe("Ping", func() {
 	var (
 		h  *handler
