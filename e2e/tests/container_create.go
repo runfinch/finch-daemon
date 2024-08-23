@@ -20,8 +20,8 @@ import (
 	"github.com/runfinch/common-tests/ffs"
 	"github.com/runfinch/common-tests/option"
 
+	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/e2e/client"
-	"github.com/runfinch/finch-daemon/pkg/api/types"
 )
 
 type containerCreateResponse struct {

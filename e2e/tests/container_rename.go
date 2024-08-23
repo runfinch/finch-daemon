@@ -13,8 +13,8 @@ import (
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
 
+	"github.com/runfinch/finch-daemon/api/response"
 	"github.com/runfinch/finch-daemon/e2e/client"
-	"github.com/runfinch/finch-daemon/pkg/api/response"
 )
 
 // ContainerRename tests the `POST containers/{id}/rename` API.

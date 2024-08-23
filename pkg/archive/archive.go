@@ -15,7 +15,7 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/flog"
 )
 
-//go:generate mockgen --destination=../mocks/mocks_archive/tarcreator.go -package=mocks_archive github.com/runfinch/finch-daemon/pkg/archive TarCreator
+//go:generate mockgen --destination=../../mocks/mocks_archive/tarcreator.go -package=mocks_archive github.com/runfinch/finch-daemon/pkg/archive TarCreator
 type TarCreator interface {
 	CreateTarCommand(srcPath string, slashDot bool) (ecc.ExecCmd, error)
 }
@@ -57,7 +57,7 @@ func (c *tarCreator) CreateTarCommand(srcPath string, slashDot bool) (ecc.ExecCm
 
 // TarExtractor interface to extract a tar file
 //
-//go:generate mockgen --destination=../mocks/mocks_archive/tarextractor.go -package=mocks_archive github.com/runfinch/finch-daemon/pkg/archive TarExtractor
+//go:generate mockgen --destination=../../mocks/mocks_archive/tarextractor.go -package=mocks_archive github.com/runfinch/finch-daemon/pkg/archive TarExtractor
 type TarExtractor interface {
 	ExtractInTemp(reader io.Reader, dirPrefix string) (ecc.ExecCmd, error)
 	CreateExtractCmd(reader io.Reader, destDir string) (ecc.ExecCmd, error)

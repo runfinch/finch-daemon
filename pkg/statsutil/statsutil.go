@@ -18,7 +18,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-//go:generate mockgen --destination=../mocks/mocks_statsutil/statsutil.go -package=mocks_statsutil github.com/runfinch/finch-daemon/pkg/statsutil StatsUtil
+//go:generate mockgen --destination=../../mocks/mocks_statsutil/statsutil.go -package=mocks_statsutil github.com/runfinch/finch-daemon/pkg/statsutil StatsUtil
 type StatsUtil interface {
 	// GetSystemCPUUsage returns the host system's cpu usage in
 	// nanoseconds. An error is returned if the format of the underlying
