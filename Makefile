@@ -10,7 +10,7 @@ build::
 	$(eval PACKAGE := github.com/runfinch/finch-daemon)
 	$(eval VERSION ?= $(shell git describe --match 'v[0-9]*' --dirty='.modified' --always --tags))
 	$(eval GITCOMMIT := $(shell git rev-parse HEAD)$(shell if ! git diff --no-ext-diff --quiet --exit-code; then echo .m; fi))
-	$(eval LDFLAGS := "-X $(PACKAGE)/pkg/version.Version=$(VERSION) -X $(PACKAGE)/pkg/version.GitCommit=$(GITCOMMIT)")
+	$(eval LDFLAGS := "-X $(PACKAGE)/version.Version=$(VERSION) -X $(PACKAGE)/version.GitCommit=$(GITCOMMIT)")
 	GOOS=linux go build -ldflags $(LDFLAGS) -v -o bin/finch-daemon $(PACKAGE)/cmd/finch-daemon
 
 # Linux targets
