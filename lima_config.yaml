@@ -1,0 +1,3 @@
+portForwards:
+- guestSocket: "/run/finch.sock"
+  hostSocket: "{{.Dir}}/sock/finch.sock"
