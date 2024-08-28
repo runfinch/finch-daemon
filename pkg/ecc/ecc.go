@@ -8,12 +8,12 @@ import (
 	"os/exec"
 )
 
-//go:generate mockgen --destination=../mocks/mocks_ecc/execcmdcreator.go -package=mocks_ecc github.com/runfinch/finch-daemon/pkg/ecc ExecCmdCreator
+//go:generate mockgen --destination=../../mocks/mocks_ecc/execcmdcreator.go -package=mocks_ecc github.com/runfinch/finch-daemon/pkg/ecc ExecCmdCreator
 type ExecCmdCreator interface {
 	Command(name string, args ...string) ExecCmd
 }
 
-//go:generate mockgen --destination=../mocks/mocks_ecc/execcmd.go -package=mocks_ecc github.com/runfinch/finch-daemon/pkg/ecc ExecCmd
+//go:generate mockgen --destination=../../mocks/mocks_ecc/execcmd.go -package=mocks_ecc github.com/runfinch/finch-daemon/pkg/ecc ExecCmd
 type ExecCmd interface {
 	Run() error
 	SetDir(path string)

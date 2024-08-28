@@ -6,7 +6,7 @@ package flog
 
 // Logger should be used to write any logs. No concrete implementations should be directly used.
 //
-//go:generate mockgen -destination=../mocks/mocks_logger/logger.go -package=mocks_logger -mock_names Logger=Logger . Logger
+//go:generate mockgen -destination=../../mocks/mocks_logger/logger.go -package=mocks_logger -mock_names Logger=Logger . Logger
 type Logger interface {
 	Debugf(format string, args ...interface{})
 	Debugln(args ...interface{})

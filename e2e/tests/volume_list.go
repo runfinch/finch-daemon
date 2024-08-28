@@ -15,8 +15,8 @@ import (
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
 
+	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/e2e/client"
-	"github.com/runfinch/finch-daemon/pkg/api/types"
 )
 
 // VolumeList tests listing volumes.

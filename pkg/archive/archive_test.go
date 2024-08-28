@@ -15,9 +15,9 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 
+	"github.com/runfinch/finch-daemon/mocks/mocks_ecc"
+	"github.com/runfinch/finch-daemon/mocks/mocks_logger"
 	"github.com/runfinch/finch-daemon/pkg/ecc"
-	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_ecc"
-	"github.com/runfinch/finch-daemon/pkg/mocks/mocks_logger"
 )
 
 // TestContainerHandler function is the entry point of container handler package's unit test using ginkgo.

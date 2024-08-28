@@ -24,18 +24,18 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
-	"github.com/runfinch/finch-daemon/pkg/api/router"
+	"github.com/runfinch/finch-daemon/api/router"
+	"github.com/runfinch/finch-daemon/internal/backend"
+	"github.com/runfinch/finch-daemon/internal/service/builder"
+	"github.com/runfinch/finch-daemon/internal/service/container"
+	"github.com/runfinch/finch-daemon/internal/service/exec"
+	"github.com/runfinch/finch-daemon/internal/service/image"
+	"github.com/runfinch/finch-daemon/internal/service/network"
+	"github.com/runfinch/finch-daemon/internal/service/system"
+	"github.com/runfinch/finch-daemon/internal/service/volume"
 	"github.com/runfinch/finch-daemon/pkg/archive"
-	"github.com/runfinch/finch-daemon/pkg/backend"
 	"github.com/runfinch/finch-daemon/pkg/ecc"
 	"github.com/runfinch/finch-daemon/pkg/flog"
-	"github.com/runfinch/finch-daemon/pkg/service/builder"
-	"github.com/runfinch/finch-daemon/pkg/service/container"
-	"github.com/runfinch/finch-daemon/pkg/service/exec"
-	"github.com/runfinch/finch-daemon/pkg/service/image"
-	"github.com/runfinch/finch-daemon/pkg/service/network"
-	"github.com/runfinch/finch-daemon/pkg/service/system"
-	"github.com/runfinch/finch-daemon/pkg/service/volume"
 )
 
 const (
