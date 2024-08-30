@@ -86,8 +86,8 @@ ifneq ($(shell uname), Darwin)
 endif
 
 .PHONY: run-e2e-tests
-run-e2e-tests: macOS
-	DOCKER_HOST="unix://$(FINCH_ROOT)/lima/data/finch/sock/finch.sock" \
+run-e2e-tests: linux
+	DOCKER_HOST="unix:///run/finch.sock" \
 	DOCKER_API_VERSION="v1.41" \
 	RUN_E2E_TESTS=1 \
 	$(GINKGO) $(GFLAGS) ./e2e/...
