@@ -12,6 +12,8 @@ import (
 	"github.com/containerd/containerd/remotes"
 	"github.com/containerd/containerd/remotes/docker"
 	dockerconfig "github.com/containerd/containerd/remotes/docker/config"
+	"github.com/containerd/nerdctl/pkg/api/types"
+	"github.com/containerd/nerdctl/pkg/cmd/image"
 	"github.com/containerd/nerdctl/pkg/idutil/imagewalker"
 	"github.com/containerd/nerdctl/pkg/imageinspector"
 	"github.com/containerd/nerdctl/pkg/imgutil"
@@ -28,6 +30,8 @@ type NerdctlImageSvc interface {
 	PullImage(ctx context.Context, stdout, stderr io.Writer, resolver remotes.Resolver, ref string, platforms []ocispec.Platform) (*imgutil.EnsuredImage, error)
 	PushImage(ctx context.Context, resolver remotes.Resolver, tracker docker.StatusTracker, stdout io.Writer, pushRef, ref string, platMC platforms.MatchComparer) error
 	SearchImage(ctx context.Context, name string) (int, int, []*images.Image, error)
+	LoadImage(ctx context.Context, img string, stdout io.Writer, quiet bool) error
+	GetDataStore() (string, error)
 }
 
 func (w *NerdctlWrapper) InspectImage(ctx context.Context, image images.Image) (*dockercompat.Image, error) {
@@ -103,4 +107,16 @@ func (w *NerdctlWrapper) SearchImage(ctx context.Context, name string) (int, int
 	}
 	n, err := walker.Walk(ctx, name)
 	return n, uniqueCount, imgs, err
+}
+
+func (w *NerdctlWrapper) LoadImage(ctx context.Context, img string, stdout io.Writer, _ /*quiet*/ bool) error {
+	// TODO currently the "quiet" flag in nerdctl is hardcoded as "false".
+	// Ideally this flag should be part of the ImageLoadOptions, we can
+	// contribute this enhancement at upstream
+	return image.Load(ctx, w.clientWrapper.client, types.ImageLoadOptions{
+		Stdout:       stdout,
+		GOptions:     *w.globalOptions,
+		Input:        img,
+		AllPlatforms: true,
+	})
 }

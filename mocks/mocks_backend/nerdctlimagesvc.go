@@ -43,6 +43,21 @@ func (m *MockNerdctlImageSvc) EXPECT() *MockNerdctlImageSvcMockRecorder {
 	return m.recorder
 }
 
+// GetDataStore mocks base method.
+func (m *MockNerdctlImageSvc) GetDataStore() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDataStore")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDataStore indicates an expected call of GetDataStore.
+func (mr *MockNerdctlImageSvcMockRecorder) GetDataStore() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDataStore", reflect.TypeOf((*MockNerdctlImageSvc)(nil).GetDataStore))
+}
+
 // GetDockerResolver mocks base method.
 func (m *MockNerdctlImageSvc) GetDockerResolver(arg0 context.Context, arg1 string, arg2 dockerconfigresolver.AuthCreds) (remotes.Resolver, docker.StatusTracker, error) {
 	m.ctrl.T.Helper()
@@ -72,6 +87,20 @@ func (m *MockNerdctlImageSvc) InspectImage(arg0 context.Context, arg1 images.Ima
 func (mr *MockNerdctlImageSvcMockRecorder) InspectImage(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InspectImage", reflect.TypeOf((*MockNerdctlImageSvc)(nil).InspectImage), arg0, arg1)
+}
+
+// LoadImage mocks base method.
+func (m *MockNerdctlImageSvc) LoadImage(arg0 context.Context, arg1 string, arg2 io.Writer, arg3 bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LoadImage", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// LoadImage indicates an expected call of LoadImage.
+func (mr *MockNerdctlImageSvcMockRecorder) LoadImage(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadImage", reflect.TypeOf((*MockNerdctlImageSvc)(nil).LoadImage), arg0, arg1, arg2, arg3)
 }
 
 // PullImage mocks base method.
