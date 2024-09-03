@@ -1,21 +1,12 @@
 #!/bin/bash
 # Set versions
-CONTAINERD_VERSION=1.6.34
-RUNC_VERSION=1.1.12
-NERDCTL_VERSION=1.7.1
+CONTAINERD_VERSION=1.7.21
+RUNC_VERSION=1.1.14
+NERDCTL_VERSION=1.7.6
 BUILDKIT_VERSION=0.15.2
-CNI_VERSION=1.4.1
+CNI_VERSION=1.5.1
 
 apt update && apt install -y make gcc linux-libc-dev libseccomp-dev pkg-config git
-apk add --no-cache \
-    btrfs-progs-libs \
-    curl \
-    fuse \
-    gcc \
-    libc6-compat \
-    libseccomp-dev \
-    pigz \
-    zlib-dev
 
 # Download and install containerd
 curl -sSL --output /tmp/containerd.tgz https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-${TARGETARCH:-amd64}.tar.gz
@@ -50,3 +41,4 @@ sudo containerd &
 sudo buildkitd &
 
 sleep 2
+
