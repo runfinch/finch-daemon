@@ -16,7 +16,7 @@ apk add --no-cache \
     libseccomp-dev \
     pigz \
     zlib-dev
-sudo apt install rootlesskit
+
 # Download and install containerd
 curl -sSL --output /tmp/containerd.tgz https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-${TARGETARCH:-amd64}.tar.gz
 tar zxvf /tmp/containerd.tgz -C /usr/local/
@@ -38,40 +38,15 @@ tar zxvf /tmp/buildkit.tgz -C /usr/local/bin/
 sudo mv /usr/local/bin/bin/* /usr/local/bin/
 rm /tmp/buildkit.tgz
 
-sudo mkdir -p /etc/systemd/system/user@.service.d
-cat <<EOF | sudo tee /etc/systemd/system/user@.service.d/delegate.conf
-[Service]
-Delegate=cpu cpuset io memory pids
-EOF
-
+#Download and install cni-plugins
 sudo rm -rf /opt/cni/bin/*
 cd && wget https://github.com/containernetworking/plugins/releases/download/v${CNI_VERSION}/cni-plugins-linux-amd64-v${CNI_VERSION}.tgz
 sudo mkdir -p /opt/cni/bin
 sudo tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v${CNI_VERSION}.tgz
 
-sudo systemctl daemon-reload
-echo $XDG_RUNTIME_DIR
-sudo loginctl enable-linger $(whoami)
-
 export PATH=$PATH:/usr/local/bin
-
-
-if ! command -v nerdctl &> /dev/null
-then
-    echo "nerdctl couldnot be found in PATH"
-    exit 1
-else
-    echo "nerdctl installed successfully"
-fi
 
 sudo containerd &
 sudo buildkitd &
 
 sleep 2
-if ! pgrep containerd > /dev/null
-then
-    echo "containerd failed to start."
-    exit 1
-fi
-
-echo "containerd is running"
