@@ -19,9 +19,9 @@ func TestRun(t *testing.T) {
 	if os.Getenv("RUN_E2E_TESTS") != "1" {
 		t.Skip("E2E tests skipped. Set RUN_E2E_TESTS=1 to run these tests")
 	}
-
-	finchexe := tests.GetFinchExe()
-	opt, _ := option.New([]string{finchexe})
+	// TODO : Make this configurable
+	runtimeExe := "nerdctl"
+	opt, _ := option.New([]string{runtimeExe, "-n", "finch"})
 
 	ginkgo.SynchronizedBeforeSuite(func() []byte {
 		tests.SetupLocalRegistry(opt)
