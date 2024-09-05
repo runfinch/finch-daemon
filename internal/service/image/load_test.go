@@ -18,7 +18,7 @@ import (
 	"github.com/runfinch/finch-daemon/mocks/mocks_logger"
 )
 
-// Unit tests related to image load API
+// Unit tests related to image load API.
 var _ = Describe("Image Load API", func() {
 	var (
 		ctx      context.Context

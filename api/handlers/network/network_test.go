@@ -80,7 +80,7 @@ var _ = Describe("Network API ", func() {
 		It("should call the network list handler using /networks", func() {
 			// setup mocks
 			expErr := "error from List"
-			service.EXPECT().List(gomock.Any()).Return(nil, fmt.Errorf(expErr))
+			service.EXPECT().List(gomock.Any()).Return(nil, fmt.Errorf("%s", expErr))
 			req, _ = http.NewRequest(http.MethodGet, "/networks", nil)
 			// call api and check if it returns error
 			router.ServeHTTP(rr, req)
@@ -90,7 +90,7 @@ var _ = Describe("Network API ", func() {
 		It("should call the network list handler using /networks/", func() {
 			// setup mocks
 			expErr := "error from List"
-			service.EXPECT().List(gomock.Any()).Return(nil, fmt.Errorf(expErr))
+			service.EXPECT().List(gomock.Any()).Return(nil, fmt.Errorf("%s", expErr))
 			req, _ = http.NewRequest(http.MethodGet, "/networks/", nil)
 			// call api and check if it returns error
 			router.ServeHTTP(rr, req)

@@ -70,7 +70,7 @@ var _ = Describe("Container Logs API", func() {
 			expErrCode := http.StatusInternalServerError
 			expErrMsg := "error"
 			service.EXPECT().Logs(gomock.Any(), gomock.Any(), gomock.Any()).
-				Return(fmt.Errorf(expErrMsg))
+				Return(fmt.Errorf("%s", expErrMsg))
 
 			h.logs(rr, req)
 
@@ -83,7 +83,7 @@ var _ = Describe("Container Logs API", func() {
 			expErrCode := http.StatusNotFound
 			expErrMsg := fmt.Sprintf("no container is found given the string: %s", "123")
 			service.EXPECT().Logs(gomock.Any(), gomock.Any(), gomock.Any()).
-				Return(errdefs.NewNotFound(fmt.Errorf(expErrMsg)))
+				Return(errdefs.NewNotFound(fmt.Errorf("%s", expErrMsg)))
 
 			h.logs(rr, req)
 

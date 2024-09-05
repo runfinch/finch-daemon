@@ -72,7 +72,7 @@ var _ = Describe("Container Attach API", func() {
 			expErrCode := http.StatusInternalServerError
 			expErrMsg := "error"
 			service.EXPECT().Attach(gomock.Any(), gomock.Any(), gomock.Any()).
-				Return(fmt.Errorf(expErrMsg))
+				Return(fmt.Errorf("%s", expErrMsg))
 			req, _ = http.NewRequest(http.MethodPost, "/containers/123", nil)
 
 			h.attach(rr, req)
@@ -86,7 +86,7 @@ var _ = Describe("Container Attach API", func() {
 			expErrCode := http.StatusNotFound
 			expErrMsg := fmt.Sprintf("no container is found given the string: %s", "123")
 			service.EXPECT().Attach(gomock.Any(), gomock.Any(), gomock.Any()).
-				Return(errdefs.NewNotFound(fmt.Errorf(expErrMsg)))
+				Return(errdefs.NewNotFound(fmt.Errorf("%s", expErrMsg)))
 			req, _ = http.NewRequest(http.MethodPost, "/containers/123", nil)
 
 			h.attach(rr, req)
@@ -243,7 +243,7 @@ func (h *errorResponseRecorder) Code() int {
 }
 
 func (h *errorResponseRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	return nil, nil, fmt.Errorf(errRRErrMsg)
+	return nil, nil, fmt.Errorf("%s", errRRErrMsg)
 }
 
 // attachOptsMatcher is adapted from container create to be a wrapper type to
