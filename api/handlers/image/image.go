@@ -24,6 +24,7 @@ type Service interface {
 	Remove(ctx context.Context, name string, force bool) (deleted, untagged []string, err error)
 	Tag(ctx context.Context, srcImg string, repo, tag string) error
 	Inspect(ctx context.Context, name string) (*dockercompat.Image, error)
+	Load(ctx context.Context, inStream io.Reader, outStream io.Writer, quiet bool) error
 }
 
 func RegisterHandlers(r types.VersionedRouter, service Service, conf *config.Config, logger flog.Logger) {
@@ -31,6 +32,7 @@ func RegisterHandlers(r types.VersionedRouter, service Service, conf *config.Con
 
 	r.SetPrefix("/images")
 	r.HandleFunc("/create", h.pull, http.MethodPost)
+	r.HandleFunc("/load", h.load, http.MethodPost)
 	r.HandleFunc("/json", h.list, http.MethodGet)
 	r.HandleFunc("/{name:.*}", h.remove, http.MethodDelete)
 	r.HandleFunc("/{name:.*}/push", h.push, http.MethodPost)
