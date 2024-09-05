@@ -40,6 +40,7 @@ func TestRun(t *testing.T) {
 		tests.ContainerCreate(opt)
 		tests.ContainerStart(opt)
 		tests.ContainerStop(opt)
+		tests.ContainerRestart(opt)
 		tests.ContainerRemove(opt)
 		tests.ContainerList(opt)
 		tests.ContainerRename(opt)

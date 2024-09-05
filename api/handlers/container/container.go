@@ -24,6 +24,7 @@ type Service interface {
 	Wait(ctx context.Context, cid string, condition string) (code int64, err error)
 	Start(ctx context.Context, cid string) error
 	Stop(ctx context.Context, cid string, timeout *time.Duration) error
+	Restart(ctx context.Context, cid string, timeout time.Duration) error
 	Create(ctx context.Context, image string, cmd []string, createOpt ncTypes.ContainerCreateOptions, netOpt ncTypes.NetworkOptions) (string, error)
 	Inspect(ctx context.Context, cid string) (*types.Container, error)
 	WriteFilesAsTarArchive(filePath string, writer io.Writer, slashDot bool) error
@@ -44,6 +45,7 @@ func RegisterHandlers(r types.VersionedRouter, service Service, conf *config.Con
 	r.HandleFunc("/{id:.*}", h.remove, http.MethodDelete)
 	r.HandleFunc("/{id:.*}/start", h.start, http.MethodPost)
 	r.HandleFunc("/{id:.*}/stop", h.stop, http.MethodPost)
+	r.HandleFunc("/{id:.*}/restart", h.restart, http.MethodPost)
 	r.HandleFunc("/{id:.*}/remove", h.remove, http.MethodPost)
 	r.HandleFunc("/{id:.*}/wait", h.wait, http.MethodPost)
 	r.HandleFunc("/create", h.create, http.MethodPost)
