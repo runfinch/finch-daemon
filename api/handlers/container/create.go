@@ -158,7 +158,6 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		Workdir:           req.WorkingDir,
 		Entrypoint:        req.Entrypoint,
 		EntrypointChanged: len(req.Entrypoint) > 0,
-		//req.Entrypoint != nil is removed because len(x) > 0 will automatically verify that req.Entrypoint is not nil
 		// #endregion
 
 		// #region for metadata flags
