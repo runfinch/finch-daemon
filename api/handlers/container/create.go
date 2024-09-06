@@ -157,7 +157,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		Env:               env,
 		Workdir:           req.WorkingDir,
 		Entrypoint:        req.Entrypoint,
-		EntrypointChanged: req.Entrypoint != nil && len(req.Entrypoint) > 0,
+		EntrypointChanged: len(req.Entrypoint) > 0,
 		// #endregion
 
 		// #region for metadata flags

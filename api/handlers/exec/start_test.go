@@ -140,7 +140,7 @@ var _ = Describe("Exec Start API", func() {
 			It("should return 500 if Hijacking the connection fails", func() {
 				hijackErrMsg := "error hijacking the connection"
 				errRR := newResponseRecorderWithMockHijack(rr, func() (net.Conn, *bufio.ReadWriter, error) {
-					return nil, nil, fmt.Errorf(hijackErrMsg)
+					return nil, nil, fmt.Errorf("%s", hijackErrMsg)
 				})
 
 				h.start(errRR, req)

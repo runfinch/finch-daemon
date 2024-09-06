@@ -46,7 +46,7 @@ var _ = Describe("Network List API ", func() {
 		})
 		It("should pass through errors from FilterNetworks", func() {
 			expErr := "filter network error"
-			ncNetClient.EXPECT().FilterNetworks(gomock.Any()).Return(nil, fmt.Errorf(expErr))
+			ncNetClient.EXPECT().FilterNetworks(gomock.Any()).Return(nil, fmt.Errorf("%s", expErr))
 
 			_, err := service.List(ctx)
 			Expect(err.Error()).Should(Equal(expErr))

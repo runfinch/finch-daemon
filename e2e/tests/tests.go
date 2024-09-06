@@ -174,13 +174,13 @@ func fileShouldExistInContainer(opt *option.Option, containerName, path, content
 	gomega.Expect(command.StdoutStr(opt, "exec", containerName, "cat", path)).To(gomega.Equal(content))
 }
 
-//nolint: unused // reserved for future use cases
+//nolint:unused // reserved for future use cases
 func fileShouldNotExistInContainer(opt *option.Option, containerName, path string) {
 	cmdOut := command.RunWithoutSuccessfulExit(opt, "exec", containerName, "cat", path)
 	gomega.Expect(cmdOut.Err.Contents()).To(gomega.ContainSubstring("No such file or directory"))
 }
 
-//nolint: unused // reserved for future use cases
+//nolint:unused // reserved for future use cases
 func buildImage(opt *option.Option, imageName string) {
 	dockerfile := fmt.Sprintf(`FROM %s
 		CMD ["echo", "finch-test-dummy-output"]

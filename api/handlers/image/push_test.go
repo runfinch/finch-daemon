@@ -164,7 +164,7 @@ var _ = Describe("Image Push API", func() {
 				Expect(authCfg.Password).Should(BeEmpty())
 				// mimic service is trying to push the image and failed with auth error.
 				outStream.Write([]byte(streamMsg))
-				return nil, fmt.Errorf(errMsg)
+				return nil, fmt.Errorf("%s", errMsg)
 			})
 
 			// handler should return error message with 500 status code

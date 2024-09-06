@@ -137,7 +137,7 @@ var _ = Describe("Container List API", func() {
 				Filters:  nil,
 			}
 			errorMsg := "error from ListContainers"
-			service.EXPECT().List(gomock.Any(), listOpts).Return(nil, fmt.Errorf(errorMsg))
+			service.EXPECT().List(gomock.Any(), listOpts).Return(nil, fmt.Errorf("%s", errorMsg))
 
 			h.list(rr, req)
 			Expect(rr.Body).Should(MatchJSON(`{"message": "` + errorMsg + `"}`))

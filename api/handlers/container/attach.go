@@ -104,10 +104,7 @@ func checkUpgradeStatus(ctx context.Context, upgrade bool) (string, string) {
 		if versions.GreaterThanOrEqualTo(httputils.VersionFromContext(ctx), "1.42") {
 			contentType = "application/vnd.docker.multiplexed-stream"
 		}
-		successResponse = fmt.Sprintf("HTTP/1.1 101 UPGRADED\r\n" +
-			"Content-Type: " + contentType + "\r\n" +
-			"Connection: Upgrade\r\n" +
-			"Upgrade: tcp\r\n\r\n")
+		successResponse = fmt.Sprintf("HTTP/1.1 101 UPGRADED\r\nContent-Type: %s\r\nConnection: Upgrade\r\nUpgrade: tcp\r\n\r\n", contentType)
 	}
 	return contentType, successResponse
 }

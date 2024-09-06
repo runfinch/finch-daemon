@@ -116,7 +116,7 @@ var _ = Describe("Container Attach API ", func() {
 			cdClient.EXPECT().SearchContainer(gomock.Any(), gomock.Any()).Return([]containerd.Container{con}, nil)
 			logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).Return()
 			con.EXPECT().ID().Return(cid)
-			ncClient.EXPECT().GetDataStore().Return("", fmt.Errorf(expErr))
+			ncClient.EXPECT().GetDataStore().Return("", fmt.Errorf("%s", expErr))
 			logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).Return()
 			// set up options
 			opts := attachTypes.AttachOptions{
@@ -244,7 +244,7 @@ var _ = Describe("Container Attach API ", func() {
 				k8slabels.ContainerMetadataExtension: testAny,
 			}, nil)
 			cdClient.EXPECT().GetContainerStatus(gomock.Any(), gomock.Any()).Return(containerd.Running)
-			cdClient.EXPECT().GetContainerTaskWait(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil, fmt.Errorf(expErr))
+			cdClient.EXPECT().GetContainerTaskWait(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil, fmt.Errorf("%s", expErr))
 			logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).Return()
 
 			// set up options
