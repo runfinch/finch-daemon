@@ -59,11 +59,11 @@ type ContainerHostConfig struct {
 	// Applicable to all platforms
 	Binds []string // List of volume bindings for this container
 	// TODO: ContainerIDFile string            // File (path) where the containerId is written
-	// TODO: LogConfig       LogConfig         // Configuration of the logs for this container
-	NetworkMode  string      // Network mode to use for the container
-	PortBindings nat.PortMap // Port mapping between the exposed port (container) and the host
-	// TODO: RestartPolicy   RestartPolicy     // Restart policy to be used for the container
-	AutoRemove bool // Automatically remove container when it exits
+	LogConfig     LogConfig     // Configuration of the logs for this container
+	NetworkMode   string        // Network mode to use for the container
+	PortBindings  nat.PortMap   // Port mapping between the exposed port (container) and the host
+	RestartPolicy RestartPolicy // Restart policy to be used for the container
+	AutoRemove    bool          // Automatically remove container when it exits
 	// TODO: VolumeDriver    string            // Name of the volume driver used to mount volumes
 	// TODO: VolumesFrom     []string          // List of volumes to take from other container
 	// TODO: ConsoleSize     [2]uint           // Initial console size (height,width)
@@ -73,9 +73,9 @@ type ContainerHostConfig struct {
 	CapAdd []string // List of kernel capabilities to add to the container
 	// TODO: CapDrop         strslice.StrSlice // List of kernel capabilities to remove from the container
 	// TODO: CgroupnsMode    CgroupnsMode      // Cgroup namespace mode to use for the container
-	// TODO: DNS             []string          `json:"Dns"`        // List of DNS server to lookup
-	// TODO: DNSOptions      []string          `json:"DnsOptions"` // List of DNSOption to look for
-	// TODO: DNSSearch       []string          `json:"DnsSearch"`  // List of DNSSearch to look for
+	DNS        []string `json:"Dns"`        // List of DNS server to lookup
+	DNSOptions []string `json:"DnsOptions"` // List of DNSOption to look for
+	DNSSearch  []string `json:"DnsSearch"`  // List of DNSSearch to look for
 	// TODO: ExtraHosts      []string          // List of extra hosts
 	// TODO: GroupAdd        []string          // List of additional groups that the container process will run as
 	// TODO: IpcMode         IpcMode           // IPC namespace to use for the container
@@ -99,7 +99,8 @@ type ContainerHostConfig struct {
 	// TODO: Isolation Isolation // Isolation technology of the container (e.g. default, hyperv)
 
 	// Contains container's resources (cgroups, ulimits)
-	Memory int64 // Memory limit (in bytes)
+	CPUShares int64 `json:"CpuShares"` // CPU shares (relative weight vs. other containers)
+	Memory    int64 // Memory limit (in bytes)
 	// TODO: Resources
 
 	// Mounts specs used by the container
@@ -113,6 +114,20 @@ type ContainerHostConfig struct {
 
 	// Run a custom init inside the container, if null, use the daemon's configured settings
 	// TODO: Init *bool `json:",omitempty"`
+}
+
+// LogConfig represents the logging configuration of the container.
+// From https://github.com/moby/moby/blob/v24.0.2/api/types/container/hostconfig.go#L319-L323
+type LogConfig struct {
+	Type   string
+	Config map[string]string
+}
+
+// RestartPolicy represents the restart policies of the container.
+// From https://github.com/moby/moby/blob/v24.0.2/api/types/container/hostconfig.go#L272-L276
+type RestartPolicy struct {
+	Name              string
+	MaximumRetryCount int
 }
 
 type ContainerCreateRequest struct {

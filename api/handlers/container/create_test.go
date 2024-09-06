@@ -212,7 +212,11 @@ var _ = Describe("Container Create API ", func() {
 				"Image": "test-image",
 				"HostConfig": {
 					"AutoRemove": true,
-					"Memory": 209715200
+					"Memory": 209715200,
+					"RestartPolicy": {
+						"Name": "on-failure",
+						"MaximumRetryCount": 0
+					}
 				},
 				"User": "test-user",
 				"Env": ["VARIABLE1=1", "VAR2=var2"],
@@ -225,6 +229,7 @@ var _ = Describe("Container Create API ", func() {
 
 			// expected create options
 			createOpt.Rm = true
+			createOpt.Restart = "on-failure"
 			createOpt.User = "test-user"
 			createOpt.Env = []string{"VARIABLE1=1", "VAR2=var2"}
 			createOpt.Workdir = "/test-dir"
@@ -233,6 +238,83 @@ var _ = Describe("Container Create API ", func() {
 			createOpt.StopSignal = "SIGINT"
 			createOpt.StopTimeout = 500
 			createOpt.Memory = "209715200"
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set specified create options for resources", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"Memory": 209715200,
+					"CPUShares": 1
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.Memory = "209715200"
+			createOpt.CPUShares = 1
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set specified create options for logging", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"LogConfig": {
+						"Type": "json-file",
+						"Config": {
+							"key": "value"
+						}
+					}
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.LogDriver = "json-file"
+			createOpt.LogOpt = []string{"key=value"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set specified network options", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"Hostname": "test-host",
+				"HostConfig": {
+					"DNS": ["8.8.8.8"],
+					"DNSOptions": ["test-opt"],
+					"DNSSearch": ["test.com"]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected network options
+			netOpt.Hostname = "test-host"
+			netOpt.DNSServers = []string{"8.8.8.8"}
+			netOpt.DNSResolvConfOptions = []string{"test-opt"}
+			netOpt.DNSSearchDomains = []string{"test.com"}
 
 			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
 				cid, nil)
@@ -493,6 +575,7 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 
 		// #region for logging flags
 		LogDriver: "json-file", // nerdctl default.
+		LogOpt:    []string{},
 		// #endregion
 
 		// #region for image pull and verify types

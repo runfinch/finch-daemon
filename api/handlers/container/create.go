@@ -20,6 +20,7 @@ import (
 	"github.com/runfinch/finch-daemon/api/response"
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
+	"github.com/runfinch/finch-daemon/pkg/utility/maputility"
 )
 
 type containerCreateResponse struct {
@@ -44,6 +45,14 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// defaults
+	rp := req.HostConfig.RestartPolicy
+	restart := "no" // Docker API default.
+	if rp.Name != "" {
+		restart = rp.Name
+		if rp.MaximumRetryCount > 0 {
+			restart = fmt.Sprintf("%s:%d", restart, rp.MaximumRetryCount)
+		}
+	}
 	stopSignal := "SIGTERM" // nerdctl default.
 	if req.StopSignal != "" {
 		stopSignal = req.StopSignal
@@ -55,6 +64,15 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	memory := ""
 	if req.HostConfig.Memory > 0 {
 		memory = fmt.Sprint(req.HostConfig.Memory)
+	}
+	lc := req.HostConfig.LogConfig
+	logDriver := "json-file" // Docker API default
+	if lc.Type != "" {
+		logDriver = lc.Type
+	}
+	logOpt := []string{}
+	if len(lc.Config) > 0 {
+		logOpt = maputility.Flatten(lc.Config, maputility.KeyEqualsValueFormat)
 	}
 
 	// Volumes:
@@ -111,8 +129,8 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		Interactive: false,                     // TODO: update this after attach supports STDIN
 		TTY:         false,                     // TODO: update this after attach supports STDIN
 		Detach:      true,                      // TODO: current implementation of create does not support AttachStdin, AttachStdout, and AttachStderr flags
-		Restart:     "no",                      // Docker API default.
-		Rm:          req.HostConfig.AutoRemove, // Automatically remove container upon exit
+		Restart:     restart,                   // Restart policy to apply when a container exits.
+		Rm:          req.HostConfig.AutoRemove, // Automatically remove container upon exit.
 		Pull:        "missing",                 // nerdctl default.
 		StopSignal:  stopSignal,
 		StopTimeout: stopTimeout,
@@ -127,11 +145,12 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #endregion
 
 		// #region for resource flags
-		Memory:             memory,                  // memory limit (in bytes)
-		CPUQuota:           -1,                      // nerdctl default.
-		MemorySwappiness64: -1,                      // nerdctl default.
-		PidsLimit:          -1,                      // nerdctl default.
-		Cgroupns:           defaults.CgroupnsMode(), // nerdctl default.
+		CPUShares:          uint64(req.HostConfig.CPUShares), // CPU shares (relative weight)
+		Memory:             memory,                           // memory limit (in bytes)
+		CPUQuota:           -1,                               // nerdctl default.
+		MemorySwappiness64: -1,                               // nerdctl default.
+		PidsLimit:          -1,                               // nerdctl default.
+		Cgroupns:           defaults.CgroupnsMode(),          // nerdctl default.
 		// #endregion
 
 		// #region for user flags
@@ -166,7 +185,8 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #endregion
 
 		// #region for logging flags
-		LogDriver: "json-file", // nerdctl default.
+		LogDriver: logDriver, // logging driver for the container
+		LogOpt:    logOpt,    // logging driver specific options
 		// #endregion
 
 		// #region for image pull and verify options
@@ -190,10 +210,16 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	if networkMode == "" || networkMode == "default" {
 		networkMode = "bridge"
 	}
+	dnsOpt := []string{}
+	if req.HostConfig.DNSOptions != nil {
+		dnsOpt = req.HostConfig.DNSOptions
+	}
 	netOpt := ncTypes.NetworkOptions{
 		Hostname:             req.Hostname,
-		NetworkSlice:         []string{networkMode}, // TODO: Set to none if "NetworkDisabled" is true in request
-		DNSResolvConfOptions: []string{},            // nerdctl default.
+		NetworkSlice:         []string{networkMode},    // TODO: Set to none if "NetworkDisabled" is true in request
+		DNSServers:           req.HostConfig.DNS,       // Custom DNS lookup servers.
+		DNSResolvConfOptions: dnsOpt,                   // DNS options.
+		DNSSearchDomains:     req.HostConfig.DNSSearch, // Custom DNS search domains.
 		PortMappings:         portMappings,
 	}
 
