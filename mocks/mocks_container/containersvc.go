@@ -184,6 +184,20 @@ func (mr *MockServiceMockRecorder) Rename(arg0, arg1, arg2, arg3 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rename", reflect.TypeOf((*MockService)(nil).Rename), arg0, arg1, arg2, arg3)
 }
 
+// Restart mocks base method.
+func (m *MockService) Restart(arg0 context.Context, arg1 string, arg2 time.Duration) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Restart", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+ 
+// Restart indicates an expected call of Restart.
+func (mr *MockServiceMockRecorder) Restart(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restart", reflect.TypeOf((*MockService)(nil).Restart), arg0, arg1, arg2)
+}
+
 // Start mocks base method.
 func (m *MockService) Start(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()

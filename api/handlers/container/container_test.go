@@ -76,6 +76,15 @@ var _ = Describe("Container API", func() {
 			Expect(rr).Should(HaveHTTPStatus(http.StatusInternalServerError))
 			Expect(rr.Body).Should(MatchJSON(`{"message": "error from stop api"}`))
 		})
+		It("should call container restart method", func() {
+			// setup mocks
+			service.EXPECT().Restart(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("error from restart api"))
+			req, _ = http.NewRequest(http.MethodPost, "/containers/123/restart", nil)
+			// call the API to check if it returns the error generated from restart method
+			router.ServeHTTP(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusInternalServerError))
+			Expect(rr.Body).Should(MatchJSON(`{"message": "error from restart api"}`))
+		})
 		It("should call container create method", func() {
 			// setup mocks
 			body := []byte(`{"Image": "test-image"}`)
