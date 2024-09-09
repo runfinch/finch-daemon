@@ -1,4 +1,4 @@
-name: Release
+name: Release Finch Daemon
 on:
   workflow_dispatch:
   push:
@@ -64,7 +64,6 @@ jobs:
           path: release/
       - run: bash scripts/verify-release-artifacts.sh ${{ needs.generate-artifacts.outputs.release_tag }}
   create-release:
-    # if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     needs: [generate-artifacts, validate-artifacts]
     runs-on: ubuntu-latest
     steps:
@@ -74,7 +73,7 @@ jobs:
           name: artifacts
       - uses: softprops/action-gh-release@v2
         with:
-          draft: true
+          tag_name: ${{ needs.generate-artifacts.outputs.release_tag }}
           prerelease: false
           generate_release_notes: false
           files: |
