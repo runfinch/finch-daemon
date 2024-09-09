@@ -3,6 +3,7 @@ GINKGO = go run github.com/onsi/ginkgo/v2/ginkgo
 GFLAGS ?= --race --randomize-all --randomize-suites
 BIN = $(PWD)/bin
 FINCH_ROOT ?= /Applications/Finch
+FINCH_DAEMON_PROJECT_ROOT ?= $(shell pwd)
 
 # Linux or macOS targets
 .PHONY: build
@@ -91,3 +92,8 @@ run-e2e-tests: linux
 	DOCKER_API_VERSION="v1.41" \
 	RUN_E2E_TESTS=1 \
 	$(GINKGO) $(GFLAGS) ./e2e/...
+
+.PHONY: release
+release: linux
+	@echo "$@"
+	@$(FINCH_DAEMON_PROJECT_ROOT)/scripts/create-releases.sh $(RELEASE_TAG)
