@@ -1,45 +1,44 @@
 name: Release
-
 on:
+  workflow_dispatch:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
-  pull_request:
-    branches: ['main', 'release/**']
-    paths:
-      - '.github/workflows/releases.yml'
-      - 'scripts/**'
-      - 'Makefile'
-
 env:
   GO_VERSION: '1.23.0'
-
 permissions:
   contents: write
   deployments: write
-
 jobs:
+  get-latest-tag:
+    name: Get the latest release tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.latest-tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          fetch-depth: 0
+      - name: 'Get the latest tag'
+        id: latest-tag
+        uses: "WyriHaximus/github-action-get-previous-tag@04e8485ecb6487243907e330d522ff60f02283ce" # v1.4.0
+      - name: 'Echo previous tag'
+        run: echo ${{ steps.latest-tag.outputs.tag }}
   generate-artifacts:
+    needs: get-latest-tag
     runs-on: ubuntu-latest
     env:
       # Set during setup.
-      RELEASE_TAG: ''
+      RELEASE_TAG: ${{ needs.get-latest-tag.outputs.tag }}
       DYNAMIC_BINARY_NAME: ''
       STATIC_BINARY_NAME: ''
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-      - name: Export cleaned release tag
-        run: |
-          export release_tag=${GITHUB_REF#refs/*/} # Strip down to raw tag name
-          echo $release_tag
-          echo "RELEASE_TAG=${release_tag}" >> $GITHUB_ENV
-      - name: Create dummy environment for release
-        if: github.event_name == 'pull_request'
-        run: |
-          touch THIRD_PARTY_LICENSES
-          echo "RELEASE_TAG=v0.0.0" >> $GITHUB_ENV
+      - name: 'Echo RELEASE_TAG ENV'
+        run: echo ${{ env.RELEASE_TAG }}
       - name: Setup variables and release directories
         run: |
+          touch THIRD_PARTY_LICENSES
           export release_tag=${{ env.RELEASE_TAG }}
           export release_version=${release_tag/v/} # Remove v from tag name
           echo "DYNAMIC_BINARY_NAME=finch-daemon-${release_version}-linux-amd64.tar.gz" >> $GITHUB_ENV
@@ -52,12 +51,10 @@ jobs:
           name: artifacts
           path: release/
           if-no-files-found: error
-
     outputs:
       release_tag: ${{ env.RELEASE_TAG }}
       dynamic_binary_name: ${{ env.DYNAMIC_BINARY_NAME }}
       static_binary_name: ${{ env.STATIC_BINARY_NAME }}
-
   validate-artifacts:
     needs: generate-artifacts
     runs-on: ubuntu-latest
@@ -68,9 +65,8 @@ jobs:
           name: artifacts
           path: release/
       - run: bash scripts/verify-release-artifacts.sh ${{ needs.generate-artifacts.outputs.release_tag }}
-
   create-release:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    # if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     needs: [generate-artifacts, validate-artifacts]
     runs-on: ubuntu-latest
     steps:

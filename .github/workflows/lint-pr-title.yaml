@@ -1,5 +1,4 @@
 name: "Lint PR Title"
-
 on:
   pull_request:
     types:
@@ -7,7 +6,6 @@ on:
       - edited
       - reopened
       - synchronize
-
 jobs:
   main:
     name: conventional-commit
