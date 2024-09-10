@@ -15,7 +15,7 @@ import (
 	converter "github.com/containerd/containerd/images/converter"
 	mount "github.com/containerd/containerd/mount"
 	oci "github.com/containerd/containerd/oci"
-	platforms "github.com/containerd/containerd/platforms"
+	platforms "github.com/containerd/platforms"
 	gomock "github.com/golang/mock/gomock"
 	digest "github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"

@@ -5,11 +5,15 @@ go 1.22
 require (
 	github.com/containerd/cgroups/v3 v3.0.3
 	github.com/containerd/containerd v1.7.14
+	github.com/containerd/errdefs v0.1.0
+	github.com/containerd/fifo v1.1.0
 	github.com/containerd/go-cni v1.1.9
 	github.com/containerd/nerdctl v1.7.5
+	github.com/containerd/platforms v0.2.1
 	github.com/containerd/typeurl/v2 v2.1.1
 	github.com/containernetworking/cni v1.1.2
 	github.com/coreos/go-systemd/v22 v22.5.0
+	github.com/distribution/reference v0.6.0
 	github.com/docker/cli v26.0.0+incompatible
 	github.com/docker/docker v26.1.5+incompatible
 	github.com/docker/go-connections v0.5.0
@@ -47,8 +51,6 @@ require (
 	github.com/containerd/accelerated-container-image v1.0.4 // indirect
 	github.com/containerd/console v1.0.4 // indirect
 	github.com/containerd/continuity v0.4.3 // indirect
-	github.com/containerd/errdefs v0.1.0 // indirect
-	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/go-runc v1.1.0 // indirect
 	github.com/containerd/imgcrypt v1.1.10 // indirect
 	github.com/containerd/log v0.1.0 // indirect
@@ -62,7 +64,6 @@ require (
 	github.com/containers/ocicrypt v1.1.10 // indirect
 	github.com/coreos/go-iptables v0.7.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
-	github.com/distribution/reference v0.6.0 // indirect
 	github.com/djherbis/times v1.6.0 // indirect
 	github.com/docker/docker-credential-helpers v0.8.1 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect

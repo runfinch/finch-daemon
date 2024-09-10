@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	cerrdefs "github.com/containerd/containerd/errdefs"
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/containerd/containerd/remotes"
 	"github.com/containerd/containerd/remotes/docker"
 	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"

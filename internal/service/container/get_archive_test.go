@@ -12,7 +12,7 @@ import (
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/containers"
-	cerrdefs "github.com/containerd/containerd/errdefs"
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/containerd/containerd/mount"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"

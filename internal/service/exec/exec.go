@@ -9,7 +9,7 @@ import (
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
-	cerrdefs "github.com/containerd/containerd/errdefs"
+	cerrdefs "github.com/containerd/errdefs"
 
 	"github.com/runfinch/finch-daemon/api/handlers/exec"
 	"github.com/runfinch/finch-daemon/internal/backend"

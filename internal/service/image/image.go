@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/containerd/containerd/images"
-	"github.com/containerd/containerd/reference/docker"
+	docker "github.com/distribution/reference"
 
 	"github.com/runfinch/finch-daemon/api/handlers/image"
 	"github.com/runfinch/finch-daemon/internal/backend"
