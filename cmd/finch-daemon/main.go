@@ -34,6 +34,7 @@ import (
 	"github.com/runfinch/finch-daemon/internal/service/system"
 	"github.com/runfinch/finch-daemon/internal/service/volume"
 	"github.com/runfinch/finch-daemon/pkg/archive"
+	daemonConfig "github.com/runfinch/finch-daemon/pkg/config"
 	"github.com/runfinch/finch-daemon/pkg/ecc"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 )
@@ -49,6 +50,7 @@ type DaemonOptions struct {
 	socketAddr   string
 	socketOwner  int
 	regoFilePath string
+	configPath   string
 }
 
 var options = new(DaemonOptions)
@@ -68,6 +70,7 @@ func main() {
 		" (more info: https://github.com/lima-vm/lima/blob/5a9bca3d09481ed7109b14f8d3f0074816731f43/examples/default.yaml#L340)."+
 		" -1 means no-op.")
 	rootCmd.Flags().StringVar(&options.regoFilePath, "rego-path", "", "Optional path to a rego policy. Currently only allowlist/denylist options are available")
+	rootCmd.Flags().StringVar(&options.configPath, "config", "", "Optional path to a settings YAML file (finch-daemon.yaml)")
 	if err := rootCmd.Execute(); err != nil {
 		log.Printf("got error: %v", err)
 		log.Fatal(err)
@@ -79,13 +82,26 @@ func runAdapter(cmd *cobra.Command, _ []string) error {
 }
 
 func run(options *DaemonOptions) error {
+	fs := afero.NewOsFs()
+
+	if options.configPath != "" {
+		cfg, err := daemonConfig.Load(options.configPath, fs)
+		if err != nil {
+			return fmt.Errorf("could not read from %v: %v", options.configPath, err)
+		}
+
+		if options.regoFilePath == "" {
+			options.regoFilePath = cfg.RegoFilePath
+		}
+	}
+
 	// This sets the log level of the dependencies that use logrus (e.g., containerd library).
 	if options.debug {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
 
 	logger := flog.NewLogrus()
-	r, err := newRouter(options, logger)
+	r, err := newRouter(options, logger, fs)
 	if err != nil {
 		return fmt.Errorf("failed to create a router: %w", err)
 	}
@@ -124,7 +140,7 @@ func run(options *DaemonOptions) error {
 	return nil
 }
 
-func newRouter(options *DaemonOptions, logger *flog.Logrus) (http.Handler, error) {
+func newRouter(options *DaemonOptions, logger *flog.Logrus, fs afero.Fs) (http.Handler, error) {
 	conf := config.New()
 	conf.Debug = options.debug
 	conf.Namespace = defaultNamespace
@@ -140,7 +156,6 @@ func newRouter(options *DaemonOptions, logger *flog.Logrus) (http.Handler, error
 	if _, err = ncWrapper.GetNerdctlExe(); err != nil {
 		return nil, fmt.Errorf("failed to find nerdctl binary: %w", err)
 	}
-	fs := afero.NewOsFs()
 	execCmdCreator := ecc.NewExecCmdCreator()
 	tarCreator := archive.NewTarCreator(execCmdCreator, logger)
 	tarExtractor := archive.NewTarExtractor(execCmdCreator, logger)
