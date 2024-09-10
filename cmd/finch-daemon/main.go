@@ -45,9 +45,10 @@ const (
 )
 
 type DaemonOptions struct {
-	debug       bool
-	socketAddr  string
-	socketOwner int
+	debug        bool
+	socketAddr   string
+	socketOwner  int
+	regoFilePath string
 }
 
 var options = new(DaemonOptions)
@@ -66,6 +67,7 @@ func main() {
 		" For macOS, the socket has to be owned by the lima user to make port forwarding work"+
 		" (more info: https://github.com/lima-vm/lima/blob/5a9bca3d09481ed7109b14f8d3f0074816731f43/examples/default.yaml#L340)."+
 		" -1 means no-op.")
+	rootCmd.Flags().StringVar(&options.regoFilePath, "rego-path", "", "Optional path to a rego policy. Currently only allowlist/denylist options are available")
 	if err := rootCmd.Execute(); err != nil {
 		log.Printf("got error: %v", err)
 		log.Fatal(err)
@@ -83,7 +85,7 @@ func run(options *DaemonOptions) error {
 	}
 
 	logger := flog.NewLogrus()
-	r, err := newRouter(options.debug, logger)
+	r, err := newRouter(options, logger)
 	if err != nil {
 		return fmt.Errorf("failed to create a router: %w", err)
 	}
@@ -122,9 +124,9 @@ func run(options *DaemonOptions) error {
 	return nil
 }
 
-func newRouter(debug bool, logger *flog.Logrus) (http.Handler, error) {
+func newRouter(options *DaemonOptions, logger *flog.Logrus) (http.Handler, error) {
 	conf := config.New()
-	conf.Debug = debug
+	conf.Debug = options.debug
 	conf.Namespace = defaultNamespace
 	client, err := containerd.New(conf.Address, containerd.WithDefaultNamespace(conf.Namespace))
 	if err != nil {
@@ -151,9 +153,10 @@ func newRouter(debug bool, logger *flog.Logrus) (http.Handler, error) {
 		BuilderService:   builder.NewService(clientWrapper, ncWrapper, logger, tarExtractor),
 		VolumeService:    volume.NewService(ncWrapper, logger),
 		ExecService:      exec.NewService(clientWrapper, logger),
+		RegoFilePath:     options.regoFilePath,
 		NerdctlWrapper:   ncWrapper,
 	}
-	return router.New(opts), nil
+	return router.New(opts)
 }
 
 func handleSignal(socket string, server *http.Server, logger *flog.Logrus) {

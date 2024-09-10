@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/containerd/nerdctl/pkg/config"
@@ -52,7 +54,7 @@ var _ = Describe("version middleware test", func() {
 			VolumeService:    nil,
 			NerdctlWrapper:   nil,
 		}
-		h = New(opts)
+		h, _ = New(opts)
 		rr = httptest.NewRecorder()
 		expected = types.VersionInfo{
 			Platform: struct {
@@ -124,5 +126,70 @@ var _ = Describe("version middleware test", func() {
 		err := jd.Decode(&v)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(v).Should(Equal(expected))
+	})
+})
+
+// Unit tests for the rego handler.
+var _ = Describe("rego middleware test", func() {
+	var (
+		opts         *Options
+		rr           *httptest.ResponseRecorder
+		expected     types.VersionInfo
+		sysSvc       *mocks_system.MockService
+		regoFilePath string
+	)
+
+	BeforeEach(func() {
+		mockCtrl := gomock.NewController(GinkgoT())
+		defer mockCtrl.Finish()
+
+		tempDirPath := GinkgoT().TempDir()
+		regoFilePath = filepath.Join(tempDirPath, "authz.rego")
+		os.Create(regoFilePath)
+
+		c := config.Config{}
+		sysSvc = mocks_system.NewMockService(mockCtrl)
+		opts = &Options{
+			Config:        &c,
+			SystemService: sysSvc,
+		}
+		rr = httptest.NewRecorder()
+		expected = types.VersionInfo{}
+		sysSvc.EXPECT().GetVersion(gomock.Any()).Return(&expected, nil).AnyTimes()
+	})
+	It("should return a 200 error for calls by default", func() {
+		h, err := New(opts)
+		Expect(err).Should(BeNil())
+
+		req, _ := http.NewRequest(http.MethodGet, "/version", nil)
+		h.ServeHTTP(rr, req)
+
+		Expect(rr).Should(HaveHTTPStatus(http.StatusOK))
+	})
+
+	It("should return a 400 error for disallowed calls", func() {
+		regoPolicy := `package docker.authz
+
+default allow = false`
+
+		os.WriteFile(regoFilePath, []byte(regoPolicy), 0644)
+		opts.RegoFilePath = regoFilePath
+		h, err := New(opts)
+		Expect(err).Should(BeNil())
+
+		req, _ := http.NewRequest(http.MethodGet, "/version", nil)
+		h.ServeHTTP(rr, req)
+
+		Expect(rr).Should(HaveHTTPStatus(http.StatusBadRequest))
+	})
+
+	It("should return an error for poorly formed rego files", func() {
+		regoPolicy := `poorly formed rego file`
+
+		os.WriteFile(regoFilePath, []byte(regoPolicy), 0644)
+		opts.RegoFilePath = regoFilePath
+		_, err := New(opts)
+
+		Expect(err).Should(Equal(errRego))
 	})
 })
