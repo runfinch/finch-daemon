@@ -2,7 +2,7 @@
 on:
   push:
     branches:
-      - main
+      - release-prod
 name: release-please
 jobs:
   release-please:
