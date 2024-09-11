@@ -46,26 +46,28 @@ var _ = Describe("Image Load API", func() {
 				Return(name, nil)
 			ncClient.EXPECT().LoadImage(gomock.Any(), gomock.Any(), nil, gomock.Any()).
 				Return(nil)
+			logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
 
 			// service should return no error
 			err := service.Load(ctx, inStream, nil, false)
 			Expect(err).Should(BeNil())
 		})
 		It("should return an error if load image method returns an error", func() {
-			logger.EXPECT().Errorf(gomock.Any(), gomock.Any())
 			ncClient.EXPECT().GetDataStore().
 				Return(name, nil)
 			ncClient.EXPECT().LoadImage(gomock.Any(), gomock.Any(), nil, gomock.Any()).
 				Return(errors.New("error message"))
+			logger.EXPECT().Errorf(gomock.Any(), gomock.Any())
+			logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
 
 			// service should return an error
 			err := service.Load(ctx, inStream, nil, false)
 			Expect(err).ShouldNot(BeNil())
 		})
 		It("should return an error if get datastore method returns an error", func() {
-			logger.EXPECT().Errorf(gomock.Any(), gomock.Any())
 			ncClient.EXPECT().GetDataStore().
 				Return(name, errors.New("error message"))
+			logger.EXPECT().Errorf(gomock.Any(), gomock.Any())
 
 			// service should return an error
 			err := service.Load(ctx, inStream, nil, false)
