@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	ncTypes "github.com/containerd/nerdctl/pkg/api/types"
 
@@ -18,6 +19,7 @@ import (
 )
 
 const tagEventAction = "tag"
+const shortLen = 12
 
 // setting publishTagEventFunc as a variable to allow mocking this function for unit testing.
 var publishTagEventFunc = (*service).publishTagEvent
@@ -92,7 +94,7 @@ func tagTopic() string {
 
 func getTagEvent(digest, imgName string) *events.Event {
 	return &events.Event{
-		ID:     digest,
+		ID:     truncateID(digest), // for docker compatibility
 		Status: tagEventAction,
 		Type:   "image",
 		Action: tagEventAction,
@@ -103,4 +105,14 @@ func getTagEvent(digest, imgName string) *events.Event {
 			},
 		},
 	}
+}
+
+func truncateID(id string) string {
+	if i := strings.IndexRune(id, ':'); i >= 0 {
+		id = id[i+1:]
+	}
+	if len(id) > shortLen {
+		id = id[:shortLen]
+	}
+	return id
 }
