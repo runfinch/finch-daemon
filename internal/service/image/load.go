@@ -42,11 +42,16 @@ func (s *service) Load(ctx context.Context, inStream io.Reader, outStream io.Wri
 		return err
 	}
 	defer func() {
-		rw.Close()
 		os.Remove(img)
 	}()
 	go func() {
-		io.Copy(rw, inStream)
+		written, err := io.Copy(rw, inStream)
+		if err != nil {
+			s.logger.Errorf("failed to copy: %s", err)
+		} else {
+			s.logger.Debugf("copied %d bytes", written)
+		}
+		rw.Close()
 	}()
 	if err = s.nctlImageSvc.LoadImage(ctx, img, outStream, quiet); err != nil {
 		s.logger.Errorf("failed to load image %s: %s", img, err)
