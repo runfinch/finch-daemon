@@ -38,6 +38,8 @@ func (s *service) Create(ctx context.Context, request types.NetworkCreateRequest
 				if v != "0.0.0.0" {
 					s.logger.Warnf("network option com.docker.network.bridge.host_binding_ipv4 is set to %s, but it must be 0.0.0.0", v)
 				}
+			case "com.docker.network.bridge.enable_icc":
+				s.logger.Warnf("network option com.docker.network.bridge.enable_icc is not currently supported in nerdctl", v)
 			case "com.docker.network.bridge.name":
 				bridge = v
 			default:
