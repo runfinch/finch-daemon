@@ -55,10 +55,10 @@ var _ = Describe("Image Load API", func() {
 		It("should return an error if load image method returns an error", func() {
 			ncClient.EXPECT().GetDataStore().
 				Return(name, nil)
+			logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
 			ncClient.EXPECT().LoadImage(gomock.Any(), gomock.Any(), nil, gomock.Any()).
 				Return(errors.New("error message"))
 			logger.EXPECT().Errorf(gomock.Any(), gomock.Any())
-			logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
 
 			// service should return an error
 			err := service.Load(ctx, inStream, nil, false)
