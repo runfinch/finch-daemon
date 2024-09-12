@@ -6,3 +6,4 @@ unit-test-coverage-report.html
 .DS_Store
 *.test
 build
+THIRD_PARTY_LICENSES
