@@ -34,12 +34,13 @@ jobs:
         run: echo ${{ env.RELEASE_TAG }}
       - name: Setup variables and release directories
         run: |
-          touch THIRD_PARTY_LICENSES
           export release_tag=${{ env.RELEASE_TAG }}
           export release_version=${release_tag/v/} # Remove v from tag name
           echo "DYNAMIC_BINARY_NAME=finch-daemon-${release_version}-linux-amd64.tar.gz" >> $GITHUB_ENV
 
           mkdir release
+      - name: Create Third Party Licences File
+        run: make licenses
       - name: Create release binaries
         run: make RELEASE_TAG=${{ env.RELEASE_TAG }} release
       - uses: actions/upload-artifact@v4
