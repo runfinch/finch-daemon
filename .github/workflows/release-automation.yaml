@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   workflow_call:
 env:
-  GO_VERSION: '1.23.0'
+  GO_VERSION: '1.22.7'
 permissions:
   contents: write
   deployments: write
@@ -30,6 +30,8 @@ jobs:
       STATIC_BINARY_NAME: ''
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          fetch-tags: true
       - name: 'Echo RELEASE_TAG ENV'
         run: echo ${{ env.RELEASE_TAG }}
       - name: Setup variables and release directories
@@ -45,6 +47,18 @@ jobs:
         run: make licenses
       - name: Create release binaries
         run: make RELEASE_TAG=${{ env.RELEASE_TAG }} release
+      - name: Verify Release version
+        run: |
+          mkdir output
+          tar -xzf release/${{ env.DYNAMIC_BINARY_NAME }} -C ./output
+          BINARY_VERSION=$(./output/finch-daemon --version | grep -oP '\d+\.\d+\.\d+')
+          export release_tag=${{ env.RELEASE_TAG }}
+          export release_version=${release_tag/v/}
+          if ["$BINARY_VERSION" != "$release_version"]; then
+            echo "Version mismatch"
+            exit 1
+          fi
+        shell: bash
       - uses: actions/upload-artifact@v4
         with:
           name: artifacts
