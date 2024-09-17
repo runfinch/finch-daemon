@@ -464,20 +464,29 @@ func ContainerCreate(opt *option.Option) {
 			// start and kill a container
 			command.Run(opt, "start", testContainerName)
 			command.Run(opt, "kill", "--signal=SIGKILL", testContainerName)
-			time.Sleep(5 * time.Second)
 
-			// inspect container
-			resp := command.Stdout(opt, "inspect", testContainerName)
-			var inspect []*dockercompat.Container
-			err := json.Unmarshal(resp, &inspect)
-			Expect(err).Should(BeNil())
-			Expect(inspect).Should(HaveLen(1))
+			// check every 500 ms if container restarted
+			ticker := time.NewTicker(500 * time.Millisecond)
+			defer ticker.Stop()
+			maxDuration := 10 * time.Second
+			startTime := time.Now()
+			for range ticker.C {
+				// fail testcase if 10 seconds have passed
+				Expect(time.Since(startTime) < maxDuration).Should(BeTrue())
 
-			// verify container is still running
-			Expect(inspect[0].State.Running).Should(BeTrue())
+				// inspect container
+				resp := command.Stdout(opt, "inspect", testContainerName)
+				var inspect []*dockercompat.Container
+				err := json.Unmarshal(resp, &inspect)
+				Expect(err).Should(BeNil())
+				Expect(inspect).Should(HaveLen(1))
 
-			// verify restart count is 1
-			Expect(inspect[0].RestartCount).Should(Equal(1))
+				// if container is running, verify it was restarted
+				if inspect[0].State.Running {
+					Expect(inspect[0].RestartCount).Should(Equal(1))
+					return
+				}
+			}
 		})
 	})
 }
