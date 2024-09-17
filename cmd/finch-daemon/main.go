@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -36,6 +37,7 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/archive"
 	"github.com/runfinch/finch-daemon/pkg/ecc"
 	"github.com/runfinch/finch-daemon/pkg/flog"
+	"github.com/runfinch/finch-daemon/version"
 )
 
 const (
@@ -55,17 +57,14 @@ var options = new(DaemonOptions)
 func main() {
 	rootCmd := &cobra.Command{
 		Use:          "finch-daemon",
-		Short:        "Docker Engine API backed by containerd in finch VM",
+		Short:        "Finch daemon with a Docker-compatible API",
+		Version:      strings.TrimPrefix(version.Version, "v"),
 		RunE:         runAdapter,
 		SilenceUsage: true,
 	}
-	rootCmd.Flags().StringVar(&options.socketAddr, "socketAddr", defaultFinchAddr, "Server listen socket address. Currently only supports UNIX socket paths.")
-	rootCmd.Flags().BoolVar(&options.debug, "debug", false, "whether to print debug logs")
-	rootCmd.Flags().IntVar(&options.socketOwner, "socket-owner", -1, "UID and GID of the socket to which finch-daemon will listen."+
-		" It's useful when finch-daemon needs to be run as root to access other resources (e.g., rootful containerd socket),"+
-		" For macOS, the socket has to be owned by the lima user to make port forwarding work"+
-		" (more info: https://github.com/lima-vm/lima/blob/5a9bca3d09481ed7109b14f8d3f0074816731f43/examples/default.yaml#L340)."+
-		" -1 means no-op.")
+	rootCmd.Flags().StringVar(&options.socketAddr, "socketAddr", defaultFinchAddr, "server listening Unix socket address")
+	rootCmd.Flags().BoolVar(&options.debug, "debug", false, "turn on debug log level")
+	rootCmd.Flags().IntVar(&options.socketOwner, "socket-owner", -1, "Uid and Gid of the server socket")
 	if err := rootCmd.Execute(); err != nil {
 		log.Printf("got error: %v", err)
 		log.Fatal(err)
