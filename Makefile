@@ -1,11 +1,12 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 GINKGO = go run github.com/onsi/ginkgo/v2/ginkgo
 # Common ginkgo options: -v for verbose mode, --focus="test name" for running single tests
 GFLAGS ?= --race --randomize-all --randomize-suites
 BIN = $(PWD)/bin
-FINCH_ROOT ?= /Applications/Finch
 FINCH_DAEMON_PROJECT_ROOT ?= $(shell pwd)
 
-# Linux or macOS targets
 .PHONY: build
 build::
 	$(eval PACKAGE := github.com/runfinch/finch-daemon)
@@ -14,7 +15,6 @@ build::
 	$(eval LDFLAGS := "-X $(PACKAGE)/version.Version=$(VERSION) -X $(PACKAGE)/version.GitCommit=$(GITCOMMIT)")
 	GOOS=linux go build -ldflags $(LDFLAGS) -v -o bin/finch-daemon $(PACKAGE)/cmd/finch-daemon
 
-# Linux targets
 .PHONY: linux
 linux:
 ifneq ($(shell uname), Linux)
@@ -57,11 +57,11 @@ code-gen: linux
 
 GOLINT=$(BIN)/golangci-lint
 $(GOLINT): linux
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BIN) v1.53.3
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BIN) v1.60.3
 
 .PHONY: golint
 golint: linux $(GOLINT) 
-	$(GOLINT) run ./pkg/...
+	$(GOLINT) run ./...
 
 .PHONY: run-unit-tests
 run-unit-tests: linux
@@ -79,16 +79,8 @@ debug-unit-tests: linux $(DLV)
 
 .PHONY: coverage
 coverage: linux
-	$(GINKGO) -r -v -race --trace --cover --coverprofile="coverage-report.out" --coverpkg=./... ./pkg/...
+	$(GINKGO) -r -v -race --trace --cover --coverprofile="coverage-report.out" ./...
 	go tool cover -html="coverage-report.out" -o="unit-test-coverage-report.html"
-
-# macOS targets
-
-.PHONY: macOS
-macOS:
-ifneq ($(shell uname), Darwin)
-	$(error This needs to be run on macOS!)
-endif
 
 .PHONY: run-e2e-tests
 run-e2e-tests: linux
