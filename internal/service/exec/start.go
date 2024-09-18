@@ -13,7 +13,7 @@ import (
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
-	cerrdefs "github.com/containerd/containerd/errdefs"
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/containerd/nerdctl/pkg/signalutil"
 
 	"github.com/runfinch/finch-daemon/api/types"

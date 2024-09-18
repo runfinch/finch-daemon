@@ -11,19 +11,19 @@ import (
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
-	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/events"
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/images/converter"
 	"github.com/containerd/containerd/mount"
 	"github.com/containerd/containerd/oci"
 	"github.com/containerd/containerd/pkg/cap"
-	"github.com/containerd/containerd/platforms"
-	refdocker "github.com/containerd/containerd/reference/docker"
 	"github.com/containerd/containerd/remotes/docker"
+	"github.com/containerd/errdefs"
 	"github.com/containerd/nerdctl/pkg/containerutil"
 	"github.com/containerd/nerdctl/pkg/labels"
 	"github.com/containerd/nerdctl/pkg/referenceutil"
+	"github.com/containerd/platforms"
+	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -147,12 +147,12 @@ func (w *ContainerdClientWrapper) DefaultPlatformStrict() platforms.MatchCompare
 
 // ParseDockerRef normalizes the image reference following the docker convention.
 func (w *ContainerdClientWrapper) ParseDockerRef(rawRef string) (ref, refDomain string, err error) {
-	named, err := refdocker.ParseDockerRef(rawRef)
+	named, err := reference.ParseDockerRef(rawRef)
 	if err != nil {
 		return
 	}
 	ref = named.String()
-	refDomain = refdocker.Domain(named)
+	refDomain = reference.Domain(named)
 	return
 }
 
