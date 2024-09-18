@@ -10,7 +10,7 @@ import (
 	reflect "reflect"
 
 	images "github.com/containerd/containerd/images"
-	platforms "github.com/containerd/containerd/platforms"
+	platforms "github.com/containerd/platforms"
 	remotes "github.com/containerd/containerd/remotes"
 	docker "github.com/containerd/containerd/remotes/docker"
 	imgutil "github.com/containerd/nerdctl/pkg/imgutil"

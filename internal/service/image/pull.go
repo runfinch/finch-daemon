@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	cerrdefs "github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/remotes/docker"
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
 	dockertypes "github.com/docker/cli/cli/config/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"

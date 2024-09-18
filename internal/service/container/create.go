@@ -9,7 +9,7 @@ import (
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
-	cerrdefs "github.com/containerd/containerd/errdefs"
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/containerd/nerdctl/pkg/api/types"
 	"github.com/containerd/nerdctl/pkg/clientutil"
 	"github.com/containerd/nerdctl/pkg/labels"

@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/containerd/containerd/images"
-	"github.com/containerd/containerd/reference/docker"
+	"github.com/distribution/reference"
 
 	"github.com/runfinch/finch-daemon/api/handlers/image"
 	"github.com/runfinch/finch-daemon/internal/backend"
@@ -84,12 +84,12 @@ func canonicalize(name, tag string) (string, error) {
 	} else {
 		name = tag
 	}
-	ref, err := docker.ParseAnyReference(name)
+	ref, err := reference.ParseAnyReference(name)
 	if err != nil {
 		return "", err
 	}
-	if named, ok := ref.(docker.Named); ok && refNeedsTag(ref) {
-		tagged, err := docker.WithTag(named, defaultTag)
+	if named, ok := ref.(reference.Named); ok && refNeedsTag(ref) {
+		tagged, err := reference.WithTag(named, defaultTag)
 		if err == nil {
 			ref = tagged
 		}
@@ -97,8 +97,8 @@ func canonicalize(name, tag string) (string, error) {
 	return ref.String(), nil
 }
 
-func refNeedsTag(ref docker.Reference) bool {
-	_, tagged := ref.(docker.Tagged)
-	_, digested := ref.(docker.Digested)
+func refNeedsTag(ref reference.Reference) bool {
+	_, tagged := ref.(reference.Tagged)
+	_, digested := ref.(reference.Digested)
 	return !(tagged || digested)
 }

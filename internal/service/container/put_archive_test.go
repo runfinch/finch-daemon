@@ -14,8 +14,8 @@ import (
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/containers"
-	cerrdefs "github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/mount"
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/golang/mock/gomock"

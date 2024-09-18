@@ -11,7 +11,7 @@ import (
 	"path"
 
 	"github.com/containerd/containerd"
-	cerrdefs "github.com/containerd/containerd/errdefs"
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/spf13/afero"
 
 	"github.com/runfinch/finch-daemon/pkg/errdefs"

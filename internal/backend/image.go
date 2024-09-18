@@ -8,7 +8,6 @@ import (
 	"io"
 
 	"github.com/containerd/containerd/images"
-	"github.com/containerd/containerd/platforms"
 	"github.com/containerd/containerd/remotes"
 	"github.com/containerd/containerd/remotes/docker"
 	dockerconfig "github.com/containerd/containerd/remotes/docker/config"
@@ -20,6 +19,7 @@ import (
 	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
 	"github.com/containerd/nerdctl/pkg/imgutil/push"
 	"github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
+	"github.com/containerd/platforms"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 

@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 
-	cerrdefs "github.com/containerd/containerd/errdefs"
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/containerd/nerdctl/pkg/api/types"
 	"github.com/containerd/nerdctl/pkg/netutil"
 	"github.com/containernetworking/cni/libcni"
