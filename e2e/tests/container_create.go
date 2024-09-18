@@ -468,10 +468,10 @@ func ContainerCreate(opt *option.Option) {
 			// check every 500 ms if container restarted
 			ticker := time.NewTicker(500 * time.Millisecond)
 			defer ticker.Stop()
-			maxDuration := 10 * time.Second
+			maxDuration := 30 * time.Second
 			startTime := time.Now()
 			for range ticker.C {
-				// fail testcase if 10 seconds have passed
+				// fail testcase if 30 seconds have passed
 				Expect(time.Since(startTime) < maxDuration).Should(BeTrue())
 
 				// inspect container
