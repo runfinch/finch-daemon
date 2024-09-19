@@ -7,13 +7,19 @@ GFLAGS ?= --race --randomize-all --randomize-suites
 BIN = $(PWD)/bin
 FINCH_DAEMON_PROJECT_ROOT ?= $(shell pwd)
 
+# Base path used to install.
+PREFIX ?= /usr/local
+BINDIR ?= $(PREFIX)/bin
+
+BINARY = $(addprefix bin/,finch-daemon)
+
 .PHONY: build
-build::
+build:
 	$(eval PACKAGE := github.com/runfinch/finch-daemon)
 	$(eval VERSION ?= $(shell git describe --match 'v[0-9]*' --dirty='.modified' --always --tags))
 	$(eval GITCOMMIT := $(shell git rev-parse HEAD)$(shell if ! git diff --no-ext-diff --quiet --exit-code; then echo .m; fi))
 	$(eval LDFLAGS := "-X $(PACKAGE)/version.Version=$(VERSION) -X $(PACKAGE)/version.GitCommit=$(GITCOMMIT)")
-	GOOS=linux go build -ldflags $(LDFLAGS) -v -o bin/finch-daemon $(PACKAGE)/cmd/finch-daemon
+	GOOS=linux go build -ldflags $(LDFLAGS) -v -o $(BINARY) $(PACKAGE)/cmd/finch-daemon
 
 .PHONY: linux
 linux:
@@ -23,7 +29,7 @@ endif
 
 .PHONY: start
 start: linux build unlink
-	sudo bin/finch-daemon --debug --socket-owner $${UID}
+	sudo $(BINARY) --debug --socket-owner $${UID}
 
 DLV=$(BIN)/dlv
 $(DLV):
@@ -31,7 +37,14 @@ $(DLV):
 
 .PHONY: start-debug
 start-debug: linux build $(DLV) unlink
-	sudo $(DLV) --listen=:2345 --headless=true --api-version=2 exec ./bin/finch-daemon -- --debug --socket-owner $${UID}
+	sudo $(DLV) --listen=:2345 --headless=true --api-version=2 exec $(BINARY) -- --debug --socket-owner $${UID}
+
+install: linux
+	install -d $(DESTDIR)$(BINDIR)
+	install $(BINARY) $(DESTDIR)$(BINDIR)
+
+uninstall:
+	@rm -f $(addprefix $(DESTDIR)$(BINDIR)/,$(notdir $(BINARY)))
 
 # Unlink the unix socket if the link does not get cleaned up properly (or if finch-daemon is already running)
 .PHONY: unlink
