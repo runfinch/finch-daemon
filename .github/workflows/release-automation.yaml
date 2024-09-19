@@ -39,22 +39,27 @@ jobs:
           export release_tag=${{ env.RELEASE_TAG }}
           export release_version=${release_tag/v/} # Remove v from tag name
           echo "DYNAMIC_BINARY_NAME=finch-daemon-${release_version}-linux-amd64.tar.gz" >> $GITHUB_ENV
+          echo "STATIC_BINARY_NAME=finch-daemon-${release_version}-linux-amd64-static.tar.gz" >> $GITHUB_ENV
 
           mkdir release
       - name: Install Go licenses
         run: go install github.com/google/go-licenses@latest
       - name: Create Third Party Licences File
         run: make licenses
+      - name: setup static dependecies
+        run: sudo apt-get install glibc-static libstdc++-static
       - name: Create release binaries
         run: make RELEASE_TAG=${{ env.RELEASE_TAG }} release
       - name: Verify Release version
         run: |
-          mkdir output
-          tar -xzf release/${{ env.DYNAMIC_BINARY_NAME }} -C ./output
-          BINARY_VERSION=$(./output/finch-daemon --version | grep -oP '\d+\.\d+\.\d+')
+          mkdir -p output/static output/dynamic
+          tar -xzf release/${{ env.DYNAMIC_BINARY_NAME }} -C ./output/dynamic
+          tar -xzf release/${{ env.STATIC_BINARY_NAME }} -C ./output/static
+          DYNAMIC_BINARY_VERSION=$(./output/dynamic/finch-daemon --version | grep -oP '\d+\.\d+\.\d+')
+          STATIC_BINARY_VERSION=$(./output/static/finch-daemon --version | grep -oP '\d+\.\d+\.\d+')
           export release_tag=${{ env.RELEASE_TAG }}
           export release_version=${release_tag/v/}
-          if ["$BINARY_VERSION" != "$release_version"]; then
+          if ["$STATIC_BINARY_VERSION" != "$release_version"] || ["$DYNAMIC_BINARY_VERSION" != "$release_version"]; then
             echo "Version mismatch"
             exit 1
           fi
