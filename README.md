@@ -36,9 +36,9 @@ Getting started with Finch Daemon on Linux only requires a few steps:
 
 
 ## Creating a systemd service
-Sometimes, you may wish to have a script be controlled by systemd, 
-or to have the script restart by itself when it gets killed. 
-You can configure such a service using systemd on Linux by following these steps:
+If you want finch-daemon to be managed as a systemd service, for benefits like automatic
+restart if it gets killed, you can configure it as a systemd service on Linux by
+following these steps:
 
 1. `cd /path/to/finch-daemon`
 2. `sudo cp finch.service /etc/systemd/system/`
