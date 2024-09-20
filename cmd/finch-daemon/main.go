@@ -62,7 +62,7 @@ func main() {
 		RunE:         runAdapter,
 		SilenceUsage: true,
 	}
-	rootCmd.Flags().StringVar(&options.socketAddr, "socketAddr", defaultFinchAddr, "server listening Unix socket address")
+	rootCmd.Flags().StringVar(&options.socketAddr, "socket-addr", defaultFinchAddr, "server listening Unix socket address")
 	rootCmd.Flags().BoolVar(&options.debug, "debug", false, "turn on debug log level")
 	rootCmd.Flags().IntVar(&options.socketOwner, "socket-owner", -1, "Uid and Gid of the server socket")
 	if err := rootCmd.Execute(); err != nil {
