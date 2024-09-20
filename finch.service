@@ -1,11 +1,11 @@
 [Unit]
-Description=finch daemon %I
+Description=finch daemon
 Documentation=https://runfinch.com
 After=network.target local-fs.target containerd.service
 Wants=network.target containerd.service
 
 [Service]
-ExecStart=/usr/local/bin/finch-daemon --debug --socket-owner %i
+ExecStart=/usr/local/bin/finch-daemon --debug
 
 Type=notify
 Delegate=yes
