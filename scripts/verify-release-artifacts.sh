@@ -44,7 +44,7 @@ release_tag=$1
 release_version=${release_tag/v/} 
 
 pushd "$release_dir" || exit 1
-tarballs=("finch-daemon-${release_version}-linux-${arch}.tar.gz")
+tarballs=("finch-daemon-${release_version}-linux-${arch}.tar.gz" "finch-daemon-${release_version}-linux-${arch}-static.tar.gz")
 expected_contents=("finch-daemon" "THIRD_PARTY_LICENSES")
 release_is_valid=true
 
