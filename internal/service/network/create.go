@@ -9,11 +9,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/containerd/nerdctl/pkg/lockutil"
 	"github.com/containerd/nerdctl/pkg/netutil"
 
+	"github.com/coreos/go-iptables/iptables"
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/utility/maputility"
@@ -23,6 +25,8 @@ import (
 func (s *service) Create(ctx context.Context, request types.NetworkCreateRequest) (types.NetworkCreateResponse, error) {
 	// enable_ip_masquerade, host_binding_ipv4, and bridge name network options are not supported by nerdctl.
 	// So we must filter out any unsupported options which would prevent the network from being created and accept the defaults.
+	var enableICC, isICCSet bool
+	var err error
 	bridge := ""
 	filterUnsupportedOptions := func(original map[string]string) map[string]string {
 		options := map[string]string{}
@@ -39,7 +43,12 @@ func (s *service) Create(ctx context.Context, request types.NetworkCreateRequest
 					s.logger.Warnf("network option com.docker.network.bridge.host_binding_ipv4 is set to %s, but it must be 0.0.0.0", v)
 				}
 			case "com.docker.network.bridge.enable_icc":
-				s.logger.Warnf("network option com.docker.network.bridge.enable_icc is not currently supported in nerdctl", v)
+				isICCSet = true
+				enableICC, err = strconv.ParseBool(v)
+				if err != nil {
+					isICCSet = false
+					s.logger.Warnf("invalid value for com.docker.network.bridge.enable_icc: %s", v)
+				}
 			case "com.docker.network.bridge.name":
 				bridge = v
 			default:
@@ -112,6 +121,25 @@ func (s *service) Create(ctx context.Context, request types.NetworkCreateRequest
 		}
 	}
 
+	// If ICC option is not set, we do not manipulate the iptables and use the default icc option in nerdctl
+	if isICCSet {
+		var iccBridgeName string
+		if bridge != "" {
+			iccBridgeName = bridge
+		} else {
+			//get the bridge name from the network config file
+			iccBridgeName, err = s.getBridgeName(net)
+			if err != nil {
+				return types.NetworkCreateResponse{}, fmt.Errorf("failed to set inter-container connectivity option: %v", err)
+			}
+		}
+
+		err = s.setICC(iptables.ProtocolIPv4, iccBridgeName, enableICC, false)
+		if err != nil {
+			return types.NetworkCreateResponse{}, fmt.Errorf("failed to set inter-container connectivity option: %v", err)
+		}
+	}
+
 	return types.NetworkCreateResponse{
 		ID:      *net.NerdctlID,
 		Warning: warning,
@@ -171,6 +199,61 @@ func (s *service) setBridgeName(net *netutil.NetworkConfig, bridge string) error
 	})
 }
 
+func (s *service) getBridgeName(net *netutil.NetworkConfig) (string, error) {
+	var bridgeName string
+	err := lockutil.WithDirLock(s.netClient.NetconfPath(), func() error {
+		configFilename := s.getConfigPathForNetworkName(net.Name)
+		configFile, err := os.Open(configFilename)
+		if err != nil {
+			return err
+		}
+		defer configFile.Close()
+
+		var netJSON interface{}
+		if err = json.NewDecoder(configFile).Decode(&netJSON); err != nil {
+			return err
+		}
+
+		netMap, ok := netJSON.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("network config file %s is not a valid map", configFilename)
+		}
+
+		plugins, ok := netMap["plugins"]
+		if !ok {
+			return fmt.Errorf("could not find plugins in network config file %s", configFilename)
+		}
+
+		pluginsMap, ok := plugins.([]interface{})
+		if !ok {
+			return fmt.Errorf("could not parse plugins in network config file %s", configFilename)
+		}
+
+		for _, plugin := range pluginsMap {
+			pluginMap, ok := plugin.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			if pluginMap["type"] == "bridge" {
+				bridge, ok := pluginMap["bridge"].(string)
+				if !ok {
+					return fmt.Errorf("bridge name in config file %s is not a string", configFilename)
+				}
+				bridgeName = bridge
+				return nil
+			}
+		}
+
+		return fmt.Errorf("bridge plugin not found in network config file %s", configFilename)
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	return bridgeName, nil
+}
+
 // From https://github.com/containerd/nerdctl/blob/v1.5.0/pkg/netutil/netutil.go#L186-L188
 func (s *service) getConfigPathForNetworkName(netName string) string {
 	return filepath.Join(s.netClient.NetconfPath(), "nerdctl-"+netName+".conflist")
@@ -203,4 +286,65 @@ func (s *service) getNetworkByBridgeName(bridge string) (*netutil.NetworkConfig,
 		}
 	}
 	return nil, nil
+}
+
+func (s *service) setICC(version iptables.Protocol, bridgeIface string, iccEnable, insert bool) error {
+	ipt, err := iptables.NewWithProtocol(version)
+	if err != nil {
+		return fmt.Errorf("failed to initialize iptables: %v", err)
+	}
+
+	args := []string{"-i", bridgeIface, "-o", bridgeIface, "-j"}
+	acceptArgs := append(args, "ACCEPT")
+	dropArgs := append(args, "DROP")
+
+	if insert {
+		if !iccEnable {
+			// Remove ACCEPT rule and add DROP rule
+			if err := ipt.Delete("filter", "FORWARD", acceptArgs...); err != nil {
+				// Ignore error if the rule doesn't exist
+				if !isNotExistError(err) {
+					return fmt.Errorf("unable to remove ACCEPT rule: %v", err)
+				}
+			}
+			if err := ipt.Append("filter", "FORWARD", dropArgs...); err != nil {
+				return fmt.Errorf("unable to prevent intercontainer communication: %v", err)
+			}
+		} else {
+			// Remove DROP rule and add ACCEPT rule
+			if err := ipt.Delete("filter", "FORWARD", dropArgs...); err != nil {
+				// Ignore error if the rule doesn't exist
+				if !isNotExistError(err) {
+					return fmt.Errorf("unable to remove DROP rule: %v", err)
+				}
+			}
+			if err := ipt.Insert("filter", "FORWARD", 1, acceptArgs...); err != nil {
+				return fmt.Errorf("unable to allow intercontainer communication: %v", err)
+			}
+		}
+	} else {
+		// Remove any ICC rule
+		if !iccEnable {
+			if err := ipt.Delete("filter", "FORWARD", dropArgs...); err != nil {
+				// Ignore error if the rule doesn't exist
+				if !isNotExistError(err) {
+					return fmt.Errorf("unable to remove DROP rule: %v", err)
+				}
+			}
+		} else {
+			if err := ipt.Delete("filter", "FORWARD", acceptArgs...); err != nil {
+				// Ignore error if the rule doesn't exist
+				if !isNotExistError(err) {
+					return fmt.Errorf("unable to remove ACCEPT rule: %v", err)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// Helper function to check if the error is a "rule does not exist" error
+func isNotExistError(err error) bool {
+	return err != nil && err.Error() == "iptables: Bad rule (does a matching rule exist in that chain?)"
 }
