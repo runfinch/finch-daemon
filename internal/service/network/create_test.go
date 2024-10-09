@@ -6,6 +6,7 @@ package network
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/containerd/nerdctl/pkg/netutil"
 	"github.com/golang/mock/gomock"
@@ -14,8 +15,11 @@ import (
 
 	"github.com/runfinch/finch-daemon/api/handlers/network"
 	"github.com/runfinch/finch-daemon/api/types"
+	"github.com/runfinch/finch-daemon/internal/backend"
 	"github.com/runfinch/finch-daemon/mocks/mocks_backend"
 	"github.com/runfinch/finch-daemon/mocks/mocks_logger"
+	"github.com/runfinch/finch-daemon/mocks/mocks_network"
+	"github.com/runfinch/finch-daemon/pkg/flog"
 )
 
 var _ = Describe("Network Service Create Network Implementation", func() {
@@ -25,12 +29,13 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 	)
 
 	var (
-		ctx            context.Context
-		mockController *gomock.Controller
-		cdClient       *mocks_backend.MockContainerdClient
-		ncNetClient    *mocks_backend.MockNerdctlNetworkSvc
-		logger         *mocks_logger.Logger
-		service        network.Service
+		ctx              context.Context
+		mockController   *gomock.Controller
+		cdClient         *mocks_backend.MockContainerdClient
+		ncNetClient      *mocks_backend.MockNerdctlNetworkSvc
+		logger           *mocks_logger.Logger
+		service          network.Service
+		mockBridgeDriver *mocks_network.BridgeDriver
 	)
 
 	BeforeEach(func() {
@@ -40,6 +45,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 		ncNetClient = mocks_backend.NewMockNerdctlNetworkSvc(mockController)
 		logger = mocks_logger.NewLogger(mockController)
 		service = NewService(cdClient, ncNetClient, logger)
+		mockBridgeDriver = mocks_network.NewBridgeDriver(mockController)
 	})
 
 	When("a create network call is successful", func() {
@@ -333,6 +339,133 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 
 					service.Create(ctx, *request)
 				})
+			})
+		})
+	})
+
+	Context("ICC configuration", func() {
+		When("com.docker.network.bridge.enable_icc is set to true in the request", func() {
+			It("should not change default behavior", func() {
+				request := types.NewCreateNetworkRequest(
+					networkName,
+					types.WithOptions(map[string]string{
+						"com.docker.network.bridge.enable_icc": "true",
+					}),
+				)
+
+				ncNetClient.EXPECT().FilterNetworks(gomock.Any()).Return([]*netutil.NetworkConfig{}, nil)
+				logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
+
+				nid := networkID
+				ncNetClient.EXPECT().CreateNetwork(gomock.Any()).DoAndReturn(func(actual netutil.CreateOptions) (*netutil.NetworkConfig, error) {
+					// Check if the label exists
+					checkLabel := "com.docker.network.bridge.enable_icc=true"
+					labelExists := false
+					for _, label := range actual.Labels {
+						if label == checkLabel {
+							labelExists = true
+							break
+						}
+					}
+
+					// Expect that DisableICC is not called
+					mockBridgeDriver.EXPECT().DisableICC(gomock.Any(), gomock.Any()).Times(0)
+
+					Expect(labelExists).To(BeFalse(), fmt.Sprintf("Label '%s' should not exist in Labels", checkLabel))
+
+					return &netutil.NetworkConfig{NerdctlID: &nid}, nil
+				})
+
+				response, err := service.Create(ctx, *request)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(response.ID).Should(Equal(networkID))
+			})
+		})
+
+		When("ICC is not specified in the request", func() {
+			It("should use the default setting in the create options and not set any icc labels", func() {
+				request := types.NewCreateNetworkRequest(networkName)
+
+				ncNetClient.EXPECT().FilterNetworks(gomock.Any()).Return([]*netutil.NetworkConfig{}, nil)
+				logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
+
+				nid := networkID
+				ncNetClient.EXPECT().CreateNetwork(gomock.Any()).DoAndReturn(func(actual netutil.CreateOptions) (*netutil.NetworkConfig, error) {
+					// Check if the label exists
+					expectedLabel := "com.docker.network.bridge.enable_icc=true"
+					labelExists := false
+					for _, label := range actual.Labels {
+						if label == expectedLabel {
+							labelExists = true
+							break
+						}
+					}
+
+					Expect(labelExists).To(BeFalse(), fmt.Sprintf("Label '%s' should not exist in Labels", expectedLabel))
+
+					return &netutil.NetworkConfig{NerdctlID: &nid}, nil
+				})
+
+				response, err := service.Create(ctx, *request)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(response.ID).Should(Equal(networkID))
+			})
+		})
+
+		When("com.docker.network.bridge.enable_icc is set to false in the request", func() {
+			It("should set ICC to false in the create options", func() {
+				request := types.NewCreateNetworkRequest(
+					networkName,
+					types.WithOptions(map[string]string{
+						BridgeICCOption: "false",
+					}),
+				)
+
+				ncNetClient.EXPECT().FilterNetworks(gomock.Any()).Return([]*netutil.NetworkConfig{}, nil)
+				logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
+
+				nid := networkID
+				ncNetClient.EXPECT().CreateNetwork(gomock.Any()).DoAndReturn(func(actual netutil.CreateOptions) (*netutil.NetworkConfig, error) {
+					// Check if the label exists
+					expectedLabel := FinchICCLabel + "=false"
+					labelExists := false
+					for _, label := range actual.Labels {
+						if label == expectedLabel {
+							labelExists = true
+							break
+						}
+					}
+
+					Expect(labelExists).To(BeTrue(), fmt.Sprintf("Label '%s' should exist in Labels", expectedLabel))
+
+					return &netutil.NetworkConfig{NerdctlID: &nid}, nil
+				})
+
+				originalDriverFunc := NewBridgeDriver
+				NewBridgeDriver = func(netClient backend.NerdctlNetworkSvc, logger flog.Logger) BridgeDriverOperations {
+					return mockBridgeDriver
+				}
+				defer func() { NewBridgeDriver = originalDriverFunc }()
+
+				// Set up expectations for mockBridgeDriver
+				mockBridgeDriver.EXPECT().HandleCreateOptions(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(request types.NetworkCreateRequest, options netutil.CreateOptions) (netutil.CreateOptions, error) {
+						// Mock the behavior for BridgeICCOption set to false
+						// Remove the option from the options map
+						fmt.Println("HandleCreateOptions called with options:", options)
+						delete(options.Options, BridgeICCOption)
+						options.Labels = append(options.Labels, FinchICCLabel+"=false")
+						return options, nil
+					}).AnyTimes()
+
+				mockBridgeDriver.EXPECT().HandlePostCreate(gomock.Any()).Return("", nil).AnyTimes()
+				mockBridgeDriver.EXPECT().ICCDisabled().DoAndReturn(func() bool {
+					return true
+				}).AnyTimes()
+
+				response, err := service.Create(ctx, *request)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(response.ID).Should(Equal(networkID))
 			})
 		})
 	})
