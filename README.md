@@ -32,7 +32,7 @@ Getting started with Finch Daemon on Linux only requires a few steps:
    make
    sudo bin/finch-daemon --debug --socket-owner $UID
    ```
-5. Test any changes with `make run-unit-tests` and `sudo make run-e2e-tests`
+5. Test any changes with `make test-unit` and `sudo make test-e2e`
 
 
 ## Creating a systemd service

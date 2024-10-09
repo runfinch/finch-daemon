@@ -16,8 +16,8 @@ import (
 )
 
 func TestRun(t *testing.T) {
-	if os.Getenv("RUN_E2E_TESTS") != "1" {
-		t.Skip("E2E tests skipped. Set RUN_E2E_TESTS=1 to run these tests")
+	if os.Getenv("TEST_E2E") != "1" {
+		t.Skip("E2E tests skipped. Set TEST_E2E=1 to run these tests")
 	}
 	// TODO : Make this configurable
 	runtimeExe := "nerdctl"
