@@ -13,24 +13,23 @@ BINDIR ?= $(PREFIX)/bin
 
 BINARY = $(addprefix bin/,finch-daemon)
 
-ifndef GODEBUG
-	EXTRA_LDFLAGS += -s -w
+PACKAGE := github.com/runfinch/finch-daemon
+VERSION := $(shell git describe --match 'v[0-9]*' --dirty='.modified' --always --tags)
+GITCOMMIT := $(shell git rev-parse HEAD)$(shell if ! git diff --no-ext-diff --quiet --exit-code; then echo .m; fi)
+
+LDFLAGS := -X $(PACKAGE)/version.Version=$(VERSION) -X $(PACKAGE)/version.GitCommit=$(GITCOMMIT)
+
+ifeq ($(STATIC),)
+  GO_BUILDTAGS := osusergo netgo
+  LDFLAGS += -extldflags '-static'
+  $(info Building Static Binary)
+else
+  $(info Building Dynamic Binary)
 endif
 
 .PHONY: build
 build:
-	$(eval PACKAGE := github.com/runfinch/finch-daemon)
-	$(eval VERSION ?= $(shell git describe --match 'v[0-9]*' --dirty='.modified' --always --tags))
-	$(eval GITCOMMIT := $(shell git rev-parse HEAD)$(shell if ! git diff --no-ext-diff --quiet --exit-code; then echo .m; fi))
-ifneq ($(STATIC),)
-	$(eval GO_BUILDTAGS := osusergo netgo)
-	$(eval LDFLAGS := "-X $(PACKAGE)/version.Version=$(VERSION) -X $(PACKAGE)/version.GitCommit=$(GITCOMMIT) -extldflags '-static'")
-	@echo "Building Static Binary"
-else
-	@echo "Building Dynamic Binary"
-	$(eval LDFLAGS := "-X $(PACKAGE)/version.Version=$(VERSION) -X $(PACKAGE)/version.GitCommit=$(GITCOMMIT)")
-endif
-	GOOS=linux go build $(if $(GO_BUILDTAGS), -tags "$(GO_BUILDTAGS)")  -ldflags $(LDFLAGS) $(if $(STATIC), ) -v -o $(BINARY) $(PACKAGE)/cmd/finch-daemon
+	GOOS=linux go build $(if $(GO_BUILDTAGS), -tags "$(GO_BUILDTAGS)") -ldflags "$(LDFLAGS)" -v -o $(BINARY) $(PACKAGE)/cmd/finch-daemon
 
 clean:
 	@rm -f $(BINARIES)
