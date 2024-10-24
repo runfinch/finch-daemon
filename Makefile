@@ -21,22 +21,22 @@ ifndef GODEBUG
 	EXTRA_LDFLAGS += -s -w
 endif
 
-LDFLAGS := -X $(PACKAGE)/version.Version=$(VERSION) -X $(PACKAGE)/version.GitCommit=$(GITCOMMIT)
-
-# LDFLAGS += $(EXTRA_LDFLAGS)
-
-ifeq ($(STATIC),)
-  GO_BUILDTAGS := osusergo netgo
-  LDFLAGS += -extldflags '-static'
-  $(info Building Static Binary)
-else
-  $(info Building Dynamic Binary)
-endif
+LDFLAGS_BASE := -X $(PACKAGE)/version.Version=$(VERSION) -X $(PACKAGE)/version.GitCommit=$(GITCOMMIT) $(EXTRA_LDFLAGS)
 
 .PHONY: build
 build:
-	GOOS=linux go build $(if $(GO_BUILDTAGS), -tags "$(GO_BUILDTAGS)") -ldflags "$(LDFLAGS)" -v -o $(BINARY) $(PACKAGE)/cmd/finch-daemon
-
+ifeq ($(STATIC),)
+	@echo "Building Dynamic Binary"
+	$(eval LDFLAGS := $(LDFLAGS_BASE))
+else
+	@echo "Building Static Binary"
+	$(eval GO_BUILDTAGS := osusergo netgo)
+	$(eval LDFLAGS := $(LDFLAGS_BASE) -extldflags '-static')
+endif
+	GOOS=linux go build \
+		$(if $(GO_BUILDTAGS),-tags "$(GO_BUILDTAGS)") \
+		-ldflags "$(LDFLAGS)" \
+		-v -o $(BINARY) $(PACKAGE)/cmd/finch-daemon
 clean:
 	@rm -f $(BINARIES)
 	@rm -rf $(BIN)
