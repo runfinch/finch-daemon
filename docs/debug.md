@@ -17,7 +17,7 @@ If you have started `finch-daemon` manually, logs will either be emitted to stde
 
 ## CPU Profiling
 
-We can use Golangs `pprof` tool to profile the snapshotter. To enable profiling you must set the `--debug-addr` CLI parameter when invoking `finch-daemon`:
+We can use Golangs `pprof` tool to profile the daemon. To enable profiling you must set the `--debug-addr` CLI parameter when invoking `finch-daemon`:
 
 ```shell
 ./finch-daemon --debug-addr localhost:6060
@@ -27,7 +27,7 @@ We can use Golangs `pprof` tool to profile the snapshotter. To enable profiling 
 > Similarly to adding the command line option for a local run of finch-daemon, any systemd service file can also be modified to include the `--debug-addr` option.
 
 
-Once you have configured the debug address you can send a `GET` to the `/debug/pprof/profile` endpoint to receive a CPU profile of the snapshotter. You can specify an optional argument `seconds` to limit the results to a certain time span:
+Once you have configured the debug address you can send a `GET` to the `/debug/pprof/profile` endpoint to receive a CPU profile of the daemon. You can specify an optional argument `seconds` to limit the results to a certain time span:
 
 ```shell
 curl http://localhost:6060/debug/pprof/profile?seconds=40 > out.pprof
@@ -38,3 +38,5 @@ You can use the `pprof` tool provided by the Go CLI to visualize the data within
 ```shell
 go tool pprof -http=:8080 out.pprof
 ```
+
+For more information on pprof, [see its documentation here](https://pkg.go.dev/net/http/pprof).
