@@ -16,6 +16,7 @@ import (
 	"github.com/runfinch/finch-daemon/api/handlers/network"
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/internal/backend"
+	"github.com/runfinch/finch-daemon/internal/service/network/driver"
 	"github.com/runfinch/finch-daemon/mocks/mocks_backend"
 	"github.com/runfinch/finch-daemon/mocks/mocks_logger"
 	"github.com/runfinch/finch-daemon/mocks/mocks_network"
@@ -35,7 +36,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 		ncNetClient      *mocks_backend.MockNerdctlNetworkSvc
 		logger           *mocks_logger.Logger
 		service          network.Service
-		mockBridgeDriver *mocks_network.BridgeDriver
+		mockBridgeDriver *mocks_network.DriverHandler
 	)
 
 	BeforeEach(func() {
@@ -45,7 +46,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 		ncNetClient = mocks_backend.NewMockNerdctlNetworkSvc(mockController)
 		logger = mocks_logger.NewLogger(mockController)
 		service = NewService(cdClient, ncNetClient, logger)
-		mockBridgeDriver = mocks_network.NewBridgeDriver(mockController)
+		mockBridgeDriver = mocks_network.NewDriverHandler(mockController)
 	})
 
 	When("a create network call is successful", func() {
@@ -349,7 +350,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 				request := types.NewCreateNetworkRequest(
 					networkName,
 					types.WithOptions(map[string]string{
-						"com.docker.network.bridge.enable_icc": "true",
+						driver.BridgeICCOption: "true",
 					}),
 				)
 
@@ -359,7 +360,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 				nid := networkID
 				ncNetClient.EXPECT().CreateNetwork(gomock.Any()).DoAndReturn(func(actual netutil.CreateOptions) (*netutil.NetworkConfig, error) {
 					// Check if the label exists
-					checkLabel := "com.docker.network.bridge.enable_icc=true"
+					checkLabel := driver.BridgeICCOption + "=true"
 					labelExists := false
 					for _, label := range actual.Labels {
 						if label == checkLabel {
@@ -367,9 +368,6 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 							break
 						}
 					}
-
-					// Expect that DisableICC is not called
-					mockBridgeDriver.EXPECT().DisableICC(gomock.Any(), gomock.Any()).Times(0)
 
 					Expect(labelExists).To(BeFalse(), fmt.Sprintf("Label '%s' should not exist in Labels", checkLabel))
 
@@ -392,7 +390,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 				nid := networkID
 				ncNetClient.EXPECT().CreateNetwork(gomock.Any()).DoAndReturn(func(actual netutil.CreateOptions) (*netutil.NetworkConfig, error) {
 					// Check if the label exists
-					expectedLabel := "com.docker.network.bridge.enable_icc=true"
+					expectedLabel := driver.BridgeICCOption + "=true"
 					labelExists := false
 					for _, label := range actual.Labels {
 						if label == expectedLabel {
@@ -417,7 +415,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 				request := types.NewCreateNetworkRequest(
 					networkName,
 					types.WithOptions(map[string]string{
-						BridgeICCOption: "false",
+						driver.BridgeICCOption: "false",
 					}),
 				)
 
@@ -427,7 +425,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 				nid := networkID
 				ncNetClient.EXPECT().CreateNetwork(gomock.Any()).DoAndReturn(func(actual netutil.CreateOptions) (*netutil.NetworkConfig, error) {
 					// Check if the label exists
-					expectedLabel := FinchICCLabel + "=false"
+					expectedLabel := driver.FinchICCLabelIPv4 + "=false"
 					labelExists := false
 					for _, label := range actual.Labels {
 						if label == expectedLabel {
@@ -441,27 +439,24 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 					return &netutil.NetworkConfig{NerdctlID: &nid}, nil
 				})
 
-				originalDriverFunc := NewBridgeDriver
-				NewBridgeDriver = func(netClient backend.NerdctlNetworkSvc, logger flog.Logger) BridgeDriverOperations {
-					return mockBridgeDriver
+				originalDriverFunc := driver.NewBridgeDriver
+				driver.NewBridgeDriver = func(netClient backend.NerdctlNetworkSvc, logger flog.Logger, isIPv6 bool) (driver.DriverHandler, error) {
+					return mockBridgeDriver, nil
 				}
-				defer func() { NewBridgeDriver = originalDriverFunc }()
+				defer func() { driver.NewBridgeDriver = originalDriverFunc }()
 
 				// Set up expectations for mockBridgeDriver
 				mockBridgeDriver.EXPECT().HandleCreateOptions(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(request types.NetworkCreateRequest, options netutil.CreateOptions) (netutil.CreateOptions, error) {
 						// Mock the behavior for BridgeICCOption set to false
 						// Remove the option from the options map
-						fmt.Println("HandleCreateOptions called with options:", options)
-						delete(options.Options, BridgeICCOption)
-						options.Labels = append(options.Labels, FinchICCLabel+"=false")
+
+						delete(options.Options, driver.BridgeICCOption)
+						options.Labels = append(options.Labels, driver.FinchICCLabelIPv4+"=false")
 						return options, nil
 					}).AnyTimes()
 
 				mockBridgeDriver.EXPECT().HandlePostCreate(gomock.Any()).Return("", nil).AnyTimes()
-				mockBridgeDriver.EXPECT().ICCDisabled().DoAndReturn(func() bool {
-					return true
-				}).AnyTimes()
 
 				response, err := service.Create(ctx, *request)
 				Expect(err).ShouldNot(HaveOccurred())

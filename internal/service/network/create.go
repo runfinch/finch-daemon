@@ -11,28 +11,30 @@ import (
 	"github.com/containerd/nerdctl/pkg/netutil"
 
 	"github.com/runfinch/finch-daemon/api/types"
+	"github.com/runfinch/finch-daemon/internal/service/network/driver"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/utility/maputility"
 )
 
 // Create implements the logic to turn a network create request to the back-end nerdctl create network calls.
 func (s *service) Create(ctx context.Context, request types.NetworkCreateRequest) (types.NetworkCreateResponse, error) {
-	var bridgeDriver BridgeDriverOperations
+	var bridgeDriver driver.DriverHandler
 	var err error
 
 	createOptionsFrom := func(request types.NetworkCreateRequest) (netutil.CreateOptions, error) {
 		// Default to "bridge" driver if request does not specify a driver
-		driver := request.Driver
-		if driver == "" {
-			driver = "bridge"
+		networkDriver := request.Driver
+		if networkDriver == "" {
+			networkDriver = "bridge"
 		}
 
 		options := netutil.CreateOptions{
 			Name:        request.Name,
-			Driver:      driver,
+			Driver:      networkDriver,
 			IPAMDriver:  "default",
 			IPAMOptions: request.IPAM.Options,
 			Labels:      maputility.Flatten(request.Labels, maputility.KeyEqualsValueFormat),
+			IPv6:        request.EnableIPv6,
 		}
 
 		if request.IPAM.Driver != "" {
@@ -53,9 +55,12 @@ func (s *service) Create(ctx context.Context, request types.NetworkCreateRequest
 		}
 
 		// Handle driver-specific options
-		switch driver {
+		switch networkDriver {
 		case "bridge":
-			bridgeDriver = NewBridgeDriver(s.netClient, s.logger)
+			bridgeDriver, err = driver.NewBridgeDriver(s.netClient, s.logger, options.IPv6)
+			if err != nil {
+				return options, err
+			}
 			options, err = bridgeDriver.HandleCreateOptions(request, options)
 			return options, err
 		default:

@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/containerd/nerdctl/pkg/netutil"
+	"github.com/runfinch/finch-daemon/internal/service/network/driver"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
 
@@ -46,31 +47,35 @@ func (s *service) handleNetworkLabels(net *netutil.NetworkConfig) error {
 
 	for key, value := range *net.NerdctlLabels {
 		switch key {
-		case FinchICCLabel:
-			if err := s.handleEnableICCOption(net, value); err != nil {
-				return fmt.Errorf("error handling %s label: %w", BridgeICCOption, err)
+		case driver.FinchICCLabelIPv4:
+			if err := s.handleICCLabel(net, value, false); err != nil {
+				return fmt.Errorf("error handling IPv4 ICC label: %w", err)
+			}
+		case driver.FinchICCLabelIPv6:
+			if err := s.handleICCLabel(net, value, true); err != nil {
+				return fmt.Errorf("error handling IPv6 ICC label: %w", err)
 			}
 		}
 	}
 	return nil
 }
 
-func (s *service) handleEnableICCOption(net *netutil.NetworkConfig, value string) error {
+func (s *service) handleICCLabel(net *netutil.NetworkConfig, value string, isIPv6 bool) error {
 	if value != "false" {
 		// for some reason the label value got modified.
 		// we will still try to remove the iptable rules.
 		// iptable.DeleteIfExists is used to ignore non-existent errors
-		s.logger.Warnf("unexpected value for %s label: %s", BridgeICCOption, value)
+		s.logger.Warnf("unexpected value for ICC label: %s", value)
 	}
-	// Remove iptable rules set for disabling ICC for the network bridge
-	bridgeDriver := NewBridgeDriver(s.netClient, s.logger)
-	bridgeName, err := bridgeDriver.GetBridgeName(net)
+
+	bridgeDriver, err := driver.NewBridgeDriver(s.netClient, s.logger, isIPv6)
 	if err != nil {
-		return fmt.Errorf("unable to get bridge name: %w", err)
+		return fmt.Errorf("unable to create bridge driver: %w", err)
 	}
-	err = bridgeDriver.DisableICC(bridgeName, false)
-	if err != nil {
-		return fmt.Errorf("unable to remove ICC disable rule: %w", err)
+
+	if err := bridgeDriver.HandleRemove(net); err != nil {
+		return fmt.Errorf("error handling ICC label: %w", err)
 	}
+
 	return nil
 }
