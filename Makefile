@@ -48,9 +48,6 @@ restore-mod:
 	mv build/go.mod.bak go.mod
 	mv build/go.sum.bak go.sum
 
-clean-build-dir:
-	rm -rf build
-
 clean:
 	@rm -f $(BINARIES)
 	@rm -rf $(BIN)
@@ -108,8 +105,10 @@ $(GOLINT): linux
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BIN) v1.60.3
 
 .PHONY: lint
-lint: linux $(GOLINT)
+lint: linux $(GOLINT) patch-nerdctl
+	go mod edit -replace=github.com/containerd/nerdctl@v1.7.7=./build/nerdctl && go mod tidy
 	$(GOLINT) run ./...
+	$(MAKE) restore-mod
 
 .PHONY: test-unit
 test-unit: linux

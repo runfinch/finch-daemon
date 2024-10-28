@@ -287,3 +287,59 @@ var _ = Describe("Container Create API ", func() {
 		})
 	})
 })
+
+var _ = Describe("Extracting Userns from Labels", func() {
+	var (
+		createOpt *types.ContainerCreateOptions
+	)
+
+	BeforeEach(func() {
+		createOpt = &types.ContainerCreateOptions{}
+	})
+
+	Describe("when there are labels", func() {
+		Context("with a matching userns label", func() {
+			BeforeEach(func() {
+				createOpt.Label = []string{"runfinch.com/internal/userns=test-namespace", "other.label=value"}
+			})
+
+			It("should extract the userns correctly", func() {
+				extractUsernsFromLabels(createOpt)
+				Expect(createOpt.Userns).To(Equal("test-namespace"))
+			})
+		})
+
+		Context("without a matching userns label", func() {
+			BeforeEach(func() {
+				createOpt.Label = []string{"other.label=value"}
+			})
+
+			It("should not set userns", func() {
+				extractUsernsFromLabels(createOpt)
+				Expect(createOpt.Userns).To(BeEmpty())
+			})
+		})
+
+		Context("with multiple matching userns labels", func() {
+			BeforeEach(func() {
+				createOpt.Label = []string{"runfinch.com/internal/userns=test-namespace", "runfinch.com/internal/userns=another-namespace"}
+			})
+
+			It("should extract only the first userns label", func() {
+				extractUsernsFromLabels(createOpt)
+				Expect(createOpt.Userns).To(Equal("test-namespace"))
+			})
+		})
+
+		Context("when the label list is empty", func() {
+			BeforeEach(func() {
+				createOpt.Label = []string{}
+			})
+
+			It("should not set userns", func() {
+				extractUsernsFromLabels(createOpt)
+				Expect(createOpt.Userns).To(BeEmpty())
+			})
+		})
+	})
+})
