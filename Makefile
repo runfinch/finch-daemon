@@ -17,17 +17,40 @@ ifndef GODEBUG
 	EXTRA_LDFLAGS += -s -w
 endif
 
-.PHONY: build
-build:
+NERDCTL_REPO = https://github.com/containerd/nerdctl.git
+NERDCTL_TAG = v1.7.7
+NERDCTL_PATCH = patches/userns.patch
+
+.PHONY: patch-nerdctl build clean restore-mod
+build: patch-nerdctl
 	$(eval PACKAGE := github.com/runfinch/finch-daemon)
 	$(eval VERSION ?= $(shell git describe --match 'v[0-9]*' --dirty='.modified' --always --tags))
 	$(eval GITCOMMIT := $(shell git rev-parse HEAD)$(shell if ! git diff --no-ext-diff --quiet --exit-code; then echo .m; fi))
 	$(eval LDFLAGS := "-X $(PACKAGE)/version.Version=$(VERSION) -X $(PACKAGE)/version.GitCommit=$(GITCOMMIT) $(EXTRA_LDFLAGS)")
+	go mod edit -replace=github.com/containerd/nerdctl@v1.7.7=./tmp/nerdctl && go mod tidy
 	GOOS=linux go build -ldflags $(LDFLAGS) -v -o $(BINARY) $(PACKAGE)/cmd/finch-daemon
+	$(MAKE) restore-mod
+
+patch-nerdctl:
+	rm -rf tmp && mkdir -p tmp
+
+	cp go.mod tmp/go.mod.bak
+	cp go.sum tmp/go.sum.bak
+
+	cd tmp && git clone $(NERDCTL_REPO)
+	cd tmp/nerdctl && git fetch --tags
+	cd tmp/nerdctl && git checkout tags/$(NERDCTL_TAG) -b $(NERDCTL_TAG)-branch
+	cd tmp/nerdctl && git apply ../../$(NERDCTL_PATCH)
+
+restore-mod:
+	# Restore the original go.mod and go.sum files
+	mv tmp/go.mod.bak go.mod
+	mv tmp/go.sum.bak go.sum
 
 clean:
 	@rm -f $(BINARIES)
 	@rm -rf $(BIN)
+	@rm -rf tmp
 
 .PHONY: linux
 linux:
