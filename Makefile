@@ -17,17 +17,44 @@ ifndef GODEBUG
 	EXTRA_LDFLAGS += -s -w
 endif
 
-.PHONY: build
-build:
+NERDCTL_REPO = https://github.com/containerd/nerdctl.git
+NERDCTL_TAG = v1.7.7
+NERDCTL_USERNS_PATCH = patches/userns.patch
+NERDCTL_NONE_NETWORK_PATCH = patches/none_network.patch
+
+.PHONY: patch-nerdctl build clean restore-mod
+build: patch-nerdctl
 	$(eval PACKAGE := github.com/runfinch/finch-daemon)
 	$(eval VERSION ?= $(shell git describe --match 'v[0-9]*' --dirty='.modified' --always --tags))
 	$(eval GITCOMMIT := $(shell git rev-parse HEAD)$(shell if ! git diff --no-ext-diff --quiet --exit-code; then echo .m; fi))
 	$(eval LDFLAGS := "-X $(PACKAGE)/version.Version=$(VERSION) -X $(PACKAGE)/version.GitCommit=$(GITCOMMIT) $(EXTRA_LDFLAGS)")
+	go mod edit -replace=github.com/containerd/nerdctl@v1.7.7=./build/nerdctl && go mod tidy
 	GOOS=linux go build -ldflags $(LDFLAGS) -v -o $(BINARY) $(PACKAGE)/cmd/finch-daemon
+	$(MAKE) restore-mod
+
+patch-nerdctl:
+	rm -rf build && mkdir -p build
+
+	cp go.mod build/go.mod.bak
+	cp go.sum build/go.sum.bak
+
+	cd build && git clone $(NERDCTL_REPO)
+	cd build/nerdctl && git fetch --tags
+	cd build/nerdctl && git checkout tags/$(NERDCTL_TAG) -b $(NERDCTL_TAG)-branch
+	cd build/nerdctl && git apply ../../$(NERDCTL_USERNS_PATCH)
+	cd build/nerdctl && git apply ../../$(NERDCTL_NONE_NETWORK_PATCH)
+
+restore-mod:
+	mv build/go.mod.bak go.mod
+	mv build/go.sum.bak go.sum
+
+clean-build-dir:
+	rm -rf build
 
 clean:
 	@rm -f $(BINARIES)
 	@rm -rf $(BIN)
+	@rm -rf build
 
 .PHONY: linux
 linux:
@@ -86,7 +113,10 @@ lint: linux $(GOLINT)
 
 .PHONY: test-unit
 test-unit: linux
-	$(GINKGO) $(GFLAGS) ./...
+	$(MAKE) patch-nerdctl
+	go mod edit -replace=github.com/containerd/nerdctl@v1.7.7=./build/nerdctl && go mod tidy
+	$(GINKGO) $(GFLAGS) --skip-package nerdctl ./...
+	$(MAKE) restore-mod
 
 # Runs tests in headless dlv mode, must specify package directory with PKG_DIR
 PKG_DIR ?= .
@@ -99,7 +129,10 @@ test-e2e: linux
 	DOCKER_HOST="unix:///run/finch.sock" \
 	DOCKER_API_VERSION="v1.41" \
 	TEST_E2E=1 \
+	$(MAKE) patch-nerdctl
+	go mod edit -replace=github.com/containerd/nerdctl@v1.7.7=./build/nerdctl && go mod tidy
 	$(GINKGO) $(GFLAGS) ./e2e/...
+	$(MAKE) restore-mod
 
 .PHONY: licenses
 licenses:

@@ -1,0 +1,260 @@
+diff --git a/cmd/nerdctl/container_run_network_linux_test.go b/cmd/nerdctl/container_run_network_linux_test.go
+index 95fdbc41..8706a20d 100644
+--- a/cmd/nerdctl/container_run_network_linux_test.go
++++ b/cmd/nerdctl/container_run_network_linux_test.go
+@@ -451,6 +451,72 @@ func TestSharedNetworkStack(t *testing.T) {
+ 		AssertOutContains(testutil.NginxAlpineIndexHTMLSnippet)
+ }
+ 
++func TestSharedNetworkWithNone(t *testing.T) {
++	if runtime.GOOS != "linux" {
++		t.Skip("--network=container:<container name|id> only supports linux now")
++	}
++	base := testutil.NewBase(t)
++
++	containerName := testutil.Identifier(t)
++	defer base.Cmd("rm", "-f", containerName).AssertOK()
++	base.Cmd("run", "-d", "--name", containerName, "--network", "none",
++		testutil.NginxAlpineImage).AssertOK()
++	base.EnsureContainerStarted(containerName)
++
++	containerNameJoin := testutil.Identifier(t) + "-network"
++	defer base.Cmd("rm", "-f", containerNameJoin).AssertOK()
++	base.Cmd("run",
++		"-d",
++		"--name", containerNameJoin,
++		"--network=container:"+containerName,
++		testutil.CommonImage,
++		"sleep", "infinity").AssertOK()
++
++	base.Cmd("exec", containerNameJoin, "wget", "-qO-", "http://127.0.0.1:80").
++		AssertOutContains(testutil.NginxAlpineIndexHTMLSnippet)
++
++	base.Cmd("restart", containerName).AssertOK()
++	base.Cmd("stop", "--time=1", containerNameJoin).AssertOK()
++	base.Cmd("start", containerNameJoin).AssertOK()
++	base.Cmd("exec", containerNameJoin, "wget", "-qO-", "http://127.0.0.1:80").
++		AssertOutContains(testutil.NginxAlpineIndexHTMLSnippet)
++}
++
++func TestRunContainerInExistingNetNS(t *testing.T) {
++	if rootlessutil.IsRootless() {
++		t.Skip("Can't create new netns in rootless mode")
++	}
++	testutil.DockerIncompatible(t)
++	base := testutil.NewBase(t)
++
++	netNS, err := netns.NewNetNS(t.TempDir() + "/netns")
++	assert.NilError(t, err)
++	err = netNS.Do(func(netns ns.NetNS) error {
++		loopback, err := netlink.LinkByName("lo")
++		assert.NilError(t, err)
++		err = netlink.LinkSetUp(loopback)
++		assert.NilError(t, err)
++		return nil
++	})
++	assert.NilError(t, err)
++	defer netNS.Remove()
++
++	containerName := testutil.Identifier(t)
++	defer base.Cmd("rm", "-f", containerName).AssertOK()
++	base.Cmd("run", "-d", "--name", containerName,
++		"--network=ns:"+netNS.GetPath(), testutil.NginxAlpineImage).AssertOK()
++	base.EnsureContainerStarted(containerName)
++	time.Sleep(3 * time.Second)
++
++	err = netNS.Do(func(netns ns.NetNS) error {
++		stdout, err := exec.Command("curl", "-s", "http://127.0.0.1:80").Output()
++		assert.NilError(t, err)
++		assert.Assert(t, strings.Contains(string(stdout), testutil.NginxAlpineIndexHTMLSnippet))
++		return nil
++	})
++	assert.NilError(t, err)
++}
++
+ func TestRunContainerWithMACAddress(t *testing.T) {
+ 	base := testutil.NewBase(t)
+ 	tID := testutil.Identifier(t)
+@@ -511,6 +577,8 @@ func TestHostsFileMounts(t *testing.T) {
+ 		"sh", "-euxc", "echo >> /etc/hosts").AssertOK()
+ 	base.Cmd("run", "--rm", "-v", "/etc/hosts:/etc/hosts", "--network", "host", testutil.CommonImage,
+ 		"sh", "-euxc", "head -n -1 /etc/hosts > temp && cat temp > /etc/hosts").AssertOK()
++	base.Cmd("run", "--rm", "--network", "none", testutil.CommonImage,
++		"sh", "-euxc", "echo >> /etc/hosts").AssertOK()
+ 
+ 	base.Cmd("run", "--rm", testutil.CommonImage,
+ 		"sh", "-euxc", "echo >> /etc/resolv.conf").AssertOK()
+@@ -523,6 +591,8 @@ func TestHostsFileMounts(t *testing.T) {
+ 		"sh", "-euxc", "echo >> /etc/resolv.conf").AssertOK()
+ 	base.Cmd("run", "--rm", "-v", "/etc/resolv.conf:/etc/resolv.conf", "--network", "host", testutil.CommonImage,
+ 		"sh", "-euxc", "head -n -1 /etc/resolv.conf > temp && cat temp > /etc/resolv.conf").AssertOK()
++	base.Cmd("run", "--rm", "--network", "host", testutil.CommonImage,
++		"sh", "-euxc", "echo >> /etc/resolv.conf").AssertOK()
+ }
+ 
+ func TestRunContainerWithStaticIP6(t *testing.T) {
+@@ -594,3 +664,42 @@ func TestRunContainerWithStaticIP6(t *testing.T) {
+ 		})
+ 	}
+ }
++
++func TestNoneNetworkStaticConfigs(t *testing.T) {
++	testutil.DockerIncompatible(t)
++	base := testutil.NewBase(t)
++
++	cmd := base.Cmd("run", "--rm", "--net", "none", testutil.CommonImage, "cat", "/etc/hosts")
++	cmd.AssertOutContains("127.0.0.1	localhost")
++	cmd.AssertOutContains("::1	localhost")
++
++	cmd = base.Cmd("run", "--rm", "--net", "none", testutil.CommonImage, "cat", "/etc/resolv.conf")
++	cmd.AssertOutContains("nameserver 127.0.0.1")
++
++	// If running on Linux, verify /etc/hostname is correctly set
++	if runtime.GOOS == "linux" {
++		containerHostName := "testcontainer"
++		cmd := base.Cmd("run", "--rm", "--net", "none", "--hostname", containerHostName, testutil.CommonImage, "cat", "/etc/hostname")
++		output := cmd.Run().Combined()
++		hostname := strings.TrimSpace(output)
++
++		if len(containerHostName) > 12 {
++			require.Equal(t, containerHostName[:12], hostname)
++		} else {
++			require.Equal(t, containerHostName, hostname)
++		}
++
++		containerName := "testNoneNetworkHostname"
++		defer base.Cmd("rm", "-f", containerName).AssertOK()
++		cmd = base.Cmd("run", "--d", "--net", "none", "--name", containerName, testutil.CommonImage, "sleep", "infinity")
++		output = cmd.Run().Combined()
++		containerIDShort := strings.TrimSpace(output)[:12]
++
++		cmd = base.Cmd("exec", containerName, "cat", "/etc/hostname")
++		output = cmd.Run().Combined()
++		containerHostName = strings.TrimSpace(output)
++
++		require.Equal(t, containerHostName, containerIDShort)
++
++	}
++}
+diff --git a/go.mod b/go.mod
+index e43c1699..9f720a80 100644
+--- a/go.mod
++++ b/go.mod
+@@ -120,7 +120,7 @@ require (
+ 	github.com/pelletier/go-toml v1.9.5 // indirect
+ 	github.com/philhofer/fwd v1.1.1 // indirect
+ 	github.com/pkg/errors v0.9.1 // indirect
+-	github.com/sirupsen/logrus v1.9.3 // indirect
++	github.com/sirupsen/logrus v1.9.3
+ 	github.com/spaolacci/murmur3 v1.1.0 // indirect
+ 	github.com/stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6 // indirect
+ 	github.com/tidwall/match v1.1.1 // indirect
+diff --git a/go.sum b/go.sum
+index 723f2a36..33ae6f3d 100644
+--- a/go.sum
++++ b/go.sum
+@@ -275,8 +275,9 @@ github.com/philhofer/fwd v1.1.1 h1:GdGcTjf5RNAxwS4QLsiMzJYj5KEvPJD3Abr261yRQXQ=
+ github.com/philhofer/fwd v1.1.1/go.mod h1:gk3iGcWd9+svBvR0sR+KPcfE+RNWozjowpeBVG3ZVNU=
+ github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+ github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
+-github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
+ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
++github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRIccs7FGNTlIRMkT8wgtp5eCXdBlqhYGL6U=
++github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
+ github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
+ github.com/prometheus/procfs v0.11.1 h1:xRC8Iq1yyca5ypa9n1EZnWZkt7dwcoRPQwX/5gwaUuI=
+ github.com/prometheus/procfs v0.11.1/go.mod h1:eesXgaPo1q7lBpVMoMy0ZOFTth9hBn4W/y0/p/ScXhY=
+diff --git a/pkg/containerutil/container_network_manager.go b/pkg/containerutil/container_network_manager.go
+index b86870a4..ee82eedc 100644
+--- a/pkg/containerutil/container_network_manager.go
++++ b/pkg/containerutil/container_network_manager.go
+@@ -38,6 +38,7 @@ import (
+ 	"github.com/containerd/nerdctl/pkg/mountutil"
+ 	"github.com/containerd/nerdctl/pkg/netutil"
+ 	"github.com/containerd/nerdctl/pkg/netutil/nettype"
++	"github.com/containerd/nerdctl/pkg/resolvconf"
+ 	"github.com/containerd/nerdctl/pkg/strutil"
+ 	"github.com/opencontainers/runtime-spec/specs-go"
+ )
+@@ -169,11 +170,79 @@ func (m *noneNetworkManager) InternalNetworkingOptionLabels(_ context.Context) (
+ 	return m.netOpts, nil
+ }
+ 
++// WriteContentToHostsFile writes the given content to the specified path.
++func WriteContentToHostsFile(path string, content []byte) error {
++	// Write the content to the specified path (overwrites if the file exists)
++	if err := os.WriteFile(path, content, 0644); err != nil {
++		return err
++	}
++	return nil
++}
++
+ // ContainerNetworkingOpts Returns a slice of `oci.SpecOpts` and `containerd.NewContainerOpts` which represent
+ // the network specs which need to be applied to the container with the given ID.
+-func (m *noneNetworkManager) ContainerNetworkingOpts(_ context.Context, _ string) ([]oci.SpecOpts, []containerd.NewContainerOpts, error) {
++func (m *noneNetworkManager) ContainerNetworkingOpts(_ context.Context, containerID string) ([]oci.SpecOpts, []containerd.NewContainerOpts, error) {
+ 	// No options to return if no network settings are provided.
+-	return []oci.SpecOpts{}, []containerd.NewContainerOpts{}, nil
++	dataStore, err := clientutil.DataStore(m.globalOptions.DataRoot, m.globalOptions.Address)
++	if err != nil {
++		return nil, nil, err
++	}
++
++	stateDir, err := ContainerStateDirPath(m.globalOptions.Namespace, dataStore, containerID)
++	if err != nil {
++		return nil, nil, err
++	}
++
++	resolvConfPath := filepath.Join(stateDir, "resolv.conf")
++	dns := []string{"127.0.0.1"}
++	dnsSearch := []string{}
++	dnsOptions := []string{}
++
++	// Call the Build function
++	_, err = resolvconf.Build(resolvConfPath, dns, dnsSearch, dnsOptions)
++	if err != nil {
++		return nil, nil, err
++	}
++
++	content := []byte(`127.0.0.1	localhost
++::1	localhost
++`)
++
++	etcHostsPath, err := hostsstore.AllocHostsFile(dataStore, m.globalOptions.Namespace, containerID)
++	if err != nil {
++		return nil, nil, err
++	}
++
++	if err := WriteContentToHostsFile(etcHostsPath, content); err != nil {
++		return nil, nil, err
++	}
++
++	specs := []oci.SpecOpts{
++		withDedupMounts("/etc/hosts", withCustomHosts(etcHostsPath)),
++		withDedupMounts("/etc/resolv.conf", withCustomResolvConf(resolvConfPath)),
++	}
++
++	// `/etc/hostname` does not exist on FreeBSD
++	if runtime.GOOS == "linux" {
++		// If no hostname is set, default to first 12 characters of the container ID.
++		hostname := m.netOpts.Hostname
++		if hostname == "" {
++			hostname = containerID
++			if len(hostname) > 12 {
++				hostname = hostname[0:12]
++			}
++		}
++		m.netOpts.Hostname = hostname
++
++		hostnameOpts, err := writeEtcHostnameForContainer(m.globalOptions, m.netOpts.Hostname, containerID)
++		if err != nil {
++			return nil, nil, err
++		}
++		if hostnameOpts != nil {
++			specs = append(specs, hostnameOpts...)
++		}
++	}
++	return specs, []containerd.NewContainerOpts{}, nil
+ }
+ 
+ // types.NetworkOptionsManager implementation for container networking settings.
