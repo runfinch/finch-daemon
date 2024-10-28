@@ -6,6 +6,7 @@ package container
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
@@ -20,6 +21,17 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
 
+// ExtractUsernsFromLabels searches for a label with the prefix
+// "runfinch.com/internal/userns=" and sets the Userns field.
+func extractUsernsFromLabels(createOpt *types.ContainerCreateOptions) {
+	for _, label := range createOpt.Label {
+		if strings.HasPrefix(label, "runfinch.com/internal/userns=") {
+			createOpt.Userns = strings.TrimPrefix(label, "runfinch.com/internal/userns=")
+			return // Exit after the first match
+		}
+	}
+}
+
 func (s *service) Create(ctx context.Context, image string, cmd []string, createOpt types.ContainerCreateOptions, netOpt types.NetworkOptions) (cid string, err error) {
 	// Set path to nerdctl binary required for OCI hooks and logging
 	if createOpt.NerdctlCmd == "" {
@@ -30,6 +42,8 @@ func (s *service) Create(ctx context.Context, image string, cmd []string, create
 		createOpt.NerdctlCmd = ncExe
 		createOpt.NerdctlArgs = []string{}
 	}
+
+	extractUsernsFromLabels(&createOpt)
 
 	// translate network IDs to names because nerdctl currently does not recognize networks by their IDs during create.
 	// TODO: remove this when the issue is fixed upstream.
