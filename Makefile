@@ -13,13 +13,21 @@ BINDIR ?= $(PREFIX)/bin
 
 BINARY = $(addprefix bin/,finch-daemon)
 
+ifndef GODEBUG
+	EXTRA_LDFLAGS += -s -w
+endif
+
 .PHONY: build
 build:
 	$(eval PACKAGE := github.com/runfinch/finch-daemon)
 	$(eval VERSION ?= $(shell git describe --match 'v[0-9]*' --dirty='.modified' --always --tags))
 	$(eval GITCOMMIT := $(shell git rev-parse HEAD)$(shell if ! git diff --no-ext-diff --quiet --exit-code; then echo .m; fi))
-	$(eval LDFLAGS := "-X $(PACKAGE)/version.Version=$(VERSION) -X $(PACKAGE)/version.GitCommit=$(GITCOMMIT)")
+	$(eval LDFLAGS := "-X $(PACKAGE)/version.Version=$(VERSION) -X $(PACKAGE)/version.GitCommit=$(GITCOMMIT) $(EXTRA_LDFLAGS)")
 	GOOS=linux go build -ldflags $(LDFLAGS) -v -o $(BINARY) $(PACKAGE)/cmd/finch-daemon
+
+clean:
+	@rm -f $(BINARIES)
+	@rm -rf $(BIN)
 
 .PHONY: linux
 linux:
@@ -53,8 +61,8 @@ ifneq ("$(wildcard /run/finch.sock)","")
 	sudo unlink /run/finch.sock
 endif
 
-.PHONY: code-gen
-code-gen: linux
+.PHONY:  gen-code
+ gen-code: linux
 	rm -rf ./pkg/mocks
 	GOBIN=$(BIN) go install github.com/golang/mock/mockgen
 	GOBIN=$(BIN) go install golang.org/x/tools/cmd/stringer
@@ -72,35 +80,35 @@ GOLINT=$(BIN)/golangci-lint
 $(GOLINT): linux
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BIN) v1.60.3
 
-.PHONY: golint
-golint: linux $(GOLINT) 
+.PHONY: lint
+lint: linux $(GOLINT)
 	$(GOLINT) run ./...
 
-.PHONY: run-unit-tests
-run-unit-tests: linux
+.PHONY: test-unit
+test-unit: linux
 	$(GINKGO) $(GFLAGS) ./...
+
+# Runs tests in headless dlv mode, must specify package directory with PKG_DIR
+PKG_DIR ?= .
+.PHONY: test-unit-debug
+test-unit-debug: linux $(DLV)
+	sudo $(DLV) --listen=:2345 --headless=true --api-version=2 test $(PKG_DIR)
+
+.PHONY: test-e2e
+test-e2e: linux
+	DOCKER_HOST="unix:///run/finch.sock" \
+	DOCKER_API_VERSION="v1.41" \
+	TEST_E2E=1 \
+	$(GINKGO) $(GFLAGS) ./e2e/...
 
 .PHONY: licenses
 licenses:
 	PATH=$(BIN):$(PATH) go-licenses report --template="scripts/third-party-license.tpl" --ignore github.com/runfinch ./... > THIRD_PARTY_LICENSES
 
-# Runs tests in headless dlv mode, must specify package directory with PKG_DIR
-PKG_DIR ?= .
-.PHONY: debug-unit-tests
-debug-unit-tests: linux $(DLV)
-	sudo $(DLV) --listen=:2345 --headless=true --api-version=2 test $(PKG_DIR)
-
 .PHONY: coverage
 coverage: linux
 	$(GINKGO) -r -v -race --trace --cover --coverprofile="coverage-report.out" ./...
 	go tool cover -html="coverage-report.out" -o="unit-test-coverage-report.html"
-
-.PHONY: run-e2e-tests
-run-e2e-tests: linux
-	DOCKER_HOST="unix:///run/finch.sock" \
-	DOCKER_API_VERSION="v1.41" \
-	RUN_E2E_TESTS=1 \
-	$(GINKGO) $(GFLAGS) ./e2e/...
 
 .PHONY: release
 release: linux

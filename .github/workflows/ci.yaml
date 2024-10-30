@@ -63,7 +63,7 @@ jobs:
       - name: Build and run unit tests
         run: |
           make build
-          make run-unit-tests
+          make test-unit
   e2e-test:
     runs-on: ubuntu-latest
     steps:
@@ -83,4 +83,4 @@ jobs:
       - name: Start finch-daemon
         run: sudo bin/finch-daemon  --debug --socket-owner $UID &
       - name: Run e2e test
-        run: sudo make run-e2e-tests
+        run: sudo make test-e2e
