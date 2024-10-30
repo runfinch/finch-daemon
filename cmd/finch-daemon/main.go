@@ -17,39 +17,31 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/containerd/containerd"
-	"github.com/containerd/nerdctl/pkg/api/types"
-	"github.com/containerd/nerdctl/pkg/config"
-	"github.com/coreos/go-systemd/v22/daemon"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/afero"
-	"github.com/spf13/cobra"
+	// #nosec
+	// register HTTP handler for /debug/pprof on the DefaultServeMux.
+	_ "net/http/pprof"
 
+	"github.com/coreos/go-systemd/v22/daemon"
 	"github.com/runfinch/finch-daemon/api/router"
-	"github.com/runfinch/finch-daemon/internal/backend"
-	"github.com/runfinch/finch-daemon/internal/service/builder"
-	"github.com/runfinch/finch-daemon/internal/service/container"
-	"github.com/runfinch/finch-daemon/internal/service/exec"
-	"github.com/runfinch/finch-daemon/internal/service/image"
-	"github.com/runfinch/finch-daemon/internal/service/network"
-	"github.com/runfinch/finch-daemon/internal/service/system"
-	"github.com/runfinch/finch-daemon/internal/service/volume"
-	"github.com/runfinch/finch-daemon/pkg/archive"
-	"github.com/runfinch/finch-daemon/pkg/ecc"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 	"github.com/runfinch/finch-daemon/version"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 const (
 	// Keep this value in sync with `guestSocket` in README.md.
-	defaultFinchAddr = "/run/finch.sock"
-	defaultNamespace = "finch"
+	defaultFinchAddr  = "/run/finch.sock"
+	defaultNamespace  = "finch"
+	defaultConfigPath = "/etc/finch/finch.toml"
 )
 
 type DaemonOptions struct {
-	debug       bool
-	socketAddr  string
-	socketOwner int
+	debug        bool
+	socketAddr   string
+	socketOwner  int
+	debugAddress string
+	configPath   string
 }
 
 var options = new(DaemonOptions)
@@ -65,6 +57,8 @@ func main() {
 	rootCmd.Flags().StringVar(&options.socketAddr, "socket-addr", defaultFinchAddr, "server listening Unix socket address")
 	rootCmd.Flags().BoolVar(&options.debug, "debug", false, "turn on debug log level")
 	rootCmd.Flags().IntVar(&options.socketOwner, "socket-owner", -1, "Uid and Gid of the server socket")
+	rootCmd.Flags().StringVar(&options.debugAddress, "debug-addr", "", "")
+	rootCmd.Flags().StringVar(&options.configPath, "config-file", defaultConfigPath, "Daemon Config Path")
 	if err := rootCmd.Execute(); err != nil {
 		log.Printf("got error: %v", err)
 		log.Fatal(err)
@@ -82,7 +76,7 @@ func run(options *DaemonOptions) error {
 	}
 
 	logger := flog.NewLogrus()
-	r, err := newRouter(options.debug, logger)
+	r, err := newRouter(options, logger)
 	if err != nil {
 		return fmt.Errorf("failed to create a router: %w", err)
 	}
@@ -99,6 +93,24 @@ func run(options *DaemonOptions) error {
 	if err := os.Chown(options.socketAddr, options.socketOwner, options.socketOwner); err != nil {
 		return fmt.Errorf("failed to chown the finch-daemon socket: %w", err)
 	}
+
+	if options.debugAddress != "" {
+		logger.Infof("Serving debugging endpoint on %q", options.debugAddress)
+		go func() {
+			debugListener, err := net.Listen("tcp", options.debugAddress)
+			if err != nil {
+				logger.Fatal(err)
+			}
+			debugServer := &http.Server{
+				Handler:           http.DefaultServeMux,
+				ReadHeaderTimeout: 5 * time.Second,
+			}
+			if err := debugServer.Serve(debugListener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				logger.Fatal(err)
+			}
+		}()
+	}
+
 	server := &http.Server{
 		Handler:           r,
 		ReadHeaderTimeout: 5 * time.Minute,
@@ -121,37 +133,23 @@ func run(options *DaemonOptions) error {
 	return nil
 }
 
-func newRouter(debug bool, logger *flog.Logrus) (http.Handler, error) {
-	conf := config.New()
-	conf.Debug = debug
-	conf.Namespace = defaultNamespace
-	client, err := containerd.New(conf.Address, containerd.WithDefaultNamespace(conf.Namespace))
+func newRouter(options *DaemonOptions, logger *flog.Logrus) (http.Handler, error) {
+	conf, err := initializeConfig(options)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create containerd client: %w", err)
+		return nil, err
 	}
-	clientWrapper := backend.NewContainerdClientWrapper(client)
-	// GlobalCommandOptions is actually just an alias for Config, see
-	// https://github.com/containerd/nerdctl/blob/9f8655f7722d6e6851755123730436bf1a6c9995/pkg/api/types/global.go#L21
-	globalOptions := (*types.GlobalCommandOptions)(conf)
-	ncWrapper := backend.NewNerdctlWrapper(clientWrapper, globalOptions)
-	if _, err = ncWrapper.GetNerdctlExe(); err != nil {
-		return nil, fmt.Errorf("failed to find nerdctl binary: %w", err)
+
+	clientWrapper, err := createContainerdClient(conf)
+	if err != nil {
+		return nil, err
 	}
-	fs := afero.NewOsFs()
-	execCmdCreator := ecc.NewExecCmdCreator()
-	tarCreator := archive.NewTarCreator(execCmdCreator, logger)
-	tarExtractor := archive.NewTarExtractor(execCmdCreator, logger)
-	opts := &router.Options{
-		Config:           conf,
-		ContainerService: container.NewService(clientWrapper, ncWrapper, logger, fs, tarCreator, tarExtractor),
-		ImageService:     image.NewService(clientWrapper, ncWrapper, logger),
-		NetworkService:   network.NewService(clientWrapper, ncWrapper, logger),
-		SystemService:    system.NewService(clientWrapper, ncWrapper, logger),
-		BuilderService:   builder.NewService(clientWrapper, ncWrapper, logger, tarExtractor),
-		VolumeService:    volume.NewService(ncWrapper, logger),
-		ExecService:      exec.NewService(clientWrapper, logger),
-		NerdctlWrapper:   ncWrapper,
+
+	ncWrapper, err := createNerdctlWrapper(clientWrapper, conf)
+	if err != nil {
+		return nil, err
 	}
+
+	opts := createRouterOptions(conf, clientWrapper, ncWrapper, logger)
 	return router.New(opts), nil
 }
 
