@@ -27,16 +27,17 @@ LDFLAGS_BASE := -X $(PACKAGE)/version.Version=$(VERSION) -X $(PACKAGE)/version.G
 build:
 ifeq ($(STATIC),)
 	@echo "Building Dynamic Binary"
-	$(eval LDFLAGS := $(LDFLAGS_BASE))
+	CGO_ENABLED=1 GOOS=linux go build \
+		-ldflags "$(LDFLAGS_BASE)" \
+		-v -o $(BINARY) $(PACKAGE)/cmd/finch-daemon
 else
 	@echo "Building Static Binary"
-	$(eval GO_BUILDTAGS := osusergo netgo)
-	$(eval LDFLAGS := $(LDFLAGS_BASE) -extldflags '-static')
-endif
-	GOOS=linux go build \
-		$(if $(GO_BUILDTAGS),-tags "$(GO_BUILDTAGS)") \
-		-ldflags "$(LDFLAGS)" \
+	CGO_ENABLED=0 GOOS=linux go build \
+		-tags netgo \
+		-ldflags "$(LDFLAGS_BASE) -extldflags '-static'" \
 		-v -o $(BINARY) $(PACKAGE)/cmd/finch-daemon
+endif
+
 clean:
 	@rm -f $(BINARIES)
 	@rm -rf $(BIN)
