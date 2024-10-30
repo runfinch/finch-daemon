@@ -9,7 +9,7 @@ require (
 	github.com/containerd/errdefs v0.1.0
 	github.com/containerd/fifo v1.1.0
 	github.com/containerd/go-cni v1.1.10
-	github.com/containerd/nerdctl v1.7.5
+	github.com/containerd/nerdctl v1.7.7
 	github.com/containerd/platforms v0.2.1
 	github.com/containerd/typeurl/v2 v2.2.0
 	github.com/containernetworking/cni v1.2.2
@@ -29,7 +29,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/pkg/errors v0.9.1
-	github.com/runfinch/common-tests v0.7.21
+	github.com/runfinch/common-tests v0.8.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/afero v1.11.0
 	github.com/spf13/cobra v1.8.1
@@ -49,7 +49,7 @@ require (
 	github.com/Microsoft/hcsshim v0.12.5 // indirect
 	github.com/awslabs/soci-snapshotter v0.5.0 // indirect
 	github.com/cilium/ebpf v0.14.0 // indirect
-	github.com/containerd/accelerated-container-image v1.0.4 // indirect
+	github.com/containerd/accelerated-container-image v1.1.2 // indirect
 	github.com/containerd/console v1.0.4 // indirect
 	github.com/containerd/continuity v0.4.3 // indirect
 	github.com/containerd/go-runc v1.1.0 // indirect
