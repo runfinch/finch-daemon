@@ -17,6 +17,10 @@ import (
 	"syscall"
 	"time"
 
+	// #nosec
+	// register HTTP handler for /debug/pprof on the DefaultServeMux.
+	_ "net/http/pprof"
+
 	"github.com/containerd/containerd"
 	"github.com/containerd/nerdctl/pkg/api/types"
 	"github.com/containerd/nerdctl/pkg/config"
@@ -47,9 +51,10 @@ const (
 )
 
 type DaemonOptions struct {
-	debug       bool
-	socketAddr  string
-	socketOwner int
+	debug        bool
+	socketAddr   string
+	socketOwner  int
+	debugAddress string
 }
 
 var options = new(DaemonOptions)
@@ -65,6 +70,7 @@ func main() {
 	rootCmd.Flags().StringVar(&options.socketAddr, "socket-addr", defaultFinchAddr, "server listening Unix socket address")
 	rootCmd.Flags().BoolVar(&options.debug, "debug", false, "turn on debug log level")
 	rootCmd.Flags().IntVar(&options.socketOwner, "socket-owner", -1, "Uid and Gid of the server socket")
+	rootCmd.Flags().StringVar(&options.debugAddress, "debug-addr", "", "")
 	if err := rootCmd.Execute(); err != nil {
 		log.Printf("got error: %v", err)
 		log.Fatal(err)
@@ -99,6 +105,24 @@ func run(options *DaemonOptions) error {
 	if err := os.Chown(options.socketAddr, options.socketOwner, options.socketOwner); err != nil {
 		return fmt.Errorf("failed to chown the finch-daemon socket: %w", err)
 	}
+
+	if options.debugAddress != "" {
+		logger.Infof("Serving debugging endpoint on %q", options.debugAddress)
+		go func() {
+			debugListener, err := net.Listen("tcp", options.debugAddress)
+			if err != nil {
+				logger.Fatal(err)
+			}
+			debugServer := &http.Server{
+				Handler:           http.DefaultServeMux,
+				ReadHeaderTimeout: 5 * time.Second,
+			}
+			if err := debugServer.Serve(debugListener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				logger.Fatal(err)
+			}
+		}()
+	}
+
 	server := &http.Server{
 		Handler:           r,
 		ReadHeaderTimeout: 5 * time.Minute,
