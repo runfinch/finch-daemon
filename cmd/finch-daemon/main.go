@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -23,6 +24,7 @@ import (
 
 	"github.com/coreos/go-systemd/v22/activation"
 	"github.com/coreos/go-systemd/v22/daemon"
+	"github.com/moby/moby/pkg/pidfile"
 	"github.com/runfinch/finch-daemon/api/router"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 	"github.com/runfinch/finch-daemon/version"
@@ -35,6 +37,7 @@ const (
 	defaultFinchAddr  = "/run/finch.sock"
 	defaultNamespace  = "finch"
 	defaultConfigPath = "/etc/finch/finch.toml"
+	defaultPidFile    = "/run/finch.pid"
 )
 
 type DaemonOptions struct {
@@ -43,6 +46,7 @@ type DaemonOptions struct {
 	socketOwner  int
 	debugAddress string
 	configPath   string
+	pidFile      string
 }
 
 var options = new(DaemonOptions)
@@ -60,6 +64,7 @@ func main() {
 	rootCmd.Flags().IntVar(&options.socketOwner, "socket-owner", -1, "Uid and Gid of the server socket")
 	rootCmd.Flags().StringVar(&options.debugAddress, "debug-addr", "", "")
 	rootCmd.Flags().StringVar(&options.configPath, "config-file", defaultConfigPath, "Daemon Config Path")
+	rootCmd.Flags().StringVar(&options.pidFile, "pidfile", defaultPidFile, "pid file location")
 	if err := rootCmd.Execute(); err != nil {
 		log.Printf("got error: %v", err)
 		log.Fatal(err)
@@ -99,10 +104,32 @@ func getListener(options *DaemonOptions) (net.Listener, error) {
 	return listener, nil
 }
 
+func handlePidFileOptions(options *DaemonOptions) error {
+	if options.pidFile != "" {
+		if err := os.MkdirAll(filepath.Dir(options.pidFile), 0o640); err != nil {
+			return fmt.Errorf("failed to create pidfile directory %s", err)
+		}
+		if err := pidfile.Write(options.pidFile, os.Getpid()); err != nil {
+			return fmt.Errorf("failed to start daemon, ensure finch daemon is not running or delete %s %w", options.pidFile, err)
+		}
+	}
+	return nil
+}
+
 func run(options *DaemonOptions) error {
 	// This sets the log level of the dependencies that use logrus (e.g., containerd library).
 	if options.debug {
 		logrus.SetLevel(logrus.DebugLevel)
+	}
+
+	defer func() {
+		if err := os.Remove(options.pidFile); err != nil {
+			logrus.Errorf("failed to remove pidfile %s", options.pidFile)
+		}
+	}()
+
+	if err := handlePidFileOptions(options); err != nil {
+		return err
 	}
 
 	logger := flog.NewLogrus()
