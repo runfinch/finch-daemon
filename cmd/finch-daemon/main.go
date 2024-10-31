@@ -21,6 +21,7 @@ import (
 	// register HTTP handler for /debug/pprof on the DefaultServeMux.
 	_ "net/http/pprof"
 
+	"github.com/coreos/go-systemd/v22/activation"
 	"github.com/coreos/go-systemd/v22/daemon"
 	"github.com/runfinch/finch-daemon/api/router"
 	"github.com/runfinch/finch-daemon/pkg/flog"
@@ -69,6 +70,35 @@ func runAdapter(cmd *cobra.Command, _ []string) error {
 	return run(options)
 }
 
+func getListener(options *DaemonOptions) (net.Listener, error) {
+	var listener net.Listener
+	var err error
+
+	if options.socketAddr == "fd://" {
+		if options.socketOwner != -1 {
+			return nil, fmt.Errorf("socket-owner is not supported while using socket activation using fd://")
+		}
+
+		listeners, err := activation.Listeners()
+		if err != nil {
+			return nil, fmt.Errorf("cannot retrieve listeners: %w", err)
+		}
+		if len(listeners) != 1 {
+			return nil, fmt.Errorf("unexpected number of socket activations (%d != 1)", len(listeners))
+		}
+		listener = listeners[0]
+	} else {
+		listener, err = net.Listen("unix", options.socketAddr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to listen on %s: %w", options.socketAddr, err)
+		}
+		if err := os.Chown(options.socketAddr, options.socketOwner, options.socketOwner); err != nil {
+			return nil, fmt.Errorf("failed to chown the socket: %w", err)
+		}
+	}
+	return listener, nil
+}
+
 func run(options *DaemonOptions) error {
 	// This sets the log level of the dependencies that use logrus (e.g., containerd library).
 	if options.debug {
@@ -84,14 +114,9 @@ func run(options *DaemonOptions) error {
 	serverWg := &sync.WaitGroup{}
 	serverWg.Add(1)
 
-	listener, err := net.Listen("unix", options.socketAddr)
+	listener, err := getListener(options)
 	if err != nil {
-		return fmt.Errorf("failed to listen on %s: %w", options.socketAddr, err)
-	}
-	// TODO: Revisit this after we use systemd to manage finch-daemon.
-	// Related: https://github.com/lima-vm/lima/blob/5a9bca3d09481ed7109b14f8d3f0074816731f43/examples/podman-rootful.yaml#L44
-	if err := os.Chown(options.socketAddr, options.socketOwner, options.socketOwner); err != nil {
-		return fmt.Errorf("failed to chown the finch-daemon socket: %w", err)
+		return fmt.Errorf("failed to create a listener: %w", err)
 	}
 
 	if options.debugAddress != "" {
