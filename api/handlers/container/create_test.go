@@ -305,7 +305,8 @@ var _ = Describe("Container Create API ", func() {
 				"HostConfig": {
 					"DNS": ["8.8.8.8"],
 					"DNSOptions": ["test-opt"],
-					"DNSSearch": ["test.com"]
+					"DNSSearch": ["test.com"],
+					"ExtraHosts": ["test-host:127.0.0.1"]
 				}
 			}`)
 			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
@@ -315,6 +316,7 @@ var _ = Describe("Container Create API ", func() {
 			netOpt.DNSServers = []string{"8.8.8.8"}
 			netOpt.DNSResolvConfOptions = []string{"test-opt"}
 			netOpt.DNSSearchDomains = []string{"test.com"}
+			netOpt.AddHost = []string{"test-host:127.0.0.1"}
 
 			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
 				cid, nil)
