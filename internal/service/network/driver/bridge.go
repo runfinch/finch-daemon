@@ -43,7 +43,7 @@ var NewBridgeDriver = func(netClient backend.NerdctlNetworkSvc, logger flog.Logg
 	}, nil
 }
 
-// handleBridgeDriverOptions filters unsupported options for the bridge driver.
+// HandleCreateOptions processes finch specific options for the bridge driver.
 func (bd *bridgeDriver) HandleCreateOptions(request types.NetworkCreateRequest, options netutil.CreateOptions) (netutil.CreateOptions, error) {
 	// enable_icc, host_binding_ipv4, and bridge name network options are not supported by nerdctl.
 	// So we process these options here and filter them out from the network create request to nerdctl.
@@ -162,12 +162,18 @@ func (bd *bridgeDriver) setBridgeName(net *netutil.NetworkConfig, bridgeName str
 			}
 		}
 
-		// Write the updated config back to the file
 		data, err := json.MarshalIndent(netMap, "", "  ")
 		if err != nil {
 			return err
 		}
-		return os.WriteFile(configFilename, data, 0o644)
+
+		// Write the updated config back to the file with the original permissions
+		fileInfo, err := os.Stat(configFilename)
+		if err != nil {
+			return err
+		}
+
+		return os.WriteFile(configFilename, data, fileInfo.Mode().Perm())
 	})
 }
 

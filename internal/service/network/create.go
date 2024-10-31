@@ -100,6 +100,22 @@ func (s *service) Create(ctx context.Context, request types.NetworkCreateRequest
 		return types.NetworkCreateResponse{}, errNetworkIDNotFound
 	}
 
+	// Add cleanup func to remove the network if an error is encountered during post processing
+	cleanup := func(ctx context.Context, name string) {
+		if cleanupErr := s.Remove(ctx, name); cleanupErr != nil {
+			// ignore if the network does not exist
+			if !errdefs.IsNotFound(cleanupErr) {
+				s.logger.Errorf("cleanup failed in defer %s: %v", name, cleanupErr)
+			}
+		}
+	}
+
+	defer func() {
+		if err != nil {
+			cleanup(ctx, request.Name)
+		}
+	}()
+
 	// Handle post network create actions
 	warning := ""
 	if bridgeDriver != nil {
