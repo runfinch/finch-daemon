@@ -22,7 +22,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
-	github.com/moby/moby v26.0.0+incompatible
+	github.com/moby/moby v27.3.1+incompatible
 	github.com/onsi/ginkgo/v2 v2.20.2
 	github.com/onsi/gomega v1.34.2
 	github.com/opencontainers/go-digest v1.0.0
@@ -154,3 +154,5 @@ require (
 	k8s.io/cri-api v0.29.3 // indirect
 	lukechampine.com/blake3 v1.2.1 // indirect
 )
+
+replace github.com/containerd/nerdctl v1.7.7 => ./build/nerdctl

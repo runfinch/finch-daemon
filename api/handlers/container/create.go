@@ -221,6 +221,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		DNSResolvConfOptions: dnsOpt,                   // DNS options.
 		DNSSearchDomains:     req.HostConfig.DNSSearch, // Custom DNS search domains.
 		PortMappings:         portMappings,
+		AddHost:              req.HostConfig.ExtraHosts, // Extra hosts.
 	}
 
 	ctx := namespaces.WithNamespace(r.Context(), h.Config.Namespace)
