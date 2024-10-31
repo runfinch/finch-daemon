@@ -438,6 +438,7 @@ func ContainerCreate(opt *option.Option) {
 			options.HostConfig.DNS = []string{"8.8.8.8"}
 			options.HostConfig.DNSOptions = []string{"test-opt"}
 			options.HostConfig.DNSSearch = []string{"test.com"}
+			options.HostConfig.ExtraHosts = []string{"test-host:127.0.0.1"}
 
 			// create container
 			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
