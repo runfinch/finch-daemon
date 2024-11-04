@@ -88,6 +88,13 @@ func (s *service) Create(ctx context.Context, request types.NetworkCreateRequest
 		return types.NetworkCreateResponse{}, err
 	}
 
+	// Ensure thread-safety for network operations using a per-network mutex.
+	// Operations on different network IDs can proceed concurrently.
+	netMu := s.ensureLock(request.Name)
+
+	netMu.Lock()
+	defer netMu.Unlock()
+
 	// Create network
 	net, err := s.netClient.CreateNetwork(options)
 	if err != nil && strings.Contains(err.Error(), "unsupported cni driver") {

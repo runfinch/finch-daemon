@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sync"
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/nerdctl/pkg/netutil"
@@ -25,16 +26,19 @@ var (
 )
 
 type service struct {
-	client    backend.ContainerdClient
-	netClient backend.NerdctlNetworkSvc
-	logger    flog.Logger
+	client         backend.ContainerdClient
+	netClient      backend.NerdctlNetworkSvc
+	logger         flog.Logger
+	mu             sync.RWMutex
+	networkMutexes map[string]*sync.Mutex
 }
 
 func NewService(client backend.ContainerdClient, netClient backend.NerdctlNetworkSvc, logger flog.Logger) network.Service {
 	return &service{
-		client:    client,
-		netClient: netClient,
-		logger:    logger,
+		client:         client,
+		netClient:      netClient,
+		logger:         logger,
+		networkMutexes: make(map[string]*sync.Mutex),
 	}
 }
 
@@ -96,4 +100,32 @@ func (s *service) getContainer(ctx context.Context, containerId string) (contain
 	}
 
 	return searchResult[0], nil
+}
+
+func (s *service) ensureLock(networkName string) *sync.Mutex {
+	s.mu.RLock()
+	if netMu, exists := s.networkMutexes[networkName]; exists {
+		s.mu.RUnlock()
+		return netMu
+	}
+	s.mu.RUnlock()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Double-check in case another goroutine created it while we were waiting for the write lock
+	if netMu, exists := s.networkMutexes[networkName]; exists {
+		return netMu
+	}
+
+	netMu := &sync.Mutex{}
+	s.networkMutexes[networkName] = netMu
+	return netMu
+}
+
+func (s *service) clearLock(networkName string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	delete(s.networkMutexes, networkName)
 }

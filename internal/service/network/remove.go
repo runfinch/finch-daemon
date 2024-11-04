@@ -32,12 +32,27 @@ func (s *service) Remove(ctx context.Context, networkId string) error {
 		return errdefs.NewForbidden(fmt.Errorf("%s is a pre-defined network and cannot be removed", networkId))
 	}
 
+	// Ensure thread-safety for network operations using a per-network mutex.
+	// RemoveNetwork and CreateNetwork operations on the same network ID are mutually exclusive.
+	// Operations on different network IDs can proceed concurrently.
+	netMu := s.ensureLock(net.Name)
+
+	netMu.Lock()
+	defer netMu.Unlock()
+
 	// Perform additional workflow based on the assigned network labels
 	if err := s.handleNetworkLabels(net); err != nil {
 		return fmt.Errorf("failed to handle nerdctl label: %w", err)
 	}
 
-	return s.netClient.RemoveNetwork(net)
+	err = s.netClient.RemoveNetwork(net)
+	if err != nil {
+		return fmt.Errorf("failed to remove network: %w", err)
+	}
+
+	// Clear the lock if remove was successful
+	s.clearLock(net.Name)
+	return nil
 }
 
 func (s *service) handleNetworkLabels(net *netutil.NetworkConfig) error {
