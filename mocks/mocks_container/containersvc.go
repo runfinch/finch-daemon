@@ -191,7 +191,7 @@ func (m *MockService) Restart(arg0 context.Context, arg1 string, arg2 time.Durat
 	ret0, _ := ret[0].(error)
 	return ret0
 }
- 
+
 // Restart indicates an expected call of Restart.
 func (mr *MockServiceMockRecorder) Restart(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
