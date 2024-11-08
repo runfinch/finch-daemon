@@ -36,27 +36,32 @@ func TestDistributionService(t *testing.T) {
 var _ = Describe("Distribution Inspect API ", func() {
 	Context("service", func() {
 		var (
-			ctx                  context.Context
-			mockCtrl             *gomock.Controller
-			logger               *mocks_logger.Logger
-			cdClient             *mocks_backend.MockContainerdClient
-			ncClient             *mocks_backend.MockNerdctlImageSvc
-			mockResolver         *mocks_remotes.MockResolver
-			mockFetcher          *mocks_remotes.MockFetcher
-			name                 string
-			tag                  string
-			imageRef             string
-			domain               string
-			ociPlatformAmd       ocispec.Platform
-			ociPlatformArm       ocispec.Platform
-			authCfg              dockertypes.AuthConfig
-			authCreds            dockerconfigresolver.AuthCreds
-			imageIndexDescriptor ocispec.Descriptor
-			imageDescriptor1     ocispec.Descriptor
-			imageDescriptor2     ocispec.Descriptor
-			imageIndex           ocispec.Index
-			imageIndexBytes      []byte
-			s                    service
+			ctx                     context.Context
+			mockCtrl                *gomock.Controller
+			logger                  *mocks_logger.Logger
+			cdClient                *mocks_backend.MockContainerdClient
+			ncClient                *mocks_backend.MockNerdctlImageSvc
+			mockResolver            *mocks_remotes.MockResolver
+			mockFetcher             *mocks_remotes.MockFetcher
+			name                    string
+			tag                     string
+			imageRef                string
+			domain                  string
+			ociPlatformAmd          ocispec.Platform
+			ociPlatformArm          ocispec.Platform
+			authCfg                 dockertypes.AuthConfig
+			authCreds               dockerconfigresolver.AuthCreds
+			imageIndexDescriptor    ocispec.Descriptor
+			imageDescriptor1        ocispec.Descriptor
+			imageDescriptor2        ocispec.Descriptor
+			imageIndex              ocispec.Index
+			image                   ocispec.Image
+			imageManifestDescriptor ocispec.Descriptor
+			imageManifest           ocispec.Manifest
+			imageManifestBytes      []byte
+			imageBytes              []byte
+			imageIndexBytes         []byte
+			s                       service
 		)
 		BeforeEach(func() {
 			ctx = context.Background()
@@ -88,7 +93,7 @@ var _ = Describe("Distribution Inspect API ", func() {
 			}
 
 			imageIndexDescriptor = ocispec.Descriptor{
-				MediaType:   ocispec.MediaTypeImageManifest,
+				MediaType:   ocispec.MediaTypeImageIndex,
 				Digest:      "sha256:9bae60c369e612488c2a089c38737277a4823a3af97ec6866c3b4ad05251bfa5",
 				Size:        2,
 				URLs:        []string{},
@@ -131,36 +136,44 @@ var _ = Describe("Distribution Inspect API ", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			imageIndexBytes = b
 
+			imageManifestDescriptor = ocispec.Descriptor{
+				MediaType:   ocispec.MediaTypeImageManifest,
+				Digest:      "sha256:9b13590c9a50929020dc76a30ad813e42514a4e34de2f04f5a088f5a1320367c",
+				Size:        2,
+				URLs:        []string{},
+				Annotations: map[string]string{},
+				Data:        []byte{},
+			}
+
+			imageManifest = ocispec.Manifest{
+				MediaType: ocispec.MediaTypeImageManifest,
+				Config: ocispec.Descriptor{
+					MediaType:    ocispec.MediaTypeImageManifest,
+					Digest:       "sha256:58cc9abebfec4b5ee95157d060207f7bc302516e6d84a0d83a560a1f7ed00e6e",
+					Size:         2,
+					URLs:         []string{},
+					Annotations:  map[string]string{},
+					Data:         []byte{},
+					Platform:     &ocispec.Platform{},
+					ArtifactType: "",
+				},
+			}
+			b, err = json.Marshal(imageManifest)
+			Expect(err).ShouldNot(HaveOccurred())
+			imageManifestBytes = b
+
+			image = ocispec.Image{
+				Platform: ociPlatformAmd,
+			}
+			b, err = json.Marshal(image)
+			Expect(err).ShouldNot(HaveOccurred())
+			imageBytes = b
+
 			s = service{
 				client:       cdClient,
 				nctlImageSvc: ncClient,
 				logger:       logger,
 			}
-		})
-
-		It("should return expected response upon success", func() {
-			cdClient.EXPECT().ParseDockerRef(imageRef).Return(
-				imageRef, domain, nil,
-			)
-			expectGetAuthCreds(mockCtrl, domain, authCfg).Return(
-				authCreds, nil,
-			)
-
-			ncClient.EXPECT().GetDockerResolver(gomock.Any(), domain, gomock.Not(gomock.Nil())).Return(
-				mockResolver, nil, nil,
-			)
-
-			mockResolver.EXPECT().Resolve(gomock.Any(), imageRef).Return("", imageIndexDescriptor, nil)
-			mockResolver.EXPECT().Fetcher(gomock.Any(), imageRef).Return(mockFetcher, nil)
-			imageIndexRc := io.NopCloser(strings.NewReader(string(imageIndexBytes)))
-			mockFetcher.EXPECT().Fetch(gomock.Any(), imageIndexDescriptor).Return(imageIndexRc, nil)
-
-			inspectRes, err := s.Inspect(ctx, imageRef, &authCfg)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(inspectRes).ShouldNot(BeNil())
-			Expect(inspectRes.Descriptor).Should(Equal(imageIndexDescriptor))
-			Expect(inspectRes.Platforms).Should(HaveLen(2))
-			Expect(inspectRes.Platforms).Should(ContainElements(ociPlatformAmd, ociPlatformArm))
 		})
 
 		It("should return an error when canonicalization fails due to invalid input", func() {
@@ -195,7 +208,7 @@ var _ = Describe("Distribution Inspect API ", func() {
 			Expect(inspect).Should(BeNil())
 		})
 
-		It("should return an error when getAuthCredsFunc fails", func() {
+		It("should return an error when getting the docker resolver fails", func() {
 			cdClient.EXPECT().ParseDockerRef(imageRef).Return(
 				imageRef, domain, nil,
 			)
@@ -275,7 +288,7 @@ var _ = Describe("Distribution Inspect API ", func() {
 			Expect(inspect).Should(BeNil())
 		})
 
-		It("should return an error when reading index fails", func() {
+		It("should return an error when reading manifest fails", func() {
 			cdClient.EXPECT().ParseDockerRef(imageRef).Return(
 				imageRef, domain, nil,
 			)
@@ -298,6 +311,117 @@ var _ = Describe("Distribution Inspect API ", func() {
 			Expect(err).Should(HaveOccurred())
 			Expect(err.Error()).Should(ContainSubstring("failed to read"))
 			Expect(inspect).Should(BeNil())
+		})
+
+		When("Image index", func() {
+			It("should return expected response upon success", func() {
+				cdClient.EXPECT().ParseDockerRef(imageRef).Return(
+					imageRef, domain, nil,
+				)
+				expectGetAuthCreds(mockCtrl, domain, authCfg).Return(
+					authCreds, nil,
+				)
+
+				ncClient.EXPECT().GetDockerResolver(gomock.Any(), domain, gomock.Not(gomock.Nil())).Return(
+					mockResolver, nil, nil,
+				)
+
+				mockResolver.EXPECT().Resolve(gomock.Any(), imageRef).Return("", imageIndexDescriptor, nil)
+				mockResolver.EXPECT().Fetcher(gomock.Any(), imageRef).Return(mockFetcher, nil)
+				imageIndexRc := io.NopCloser(strings.NewReader(string(imageIndexBytes)))
+				mockFetcher.EXPECT().Fetch(gomock.Any(), imageIndexDescriptor).Return(imageIndexRc, nil)
+
+				inspectRes, err := s.Inspect(ctx, imageRef, &authCfg)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(inspectRes).ShouldNot(BeNil())
+				Expect(inspectRes.Descriptor).Should(Equal(imageIndexDescriptor))
+				Expect(inspectRes.Platforms).Should(HaveLen(2))
+				Expect(inspectRes.Platforms).Should(ContainElements(ociPlatformAmd, ociPlatformArm))
+			})
+		})
+
+		When("Image", func() {
+			It("should return expected response upon success", func() {
+				cdClient.EXPECT().ParseDockerRef(imageRef).Return(
+					imageRef, domain, nil,
+				)
+				expectGetAuthCreds(mockCtrl, domain, authCfg).Return(
+					authCreds, nil,
+				)
+
+				ncClient.EXPECT().GetDockerResolver(gomock.Any(), domain, gomock.Not(gomock.Nil())).Return(
+					mockResolver, nil, nil,
+				)
+
+				mockResolver.EXPECT().Resolve(gomock.Any(), imageRef).Return("", imageManifestDescriptor, nil)
+				mockResolver.EXPECT().Fetcher(gomock.Any(), imageRef).Return(mockFetcher, nil)
+				imageManifestRc := io.NopCloser(strings.NewReader(string(imageManifestBytes)))
+				mockFetcher.EXPECT().Fetch(gomock.Any(), imageManifestDescriptor).Return(imageManifestRc, nil)
+
+				imageRc := io.NopCloser(strings.NewReader(string(imageBytes)))
+				// gomock.Any() used for second argument because comparing maps compares addresses, which
+				// will never be equal due to (un)marshalling
+				mockFetcher.EXPECT().Fetch(gomock.Any(), gomock.Any()).Return(imageRc, nil)
+
+				inspectRes, err := s.Inspect(ctx, imageRef, &authCfg)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(inspectRes).ShouldNot(BeNil())
+				Expect(inspectRes.Descriptor).Should(Equal(imageManifestDescriptor))
+				Expect(inspectRes.Platforms).Should(HaveLen(1))
+				Expect(inspectRes.Platforms).Should(ContainElement(ociPlatformAmd))
+			})
+
+			It("should return an error when image Fetcher fails to Fetch", func() {
+				cdClient.EXPECT().ParseDockerRef(imageRef).Return(
+					imageRef, domain, nil,
+				)
+				expectGetAuthCreds(mockCtrl, domain, authCfg).Return(
+					authCreds, nil,
+				)
+
+				ncClient.EXPECT().GetDockerResolver(gomock.Any(), domain, gomock.Not(gomock.Nil())).Return(
+					mockResolver, nil, nil,
+				)
+
+				mockResolver.EXPECT().Resolve(gomock.Any(), imageRef).Return("", imageManifestDescriptor, nil)
+				mockResolver.EXPECT().Fetcher(gomock.Any(), imageRef).Return(mockFetcher, nil)
+				imageManifestRc := io.NopCloser(strings.NewReader(string(imageManifestBytes)))
+				mockFetcher.EXPECT().Fetch(gomock.Any(), imageManifestDescriptor).Return(imageManifestRc, nil)
+				mockFetcher.EXPECT().Fetch(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("image fetcher failed to fetch"))
+
+				inspect, err := s.Inspect(ctx, imageRef, &authCfg)
+				Expect(err).Should(HaveOccurred())
+				Expect(err.Error()).Should(ContainSubstring("image fetcher failed to fetch"))
+				Expect(inspect).Should(BeNil())
+			})
+
+			It("should return an error when reading image fails", func() {
+				cdClient.EXPECT().ParseDockerRef(imageRef).Return(
+					imageRef, domain, nil,
+				)
+				expectGetAuthCreds(mockCtrl, domain, authCfg).Return(
+					authCreds, nil,
+				)
+
+				ncClient.EXPECT().GetDockerResolver(gomock.Any(), domain, gomock.Not(gomock.Nil())).Return(
+					mockResolver, nil, nil,
+				)
+
+				mockResolver.EXPECT().Resolve(gomock.Any(), imageRef).Return("", imageManifestDescriptor, nil)
+				mockResolver.EXPECT().Fetcher(gomock.Any(), imageRef).Return(mockFetcher, nil)
+				imageManifestRc := io.NopCloser(strings.NewReader(string(imageManifestBytes)))
+				mockFetcher.EXPECT().Fetch(gomock.Any(), imageManifestDescriptor).Return(imageManifestRc, nil)
+
+				imageRc := io.NopCloser(&mockReader{
+					err: fmt.Errorf("failed to read image"),
+				})
+				mockFetcher.EXPECT().Fetch(gomock.Any(), gomock.Any()).Return(imageRc, nil)
+
+				inspect, err := s.Inspect(ctx, imageRef, &authCfg)
+				Expect(err).Should(HaveOccurred())
+				Expect(err.Error()).Should(ContainSubstring("failed to read image"))
+				Expect(inspect).Should(BeNil())
+			})
 		})
 	})
 })

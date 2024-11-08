@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 
+	containerdimages "github.com/containerd/containerd/images"
 	dockerresolver "github.com/containerd/containerd/remotes/docker"
 	cerrdefs "github.com/containerd/errdefs"
 	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
@@ -96,21 +97,57 @@ func (s *service) Inspect(ctx context.Context, name string, ac *dockertypes.Auth
 
 	res, err := io.ReadAll(rc)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read index: %w", err)
+		return nil, fmt.Errorf("failed to read fetch result: %w", err)
 	}
 
 	if dgst := desc.Digest.Algorithm().FromBytes(res); dgst != desc.Digest {
 		return nil, fmt.Errorf("digest mismatch: %s != %s", dgst, desc.Digest)
 	}
 
-	var index ocispec.Index
-	if err := json.Unmarshal(res, &index); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal index: %w", err)
-	}
-
 	var platforms []ocispec.Platform
-	for _, manifest := range index.Manifests {
-		platforms = append(platforms, *manifest.Platform)
+	switch {
+	case desc.MediaType == ocispec.MediaTypeImageManifest ||
+		desc.MediaType == containerdimages.MediaTypeDockerSchema2Manifest:
+		var manifest ocispec.Manifest
+		if err := json.Unmarshal(res, &manifest); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal manifest: %w", err)
+		}
+
+		// fetch the image to get the platform
+		rc, err := fetcher.Fetch(ctx, manifest.Config)
+		if err != nil {
+			switch {
+			case cerrdefs.IsNotFound(err):
+				return nil, errdefs.NewNotFound(err)
+			default:
+				return nil, err
+			}
+		}
+
+		imageRes, err := io.ReadAll(rc)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read image: %w", err)
+		}
+
+		if dgst := manifest.Config.Digest.Algorithm().FromBytes(imageRes); dgst != manifest.Config.Digest {
+			return nil, fmt.Errorf("image digest mismatch: %s != %s", dgst, manifest.Config.Digest)
+		}
+
+		var image ocispec.Image
+		if err := json.Unmarshal(imageRes, &image); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal image: %w", err)
+		}
+
+		platforms = []ocispec.Platform{image.Platform}
+	case desc.MediaType == ocispec.MediaTypeImageIndex ||
+		desc.MediaType == containerdimages.MediaTypeDockerSchema2ManifestList:
+		var index ocispec.Index
+		if err := json.Unmarshal(res, &index); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal index: %w", err)
+		}
+		for _, manifest := range index.Manifests {
+			platforms = append(platforms, *manifest.Platform)
+		}
 	}
 
 	return &registrytypes.DistributionInspect{
