@@ -11,7 +11,7 @@ sudo journalctl -u finch
 ```
 
 > **Note**
-> The command above assumes that you have used the unit file definition [finch.service](../finch.service) we have provided. If you have created your own unit file for `finch-daemon` and replace `finch-daemon` with the one you have made. Amazon Linux distributions of Finch also use the name `finch` for the finch-daemon service.
+> The command above assumes that you have used the unit file definition [finch.service](./sample-service-files/finch.service) we have provided. If you have created your own unit file for `finch-daemon` and replace `finch-daemon` with the one you have made. Amazon Linux distributions of Finch also use the name `finch` for the finch-daemon service.
 
 If you have started `finch-daemon` manually, logs will either be emitted to stderr/stdout.
 
