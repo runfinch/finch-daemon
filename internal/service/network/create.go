@@ -94,6 +94,7 @@ func (s *service) Create(ctx context.Context, request types.NetworkCreateRequest
 
 	netMu.Lock()
 	defer netMu.Unlock()
+	defer s.releaseLock(request.Name)
 
 	// Create network
 	net, err := s.netClient.CreateNetwork(options)

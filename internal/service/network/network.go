@@ -25,12 +25,17 @@ var (
 	errNetworkIDNotFound    = errors.New("network ID not found")
 )
 
+type mutexCounter struct {
+	mutex      *sync.Mutex
+	activeReqs int // activeReqs will track concurrent active requests for the same network
+}
+
 type service struct {
 	client         backend.ContainerdClient
 	netClient      backend.NerdctlNetworkSvc
 	logger         flog.Logger
-	mu             sync.RWMutex
-	networkMutexes map[string]*sync.Mutex
+	mu             sync.Mutex
+	networkMutexes map[string]*mutexCounter
 }
 
 func NewService(client backend.ContainerdClient, netClient backend.NerdctlNetworkSvc, logger flog.Logger) network.Service {
@@ -38,7 +43,7 @@ func NewService(client backend.ContainerdClient, netClient backend.NerdctlNetwor
 		client:         client,
 		netClient:      netClient,
 		logger:         logger,
-		networkMutexes: make(map[string]*sync.Mutex),
+		networkMutexes: make(map[string]*mutexCounter),
 	}
 }
 
@@ -103,29 +108,26 @@ func (s *service) getContainer(ctx context.Context, containerId string) (contain
 }
 
 func (s *service) ensureLock(networkName string) *sync.Mutex {
-	s.mu.RLock()
-	if netMu, exists := s.networkMutexes[networkName]; exists {
-		s.mu.RUnlock()
-		return netMu
-	}
-	s.mu.RUnlock()
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
-	// Double-check in case another goroutine created it while we were waiting for the write lock
-	if netMu, exists := s.networkMutexes[networkName]; exists {
-		return netMu
+	if mwc, exists := s.networkMutexes[networkName]; exists {
+		mwc.activeReqs++
+		return mwc.mutex
 	}
 
 	netMu := &sync.Mutex{}
-	s.networkMutexes[networkName] = netMu
+	s.networkMutexes[networkName] = &mutexCounter{mutex: netMu, activeReqs: 1}
 	return netMu
 }
 
-func (s *service) clearLock(networkName string) {
+func (s *service) releaseLock(networkName string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	delete(s.networkMutexes, networkName)
+	if mwc, exists := s.networkMutexes[networkName]; exists {
+		mwc.activeReqs--
+		if mwc.activeReqs == 0 {
+			delete(s.networkMutexes, networkName)
+		}
+	}
 }

@@ -39,6 +39,7 @@ func (s *service) Remove(ctx context.Context, networkId string) error {
 
 	netMu.Lock()
 	defer netMu.Unlock()
+	defer s.releaseLock(net.Name)
 
 	// Perform additional workflow based on the assigned network labels
 	if err := s.handleNetworkLabels(net); err != nil {
@@ -50,8 +51,6 @@ func (s *service) Remove(ctx context.Context, networkId string) error {
 		return fmt.Errorf("failed to remove network: %w", err)
 	}
 
-	// Clear the lock if remove was successful
-	s.clearLock(net.Name)
 	return nil
 }
 
