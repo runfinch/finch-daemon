@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/containerd/nerdctl/pkg/netutil"
+	"github.com/containerd/nerdctl/v2/pkg/netutil"
 	"github.com/runfinch/finch-daemon/internal/service/network/driver"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )

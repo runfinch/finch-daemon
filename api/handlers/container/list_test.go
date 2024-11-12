@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	ncTypes "github.com/containerd/nerdctl/pkg/api/types"
-	"github.com/containerd/nerdctl/pkg/config"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
+	"github.com/containerd/nerdctl/v2/pkg/config"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

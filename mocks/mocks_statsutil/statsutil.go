@@ -7,7 +7,7 @@ package mocks_statsutil
 import (
 	reflect "reflect"
 
-	native "github.com/containerd/nerdctl/pkg/inspecttypes/native"
+	native "github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
 	types "github.com/docker/docker/api/types"
 	gomock "github.com/golang/mock/gomock"
 )

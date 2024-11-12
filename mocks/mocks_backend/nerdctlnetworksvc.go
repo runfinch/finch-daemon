@@ -8,8 +8,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	dockercompat "github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
-	netutil "github.com/containerd/nerdctl/pkg/netutil"
+	dockercompat "github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
+	netutil "github.com/containerd/nerdctl/v2/pkg/netutil"
 	libcni "github.com/containernetworking/cni/libcni"
 	types "github.com/containernetworking/cni/pkg/types"
 	gomock "github.com/golang/mock/gomock"

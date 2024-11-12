@@ -8,7 +8,7 @@ import (
 	"io"
 	"strconv"
 
-	ncTypes "github.com/containerd/nerdctl/pkg/api/types"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/moby/moby/pkg/stdcopy"
 
 	"github.com/runfinch/finch-daemon/api/types"

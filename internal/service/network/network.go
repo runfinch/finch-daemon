@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	"github.com/containerd/containerd"
-	"github.com/containerd/nerdctl/pkg/netutil"
+	"github.com/containerd/nerdctl/v2/pkg/netutil"
 
 	"github.com/runfinch/finch-daemon/api/handlers/network"
 	"github.com/runfinch/finch-daemon/internal/backend"

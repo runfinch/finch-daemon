@@ -12,8 +12,8 @@ import (
 
 	"github.com/containerd/containerd/namespaces"
 	gocni "github.com/containerd/go-cni"
-	ncTypes "github.com/containerd/nerdctl/pkg/api/types"
-	"github.com/containerd/nerdctl/pkg/defaults"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
+	"github.com/containerd/nerdctl/v2/pkg/defaults"
 	"github.com/docker/go-connections/nat"
 	"github.com/sirupsen/logrus"
 

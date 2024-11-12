@@ -8,7 +8,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/containerd/nerdctl/pkg/tarutil"
+	"github.com/containerd/nerdctl/v2/pkg/tarutil"
 	"github.com/docker/docker/pkg/archive"
 
 	"github.com/runfinch/finch-daemon/pkg/ecc"

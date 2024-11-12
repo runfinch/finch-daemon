@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/containerd/containerd"
-	ncTypes "github.com/containerd/nerdctl/pkg/api/types"
-	ncContainer "github.com/containerd/nerdctl/pkg/cmd/container"
-	"github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
+	ncContainer "github.com/containerd/nerdctl/v2/pkg/cmd/container"
+	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

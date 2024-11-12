@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/containerd/nerdctl/pkg/inspecttypes/native"
+	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"

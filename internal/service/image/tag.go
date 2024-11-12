@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	cerrdefs "github.com/containerd/errdefs"
-	"github.com/containerd/nerdctl/pkg/idutil/imagewalker"
-	"github.com/containerd/nerdctl/pkg/referenceutil"
+	"github.com/containerd/nerdctl/v2/pkg/idutil/imagewalker"
+	"github.com/containerd/nerdctl/v2/pkg/referenceutil"
 
 	eventtype "github.com/runfinch/finch-daemon/api/events"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"

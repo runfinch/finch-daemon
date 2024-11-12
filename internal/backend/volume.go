@@ -8,9 +8,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/containerd/nerdctl/pkg/api/types"
-	"github.com/containerd/nerdctl/pkg/cmd/volume"
-	"github.com/containerd/nerdctl/pkg/inspecttypes/native"
+	"github.com/containerd/nerdctl/v2/pkg/api/types"
+	"github.com/containerd/nerdctl/v2/pkg/cmd/volume"
+	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
 )
 
 //go:generate mockgen --destination=../../mocks/mocks_backend/nerdctlvolumesvc.go -package=mocks_backend github.com/runfinch/finch-daemon/internal/backend NerdctlVolumeSvc

@@ -8,8 +8,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/containerd/nerdctl/pkg/config"
-	"github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
+	"github.com/containerd/nerdctl/v2/pkg/config"
+	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	dockertypes "github.com/docker/cli/cli/config/types"
 
 	"github.com/runfinch/finch-daemon/api/types"
