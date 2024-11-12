@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sync"
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/nerdctl/pkg/netutil"
@@ -24,17 +25,25 @@ var (
 	errNetworkIDNotFound    = errors.New("network ID not found")
 )
 
+type mutexCounter struct {
+	mutex      *sync.Mutex
+	activeReqs int // activeReqs will track concurrent active requests for the same network
+}
+
 type service struct {
-	client    backend.ContainerdClient
-	netClient backend.NerdctlNetworkSvc
-	logger    flog.Logger
+	client         backend.ContainerdClient
+	netClient      backend.NerdctlNetworkSvc
+	logger         flog.Logger
+	mu             sync.Mutex
+	networkMutexes map[string]*mutexCounter
 }
 
 func NewService(client backend.ContainerdClient, netClient backend.NerdctlNetworkSvc, logger flog.Logger) network.Service {
 	return &service{
-		client:    client,
-		netClient: netClient,
-		logger:    logger,
+		client:         client,
+		netClient:      netClient,
+		logger:         logger,
+		networkMutexes: make(map[string]*mutexCounter),
 	}
 }
 
@@ -96,4 +105,29 @@ func (s *service) getContainer(ctx context.Context, containerId string) (contain
 	}
 
 	return searchResult[0], nil
+}
+
+func (s *service) ensureLock(networkName string) *sync.Mutex {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if mwc, exists := s.networkMutexes[networkName]; exists {
+		mwc.activeReqs++
+		return mwc.mutex
+	}
+
+	netMu := &sync.Mutex{}
+	s.networkMutexes[networkName] = &mutexCounter{mutex: netMu, activeReqs: 1}
+	return netMu
+}
+
+func (s *service) releaseLock(networkName string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if mwc, exists := s.networkMutexes[networkName]; exists {
+		mwc.activeReqs--
+		if mwc.activeReqs < 1 {
+			delete(s.networkMutexes, networkName)
+		}
+	}
 }
