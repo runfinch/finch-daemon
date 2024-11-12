@@ -58,12 +58,10 @@ func (bd *bridgeDriver) HandleCreateOptions(request types.NetworkCreateRequest, 
 			case BridgeICCOption:
 				iccOption, err := strconv.ParseBool(v)
 				if err != nil {
-					bd.logger.Warnf("invalid value for com.docker.network.bridge.enable_icc: %s", v)
+					bd.logger.Warnf("invalid value for com.docker.network.bridge.enable_icc")
+					continue
 				}
-				if !iccOption {
-					bd.disableICC = true
-				}
-
+				bd.disableICC = !iccOption
 			case BridgeNameOption:
 				bd.bridgeName = v
 			default:

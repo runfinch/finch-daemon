@@ -126,7 +126,7 @@ func (s *service) releaseLock(networkName string) {
 
 	if mwc, exists := s.networkMutexes[networkName]; exists {
 		mwc.activeReqs--
-		if mwc.activeReqs == 0 {
+		if mwc.activeReqs < 1 {
 			delete(s.networkMutexes, networkName)
 		}
 	}
