@@ -10,9 +10,9 @@ import (
 
 	v1 "github.com/containerd/cgroups/v3/cgroup1/stats"
 	v2 "github.com/containerd/cgroups/v3/cgroup2/stats"
-	"github.com/containerd/containerd"
 	cTypes "github.com/containerd/containerd/api/types"
-	"github.com/containerd/containerd/events"
+	containerd "github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/core/events"
 	cerrdefs "github.com/containerd/errdefs"
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
 	"github.com/containerd/nerdctl/v2/pkg/labels"

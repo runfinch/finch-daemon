@@ -15,7 +15,7 @@ import (
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/mocks/mocks_archive"
 
-	"github.com/containerd/containerd"
+	containerd "github.com/containerd/containerd/v2/client"
 	"github.com/containerd/nerdctl/v2/pkg/labels"
 	"github.com/containerd/nerdctl/v2/pkg/labels/k8slabels"
 	"github.com/containerd/typeurl/v2"

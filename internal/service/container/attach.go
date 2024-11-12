@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/containerd/containerd"
+	containerd "github.com/containerd/containerd/v2/client"
 	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/containerd/nerdctl/v2/pkg/api/types/cri"
 	"github.com/containerd/nerdctl/v2/pkg/labels"

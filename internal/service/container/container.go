@@ -8,7 +8,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/containerd/containerd"
+	containerd "github.com/containerd/containerd/v2/client"
 	"github.com/spf13/afero"
 
 	"github.com/runfinch/finch-daemon/api/handlers/container"

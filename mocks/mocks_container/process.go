@@ -9,8 +9,8 @@ import (
 	reflect "reflect"
 	syscall "syscall"
 
-	containerd "github.com/containerd/containerd"
-	cio "github.com/containerd/containerd/cio"
+	containerd "github.com/containerd/containerd/v2/client"
+	cio "github.com/containerd/containerd/v2/pkg/cio"
 	gomock "github.com/golang/mock/gomock"
 )
 
