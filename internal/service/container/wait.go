@@ -6,7 +6,7 @@ package container
 import (
 	"context"
 
-	"github.com/containerd/containerd"
+	containerd "github.com/containerd/containerd/v2/client"
 )
 
 func (s *service) Wait(ctx context.Context, cid string, condition string) (code int64, err error) {

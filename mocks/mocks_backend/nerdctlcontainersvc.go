@@ -11,7 +11,7 @@ import (
 	reflect "reflect"
 	time "time"
 
-	containerd "github.com/containerd/containerd"
+	containerd "github.com/containerd/containerd/v2/client"
 	types "github.com/containerd/nerdctl/v2/pkg/api/types"
 	container "github.com/containerd/nerdctl/v2/pkg/cmd/container"
 	containerutil "github.com/containerd/nerdctl/v2/pkg/containerutil"

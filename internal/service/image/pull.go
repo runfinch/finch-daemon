@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containerd/containerd/remotes/docker"
+	"github.com/containerd/containerd/v2/core/remotes/docker"
 	cerrdefs "github.com/containerd/errdefs"
 	"github.com/containerd/nerdctl/v2/pkg/imgutil/dockerconfigresolver"
 	dockertypes "github.com/docker/cli/cli/config/types"

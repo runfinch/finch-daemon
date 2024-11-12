@@ -10,7 +10,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/containerd/containerd"
+	containerd "github.com/containerd/containerd/v2/client"
 	cerrdefs "github.com/containerd/errdefs"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"

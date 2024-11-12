@@ -7,7 +7,7 @@ package mocks_cio
 import (
 	reflect "reflect"
 
-	cio "github.com/containerd/containerd/cio"
+	cio "github.com/containerd/containerd/v2/pkg/cio"
 	gomock "github.com/golang/mock/gomock"
 )
 

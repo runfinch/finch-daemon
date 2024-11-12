@@ -11,9 +11,9 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/containerd/containerd/remotes/docker"
-	dockerconfig "github.com/containerd/containerd/remotes/docker/config"
-	remoteerrs "github.com/containerd/containerd/remotes/errors"
+	"github.com/containerd/containerd/v2/core/remotes/docker"
+	dockerconfig "github.com/containerd/containerd/v2/core/remotes/docker/config"
+	remoteerrs "github.com/containerd/containerd/v2/core/remotes/errors"
 	"github.com/containerd/nerdctl/v2/pkg/imgutil/dockerconfigresolver"
 	"golang.org/x/net/context/ctxhttp"
 

@@ -8,7 +8,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/containerd/containerd"
+	containerd "github.com/containerd/containerd/v2/client"
 	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	ncContainer "github.com/containerd/nerdctl/v2/pkg/cmd/container"
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
