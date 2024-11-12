@@ -12,12 +12,12 @@ import (
 	time "time"
 
 	containerd "github.com/containerd/containerd"
-	types "github.com/containerd/nerdctl/pkg/api/types"
-	container "github.com/containerd/nerdctl/pkg/cmd/container"
-	containerutil "github.com/containerd/nerdctl/pkg/containerutil"
-	dockercompat "github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
-	native "github.com/containerd/nerdctl/pkg/inspecttypes/native"
-	logging "github.com/containerd/nerdctl/pkg/logging"
+	types "github.com/containerd/nerdctl/v2/pkg/api/types"
+	container "github.com/containerd/nerdctl/v2/pkg/cmd/container"
+	containerutil "github.com/containerd/nerdctl/v2/pkg/containerutil"
+	dockercompat "github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
+	native "github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
+	logging "github.com/containerd/nerdctl/v2/pkg/logging"
 	gomock "github.com/golang/mock/gomock"
 )
 

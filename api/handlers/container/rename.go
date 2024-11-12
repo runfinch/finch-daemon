@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/containerd/containerd/namespaces"
-	ncTypes "github.com/containerd/nerdctl/pkg/api/types"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 

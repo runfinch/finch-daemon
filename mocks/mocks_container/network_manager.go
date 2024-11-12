@@ -10,7 +10,7 @@ import (
 
 	containerd "github.com/containerd/containerd"
 	oci "github.com/containerd/containerd/oci"
-	types "github.com/containerd/nerdctl/pkg/api/types"
+	types "github.com/containerd/nerdctl/v2/pkg/api/types"
 	gomock "github.com/golang/mock/gomock"
 )
 

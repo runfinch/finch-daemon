@@ -3,7 +3,7 @@
 
 package types
 
-import "github.com/containerd/nerdctl/pkg/inspecttypes/native"
+import "github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
 
 // VolumesListResponse is the response object expected by GET /volumes
 // https://docs.docker.com/engine/api/v1.40/#tag/Volume

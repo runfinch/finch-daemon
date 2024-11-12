@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/containerd/containerd/images/converter"
-	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
+	"github.com/containerd/nerdctl/v2/pkg/imgutil/dockerconfigresolver"
 	dockertypes "github.com/docker/cli/cli/config/types"
 
 	"github.com/runfinch/finch-daemon/api/types"

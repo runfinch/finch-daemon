@@ -9,7 +9,7 @@ import (
 	io "io"
 	reflect "reflect"
 
-	types "github.com/containerd/nerdctl/pkg/api/types"
+	types "github.com/containerd/nerdctl/v2/pkg/api/types"
 	gomock "github.com/golang/mock/gomock"
 	types0 "github.com/runfinch/finch-daemon/api/types"
 )

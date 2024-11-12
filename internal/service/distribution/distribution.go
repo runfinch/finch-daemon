@@ -14,7 +14,7 @@ import (
 	dockerresolver "github.com/containerd/containerd/remotes/docker"
 	cremoteerrors "github.com/containerd/containerd/remotes/errors"
 	cerrdefs "github.com/containerd/errdefs"
-	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
+	"github.com/containerd/nerdctl/v2/pkg/imgutil/dockerconfigresolver"
 	dockertypes "github.com/docker/cli/cli/config/types"
 	registrytypes "github.com/docker/docker/api/types/registry"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
