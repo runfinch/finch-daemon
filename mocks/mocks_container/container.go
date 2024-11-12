@@ -8,9 +8,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	containerd "github.com/containerd/containerd"
-	cio "github.com/containerd/containerd/cio"
-	containers "github.com/containerd/containerd/containers"
+	containerd "github.com/containerd/containerd/v2/client"
+	cio "github.com/containerd/containerd/v2/pkg/cio"
+	containers "github.com/containerd/containerd/v2/core/containers"
 	typeurl "github.com/containerd/typeurl/v2"
 	gomock "github.com/golang/mock/gomock"
 	specs "github.com/opencontainers/runtime-spec/specs-go"

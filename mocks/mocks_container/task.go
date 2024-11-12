@@ -9,9 +9,9 @@ import (
 	reflect "reflect"
 	syscall "syscall"
 
-	containerd "github.com/containerd/containerd"
+	containerd "github.com/containerd/containerd/v2/client"
 	types "github.com/containerd/containerd/api/types"
-	cio "github.com/containerd/containerd/cio"
+	cio "github.com/containerd/containerd/v2/pkg/cio"
 	gomock "github.com/golang/mock/gomock"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )

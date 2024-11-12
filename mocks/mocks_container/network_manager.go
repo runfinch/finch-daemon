@@ -8,8 +8,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	containerd "github.com/containerd/containerd"
-	oci "github.com/containerd/containerd/oci"
+	containerd "github.com/containerd/containerd/v2/client"
+	oci "github.com/containerd/containerd/v2/pkg/oci"
 	types "github.com/containerd/nerdctl/v2/pkg/api/types"
 	gomock "github.com/golang/mock/gomock"
 )

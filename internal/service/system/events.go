@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/containerd/containerd/events"
+	"github.com/containerd/containerd/v2/core/events"
 	"github.com/containerd/typeurl/v2"
 	"github.com/sirupsen/logrus"
 

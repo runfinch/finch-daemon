@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	images "github.com/containerd/containerd/images"
+	images "github.com/containerd/containerd/v2/core/images"
 	gomock "github.com/golang/mock/gomock"
 )
 

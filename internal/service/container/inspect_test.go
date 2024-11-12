@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/containerd/containerd"
+	containerd "github.com/containerd/containerd/v2/client"
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
