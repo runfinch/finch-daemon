@@ -6,9 +6,9 @@ package system
 import (
 	"context"
 
-	"github.com/containerd/nerdctl/pkg/config"
-	"github.com/containerd/nerdctl/pkg/infoutil"
-	"github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
+	"github.com/containerd/nerdctl/v2/pkg/config"
+	"github.com/containerd/nerdctl/v2/pkg/infoutil"
+	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 )
 
 func (s *service) GetInfo(ctx context.Context, config *config.Config) (*dockercompat.Info, error) {

@@ -9,8 +9,8 @@ import (
 	"io"
 	"net/http"
 
-	ncTypes "github.com/containerd/nerdctl/pkg/api/types"
-	"github.com/containerd/nerdctl/pkg/config"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
+	"github.com/containerd/nerdctl/v2/pkg/config"
 
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/internal/backend"

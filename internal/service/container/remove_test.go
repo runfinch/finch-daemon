@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/containerd/containerd"
-	ncContainer "github.com/containerd/nerdctl/pkg/cmd/container"
+	ncContainer "github.com/containerd/nerdctl/v2/pkg/cmd/container"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

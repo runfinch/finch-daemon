@@ -13,8 +13,8 @@ import (
 	"github.com/containerd/containerd/defaults"
 	"github.com/containerd/containerd/oci"
 	cerrdefs "github.com/containerd/errdefs"
-	"github.com/containerd/nerdctl/pkg/flagutil"
-	"github.com/containerd/nerdctl/pkg/idgen"
+	"github.com/containerd/nerdctl/v2/pkg/flagutil"
+	"github.com/containerd/nerdctl/v2/pkg/idgen"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/runfinch/finch-daemon/api/types"

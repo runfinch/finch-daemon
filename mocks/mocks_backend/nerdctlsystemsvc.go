@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	dockercompat "github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
+	dockercompat "github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	gomock "github.com/golang/mock/gomock"
 )
 

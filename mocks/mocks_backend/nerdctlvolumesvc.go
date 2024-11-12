@@ -9,7 +9,7 @@ import (
 	io "io"
 	reflect "reflect"
 
-	native "github.com/containerd/nerdctl/pkg/inspecttypes/native"
+	native "github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
 	gomock "github.com/golang/mock/gomock"
 )
 

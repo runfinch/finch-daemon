@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"github.com/containerd/containerd"
-	ncTypes "github.com/containerd/nerdctl/pkg/api/types"
-	"github.com/containerd/nerdctl/pkg/api/types/cri"
-	"github.com/containerd/nerdctl/pkg/labels"
-	"github.com/containerd/nerdctl/pkg/labels/k8slabels"
-	"github.com/containerd/nerdctl/pkg/logging"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
+	"github.com/containerd/nerdctl/v2/pkg/api/types/cri"
+	"github.com/containerd/nerdctl/v2/pkg/labels"
+	"github.com/containerd/nerdctl/v2/pkg/labels/k8slabels"
+	"github.com/containerd/nerdctl/v2/pkg/logging"
 	"github.com/moby/moby/pkg/stdcopy"
 
 	"github.com/runfinch/finch-daemon/api/types"

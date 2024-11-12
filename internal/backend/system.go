@@ -6,8 +6,8 @@ package backend
 import (
 	"context"
 
-	"github.com/containerd/nerdctl/pkg/infoutil"
-	"github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
+	"github.com/containerd/nerdctl/v2/pkg/infoutil"
+	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 )
 
 //go:generate mockgen --destination=../../mocks/mocks_backend/nerdctlsystemsvc.go -package=mocks_backend github.com/runfinch/finch-daemon/internal/backend NerdctlSystemSvc

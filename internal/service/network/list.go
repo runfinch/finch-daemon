@@ -6,7 +6,7 @@ package network
 import (
 	"context"
 
-	"github.com/containerd/nerdctl/pkg/netutil"
+	"github.com/containerd/nerdctl/v2/pkg/netutil"
 
 	"github.com/runfinch/finch-daemon/api/types"
 )

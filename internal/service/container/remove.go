@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/containerd/nerdctl/pkg/cmd/container"
+	"github.com/containerd/nerdctl/v2/pkg/cmd/container"
 
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )

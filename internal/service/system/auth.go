@@ -14,7 +14,7 @@ import (
 	"github.com/containerd/containerd/remotes/docker"
 	dockerconfig "github.com/containerd/containerd/remotes/docker/config"
 	remoteerrs "github.com/containerd/containerd/remotes/errors"
-	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
+	"github.com/containerd/nerdctl/v2/pkg/imgutil/dockerconfigresolver"
 	"golang.org/x/net/context/ctxhttp"
 
 	"github.com/runfinch/finch-daemon/pkg/errdefs"

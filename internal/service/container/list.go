@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	ncTypes "github.com/containerd/nerdctl/pkg/api/types"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 
 	"github.com/runfinch/finch-daemon/api/types"
 )

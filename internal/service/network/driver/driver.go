@@ -4,7 +4,7 @@
 package driver
 
 import (
-	"github.com/containerd/nerdctl/pkg/netutil"
+	"github.com/containerd/nerdctl/v2/pkg/netutil"
 	"github.com/runfinch/finch-daemon/api/types"
 )
 
