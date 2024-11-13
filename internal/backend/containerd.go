@@ -10,14 +10,14 @@ import (
 	"time"
 
 	containerd "github.com/containerd/containerd/v2/client"
-	"github.com/containerd/containerd/v2/pkg/cio"
 	"github.com/containerd/containerd/v2/core/events"
 	"github.com/containerd/containerd/v2/core/images"
 	"github.com/containerd/containerd/v2/core/images/converter"
 	"github.com/containerd/containerd/v2/core/mount"
-	"github.com/containerd/containerd/v2/pkg/oci"
-	"github.com/containerd/containerd/v2/pkg/cap"
 	"github.com/containerd/containerd/v2/core/remotes/docker"
+	"github.com/containerd/containerd/v2/pkg/cap"
+	"github.com/containerd/containerd/v2/pkg/cio"
+	"github.com/containerd/containerd/v2/pkg/oci"
 	"github.com/containerd/errdefs"
 	"github.com/containerd/nerdctl/v2/pkg/containerutil"
 	"github.com/containerd/nerdctl/v2/pkg/labels"
@@ -118,7 +118,7 @@ func (w *ContainerdClientWrapper) GetImage(ctx context.Context, ref string) (con
 // SearchImage returns a list of images that match the search prefix.
 func (w *ContainerdClientWrapper) SearchImage(ctx context.Context, searchText string) ([]images.Image, error) {
 	var filters []string
-	if canonicalRef, err := referenceutil.ParseAny(searchText); err == nil {
+	if canonicalRef, err := referenceutil.Parse(searchText); err == nil {
 		filters = append(filters, fmt.Sprintf("name==%s", canonicalRef.String()))
 	}
 	filters = append(filters,

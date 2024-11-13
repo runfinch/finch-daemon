@@ -60,7 +60,7 @@ func VolumeRemove(opt *option.Option) {
 			Expect(err).Should(BeNil())
 			res, err := uClient.Do(req)
 			Expect(err).Should(BeNil())
-			Expect(res.StatusCode).Should(Equal(http.StatusConflict))
+			Expect(res.StatusCode).Should(Equal(http.StatusBadRequest))
 			volumeShouldExist(opt, testVolumeName)
 		})
 	})

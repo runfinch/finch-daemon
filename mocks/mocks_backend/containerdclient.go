@@ -8,12 +8,12 @@ import (
 	context "context"
 	reflect "reflect"
 
-	containerd "github.com/containerd/containerd/v2/client"
-	cio "github.com/containerd/containerd/v2/pkg/cio"
+	client "github.com/containerd/containerd/v2/client"
 	events "github.com/containerd/containerd/v2/core/events"
 	images "github.com/containerd/containerd/v2/core/images"
 	converter "github.com/containerd/containerd/v2/core/images/converter"
 	mount "github.com/containerd/containerd/v2/core/mount"
+	cio "github.com/containerd/containerd/v2/pkg/cio"
 	oci "github.com/containerd/containerd/v2/pkg/oci"
 	platforms "github.com/containerd/platforms"
 	gomock "github.com/golang/mock/gomock"
@@ -122,10 +122,10 @@ func (mr *MockContainerdClientMockRecorder) DeleteImage(arg0, arg1 interface{}) 
 }
 
 // GetClient mocks base method.
-func (m *MockContainerdClient) GetClient() *containerd.Client {
+func (m *MockContainerdClient) GetClient() *client.Client {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetClient")
-	ret0, _ := ret[0].(*containerd.Client)
+	ret0, _ := ret[0].(*client.Client)
 	return ret0
 }
 
@@ -136,7 +136,7 @@ func (mr *MockContainerdClientMockRecorder) GetClient() *gomock.Call {
 }
 
 // GetContainerRemoveEvent mocks base method.
-func (m *MockContainerdClient) GetContainerRemoveEvent(arg0 context.Context, arg1 containerd.Container) (<-chan *events.Envelope, <-chan error) {
+func (m *MockContainerdClient) GetContainerRemoveEvent(arg0 context.Context, arg1 client.Container) (<-chan *events.Envelope, <-chan error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetContainerRemoveEvent", arg0, arg1)
 	ret0, _ := ret[0].(<-chan *events.Envelope)
@@ -151,10 +151,10 @@ func (mr *MockContainerdClientMockRecorder) GetContainerRemoveEvent(arg0, arg1 i
 }
 
 // GetContainerStatus mocks base method.
-func (m *MockContainerdClient) GetContainerStatus(arg0 context.Context, arg1 containerd.Container) containerd.ProcessStatus {
+func (m *MockContainerdClient) GetContainerStatus(arg0 context.Context, arg1 client.Container) client.ProcessStatus {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetContainerStatus", arg0, arg1)
-	ret0, _ := ret[0].(containerd.ProcessStatus)
+	ret0, _ := ret[0].(client.ProcessStatus)
 	return ret0
 }
 
@@ -165,11 +165,11 @@ func (mr *MockContainerdClientMockRecorder) GetContainerStatus(arg0, arg1 interf
 }
 
 // GetContainerTaskWait mocks base method.
-func (m *MockContainerdClient) GetContainerTaskWait(arg0 context.Context, arg1 cio.Attach, arg2 containerd.Container) (containerd.Task, <-chan containerd.ExitStatus, error) {
+func (m *MockContainerdClient) GetContainerTaskWait(arg0 context.Context, arg1 cio.Attach, arg2 client.Container) (client.Task, <-chan client.ExitStatus, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetContainerTaskWait", arg0, arg1, arg2)
-	ret0, _ := ret[0].(containerd.Task)
-	ret1, _ := ret[1].(<-chan containerd.ExitStatus)
+	ret0, _ := ret[0].(client.Task)
+	ret1, _ := ret[1].(<-chan client.ExitStatus)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
 }
@@ -196,10 +196,10 @@ func (mr *MockContainerdClientMockRecorder) GetCurrentCapabilities() *gomock.Cal
 }
 
 // GetImage mocks base method.
-func (m *MockContainerdClient) GetImage(arg0 context.Context, arg1 string) (containerd.Image, error) {
+func (m *MockContainerdClient) GetImage(arg0 context.Context, arg1 string) (client.Image, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetImage", arg0, arg1)
-	ret0, _ := ret[0].(containerd.Image)
+	ret0, _ := ret[0].(client.Image)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -388,10 +388,10 @@ func (mr *MockContainerdClientMockRecorder) PublishEvent(arg0, arg1, arg2 interf
 }
 
 // SearchContainer mocks base method.
-func (m *MockContainerdClient) SearchContainer(arg0 context.Context, arg1 string) ([]containerd.Container, error) {
+func (m *MockContainerdClient) SearchContainer(arg0 context.Context, arg1 string) ([]client.Container, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SearchContainer", arg0, arg1)
-	ret0, _ := ret[0].([]containerd.Container)
+	ret0, _ := ret[0].([]client.Container)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

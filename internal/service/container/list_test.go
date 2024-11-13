@@ -49,8 +49,8 @@ var _ = Describe("Container List API ", func() {
 		listOpts = ncTypes.ContainerListOptions{}
 		created = time.Now()
 		containers = []ncContainer.ListItem{
-			{ID: "id1", Names: "name1", Image: "img1", CreatedAt: created, Labels: nil},
-			{ID: "id2", Names: "name2", Image: "img2", CreatedAt: created, Labels: nil},
+			{ID: "id1", Names: "name1", Image: "img1", CreatedAt: created, LabelsMap: nil},
+			{ID: "id2", Names: "name2", Image: "img2", CreatedAt: created, LabelsMap: nil},
 		}
 		tarExtractor = mocks_archive.NewMockTarExtractor(mockCtrl)
 		con = mocks_container.NewMockContainer(mockCtrl)

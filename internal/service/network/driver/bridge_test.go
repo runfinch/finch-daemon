@@ -6,7 +6,7 @@ package driver
 import (
 	"fmt"
 
-	"github.com/containerd/nerdctl/v2/pkg/netutil"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/coreos/go-iptables/iptables"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -22,7 +22,7 @@ var _ = Describe("bridgeDriver HandleCreateOptions", func() {
 		logger         *mocks_logger.Logger
 		driver         *bridgeDriver
 		request        types.NetworkCreateRequest
-		options        netutil.CreateOptions
+		options        ncTypes.NetworkCreateOptions
 	)
 
 	BeforeEach(func() {
@@ -32,7 +32,7 @@ var _ = Describe("bridgeDriver HandleCreateOptions", func() {
 		request = types.NetworkCreateRequest{
 			Options: make(map[string]string),
 		}
-		options = netutil.CreateOptions{
+		options = ncTypes.NetworkCreateOptions{
 			Options: make(map[string]string),
 			Labels:  []string{},
 		}

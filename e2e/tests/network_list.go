@@ -61,7 +61,7 @@ func NetworkList(opt *option.Option) {
 			Expect(err).Should(BeNil())
 			err = json.Unmarshal(body, ls)
 			Expect(err).Should(BeNil())
-			Expect((*ls)[1].Name).Should(Equal(expName))
+			Expect((*ls)[0].Name).Should(Equal(expName))
 		})
 	})
 }
