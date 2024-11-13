@@ -8,10 +8,11 @@ import (
 	context "context"
 	reflect "reflect"
 
+	types "github.com/containerd/nerdctl/v2/pkg/api/types"
 	dockercompat "github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	netutil "github.com/containerd/nerdctl/v2/pkg/netutil"
 	libcni "github.com/containernetworking/cni/libcni"
-	types "github.com/containernetworking/cni/pkg/types"
+	types0 "github.com/containernetworking/cni/pkg/types"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -39,10 +40,10 @@ func (m *MockNerdctlNetworkSvc) EXPECT() *MockNerdctlNetworkSvcMockRecorder {
 }
 
 // AddNetworkList mocks base method.
-func (m *MockNerdctlNetworkSvc) AddNetworkList(arg0 context.Context, arg1 *libcni.NetworkConfigList, arg2 *libcni.RuntimeConf) (types.Result, error) {
+func (m *MockNerdctlNetworkSvc) AddNetworkList(arg0 context.Context, arg1 *libcni.NetworkConfigList, arg2 *libcni.RuntimeConf) (types0.Result, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddNetworkList", arg0, arg1, arg2)
-	ret0, _ := ret[0].(types.Result)
+	ret0, _ := ret[0].(types0.Result)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -54,7 +55,7 @@ func (mr *MockNerdctlNetworkSvcMockRecorder) AddNetworkList(arg0, arg1, arg2 int
 }
 
 // CreateNetwork mocks base method.
-func (m *MockNerdctlNetworkSvc) CreateNetwork(arg0 netutil.CreateOptions) (*netutil.NetworkConfig, error) {
+func (m *MockNerdctlNetworkSvc) CreateNetwork(arg0 types.NetworkCreateOptions) (*netutil.NetworkConfig, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateNetwork", arg0)
 	ret0, _ := ret[0].(*netutil.NetworkConfig)
@@ -96,6 +97,20 @@ func (m *MockNerdctlNetworkSvc) InspectNetwork(arg0 context.Context, arg1 *netut
 func (mr *MockNerdctlNetworkSvcMockRecorder) InspectNetwork(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InspectNetwork", reflect.TypeOf((*MockNerdctlNetworkSvc)(nil).InspectNetwork), arg0, arg1)
+}
+
+// Namespace mocks base method.
+func (m *MockNerdctlNetworkSvc) Namespace() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Namespace")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Namespace indicates an expected call of Namespace.
+func (mr *MockNerdctlNetworkSvcMockRecorder) Namespace() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Namespace", reflect.TypeOf((*MockNerdctlNetworkSvc)(nil).Namespace))
 }
 
 // NetconfPath mocks base method.

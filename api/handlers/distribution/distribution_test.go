@@ -10,7 +10,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/containerd/nerdctl/pkg/config"
+	"github.com/containerd/nerdctl/v2/pkg/config"
 	registrytypes "github.com/docker/docker/api/types/registry"
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"

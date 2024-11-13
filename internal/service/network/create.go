@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/containerd/nerdctl/v2/pkg/netutil"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/internal/service/network/driver"
@@ -21,14 +21,14 @@ func (s *service) Create(ctx context.Context, request types.NetworkCreateRequest
 	var bridgeDriver driver.DriverHandler
 	var err error
 
-	createOptionsFrom := func(request types.NetworkCreateRequest) (netutil.CreateOptions, error) {
+	createOptionsFrom := func(request types.NetworkCreateRequest) (ncTypes.NetworkCreateOptions, error) {
 		// Default to "bridge" driver if request does not specify a driver
 		networkDriver := request.Driver
 		if networkDriver == "" {
 			networkDriver = "bridge"
 		}
 
-		options := netutil.CreateOptions{
+		options := ncTypes.NetworkCreateOptions{
 			Name:        request.Name,
 			Driver:      networkDriver,
 			IPAMDriver:  "default",

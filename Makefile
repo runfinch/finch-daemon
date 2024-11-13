@@ -80,12 +80,12 @@ endif
 	GOBIN=$(BIN) go install github.com/golang/mock/mockgen
 	GOBIN=$(BIN) go install golang.org/x/tools/cmd/stringer
 	PATH=$(BIN):$(PATH) go generate ./...
-	PATH=$(BIN):$(PATH) mockgen --destination=./mocks/mocks_container/container.go -package=mocks_container github.com/containerd/containerd Container
-	PATH=$(BIN):$(PATH) mockgen --destination=./mocks/mocks_container/process.go -package=mocks_container github.com/containerd/containerd Process
-	PATH=$(BIN):$(PATH) mockgen --destination=./mocks/mocks_container/task.go -package=mocks_container github.com/containerd/containerd Task
-	PATH=$(BIN):$(PATH) mockgen --destination=./mocks/mocks_image/store.go -package=mocks_image github.com/containerd/containerd/images Store
+	PATH=$(BIN):$(PATH) mockgen --destination=./mocks/mocks_container/container.go -package=mocks_container github.com/containerd/containerd/v2/client Container
+	PATH=$(BIN):$(PATH) mockgen --destination=./mocks/mocks_container/process.go -package=mocks_container github.com/containerd/containerd/v2/client Process
+	PATH=$(BIN):$(PATH) mockgen --destination=./mocks/mocks_container/task.go -package=mocks_container github.com/containerd/containerd/v2/client Task
+	PATH=$(BIN):$(PATH) mockgen --destination=./mocks/mocks_image/store.go -package=mocks_image github.com/containerd/containerd/v2/core/images Store
 	PATH=$(BIN):$(PATH) mockgen --destination=./mocks/mocks_container/network_manager.go -package=mocks_container github.com/containerd/nerdctl/v2/pkg/containerutil NetworkOptionsManager
-	PATH=$(BIN):$(PATH) mockgen --destination=./mocks/mocks_cio/io.go -package=mocks_cio github.com/containerd/containerd/cio IO
+	PATH=$(BIN):$(PATH) mockgen --destination=./mocks/mocks_cio/io.go -package=mocks_cio github.com/containerd/containerd/v2/pkg/cio IO
 	PATH=$(BIN):$(PATH) mockgen --destination=./mocks/mocks_http/response_writer.go -package=mocks_http net/http ResponseWriter
 	PATH=$(BIN):$(PATH) mockgen --destination=./mocks/mocks_http/conn.go -package=mocks_http net Conn
 

@@ -9,9 +9,11 @@ import (
 
 	dockertypes "github.com/docker/cli/cli/config/types"
 
-	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
+	"github.com/containerd/nerdctl/v2/pkg/imgutil/dockerconfigresolver"
 	"github.com/runfinch/finch-daemon/internal/backend"
 )
+
+const IndexServer = "https://index.docker.io/v1/"
 
 // GetAuthCreds returns authentication credentials resolver function from image reference domain and auth config.
 func GetAuthCreds(refDomain string, containerdClient backend.ContainerdClient, ac dockertypes.AuthConfig) (dockerconfigresolver.AuthCreds, error) {
@@ -33,7 +35,7 @@ func GetAuthCreds(refDomain string, containerdClient backend.ContainerdClient, a
 		saHostname := convertToHostname(sa)
 		// "registry-1.docker.io" can show up as "https://index.docker.io/v1/" in ServerAddress
 		if expectedDomain == "registry-1.docker.io" {
-			if saHostname != refDomain && sa != dockerconfigresolver.IndexServer {
+			if saHostname != refDomain && sa != IndexServer {
 				return nil, fmt.Errorf("specified server address %s does not match the image reference domain %s", sa, refDomain)
 			}
 		} else if saHostname != refDomain {

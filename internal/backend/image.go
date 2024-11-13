@@ -12,11 +12,12 @@ import (
 	"github.com/containerd/containerd/v2/core/remotes/docker"
 	dockerconfig "github.com/containerd/containerd/v2/core/remotes/docker/config"
 	"github.com/containerd/nerdctl/v2/pkg/api/types"
-	"github.com/containerd/nerdctl/v2/pkg/cmd/image"
+	"github.com/containerd/nerdctl/v2/pkg/containerdutil"
 	"github.com/containerd/nerdctl/v2/pkg/idutil/imagewalker"
 	"github.com/containerd/nerdctl/v2/pkg/imageinspector"
 	"github.com/containerd/nerdctl/v2/pkg/imgutil"
 	"github.com/containerd/nerdctl/v2/pkg/imgutil/dockerconfigresolver"
+	"github.com/containerd/nerdctl/v2/pkg/imgutil/load"
 	"github.com/containerd/nerdctl/v2/pkg/imgutil/push"
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	"github.com/containerd/platforms"
@@ -32,10 +33,12 @@ type NerdctlImageSvc interface {
 	SearchImage(ctx context.Context, name string) (int, int, []*images.Image, error)
 	LoadImage(ctx context.Context, img string, stdout io.Writer, quiet bool) error
 	GetDataStore() (string, error)
+	Namespace() string
 }
 
 func (w *NerdctlWrapper) InspectImage(ctx context.Context, image images.Image) (*dockercompat.Image, error) {
-	n, err := imageinspector.Inspect(ctx, w.clientWrapper.client, image, w.globalOptions.Snapshotter)
+	snapshotter := containerdutil.SnapshotService(w.clientWrapper.client, w.globalOptions.Snapshotter)
+	n, err := imageinspector.Inspect(ctx, w.clientWrapper.client, image, snapshotter)
 	if err != nil {
 		return nil, err
 	}
@@ -65,17 +68,22 @@ func (w *NerdctlWrapper) GetDockerResolver(ctx context.Context, refDomain string
 
 // PullImage pulls an image from nerdctl's imgutil library.
 func (w *NerdctlWrapper) PullImage(ctx context.Context, stdout, stderr io.Writer, resolver remotes.Resolver, ref string, platforms []ocispec.Platform) (*imgutil.EnsuredImage, error) {
+	opts := types.ImagePullOptions{
+		Stdout:          stdout,
+		Stderr:          stderr,
+		GOptions:        *w.globalOptions,
+		Unpack:          nil,
+		OCISpecPlatform: platforms,
+		Mode:            "always",
+		Quiet:           false,
+	}
+
 	return imgutil.PullImage(
 		ctx,
 		w.clientWrapper.client,
-		stdout, stderr,
-		w.globalOptions.Snapshotter,
 		resolver,
 		ref,
-		platforms,
-		nil,
-		false,
-		imgutil.RemoteSnapshotterFlags{},
+		opts,
 	)
 }
 
@@ -109,14 +117,16 @@ func (w *NerdctlWrapper) SearchImage(ctx context.Context, name string) (int, int
 	return n, uniqueCount, imgs, err
 }
 
-func (w *NerdctlWrapper) LoadImage(ctx context.Context, img string, stdout io.Writer, _ /*quiet*/ bool) error {
+func (w *NerdctlWrapper) LoadImage(ctx context.Context, img string, stdout io.Writer, q bool) error {
 	// TODO currently the "quiet" flag in nerdctl is hardcoded as "false".
 	// Ideally this flag should be part of the ImageLoadOptions, we can
 	// contribute this enhancement at upstream
-	return image.Load(ctx, w.clientWrapper.client, types.ImageLoadOptions{
+	_, err := load.FromArchive(ctx, w.clientWrapper.client, types.ImageLoadOptions{
 		Stdout:       stdout,
 		GOptions:     *w.globalOptions,
 		Input:        img,
 		AllPlatforms: true,
+		Quiet:        q,
 	})
+	return err
 }

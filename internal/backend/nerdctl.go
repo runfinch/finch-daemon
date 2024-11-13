@@ -28,6 +28,7 @@ func NewNerdctlWrapper(clientWrapper *ContainerdClientWrapper, options *types.Gl
 		netClient: &netutil.CNIEnv{
 			Path:        options.CNIPath,
 			NetconfPath: options.CNINetConfPath,
+			Namespace:   options.Namespace,
 		},
 		CNI: libcni.NewCNIConfig(
 			[]string{

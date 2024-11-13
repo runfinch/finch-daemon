@@ -26,6 +26,8 @@ func (s *service) Remove(ctx context.Context, volName string, force bool) error 
 			err = errdefs.NewNotFound(err)
 		case strings.Contains(err.Error(), "in use"):
 			err = errdefs.NewConflict(err)
+		case strings.Contains(err.Error(), "could not be removed"):
+			err = errdefs.NewInvalidFormat(err)
 		}
 		return err
 	}

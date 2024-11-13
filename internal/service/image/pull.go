@@ -20,6 +20,8 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
 
+const IndexServer = "https://index.docker.io/v1/"
+
 func (s *service) Pull(ctx context.Context, name, tag, platformStr string, ac *dockertypes.AuthConfig, outStream io.Writer) error {
 	// get host platform's default spec if unspecified
 	var platform ocispec.Platform
