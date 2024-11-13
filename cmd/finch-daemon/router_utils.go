@@ -17,6 +17,7 @@ import (
 	"github.com/runfinch/finch-daemon/internal/backend"
 	"github.com/runfinch/finch-daemon/internal/service/builder"
 	"github.com/runfinch/finch-daemon/internal/service/container"
+	"github.com/runfinch/finch-daemon/internal/service/distribution"
 	"github.com/runfinch/finch-daemon/internal/service/exec"
 	"github.com/runfinch/finch-daemon/internal/service/image"
 	"github.com/runfinch/finch-daemon/internal/service/network"
@@ -101,14 +102,15 @@ func createRouterOptions(
 	tarExtractor := archive.NewTarExtractor(ecc.NewExecCmdCreator(), logger)
 
 	return &router.Options{
-		Config:           conf,
-		ContainerService: container.NewService(clientWrapper, ncWrapper, logger, fs, tarCreator, tarExtractor),
-		ImageService:     image.NewService(clientWrapper, ncWrapper, logger),
-		NetworkService:   network.NewService(clientWrapper, ncWrapper, logger),
-		SystemService:    system.NewService(clientWrapper, ncWrapper, logger),
-		BuilderService:   builder.NewService(clientWrapper, ncWrapper, logger, tarExtractor),
-		VolumeService:    volume.NewService(ncWrapper, logger),
-		ExecService:      exec.NewService(clientWrapper, logger),
-		NerdctlWrapper:   ncWrapper,
+		Config:              conf,
+		ContainerService:    container.NewService(clientWrapper, ncWrapper, logger, fs, tarCreator, tarExtractor),
+		ImageService:        image.NewService(clientWrapper, ncWrapper, logger),
+		NetworkService:      network.NewService(clientWrapper, ncWrapper, logger),
+		SystemService:       system.NewService(clientWrapper, ncWrapper, logger),
+		BuilderService:      builder.NewService(clientWrapper, ncWrapper, logger, tarExtractor),
+		VolumeService:       volume.NewService(ncWrapper, logger),
+		ExecService:         exec.NewService(clientWrapper, logger),
+		DistributionService: distribution.NewService(clientWrapper, ncWrapper, logger),
+		NerdctlWrapper:      ncWrapper,
 	}
 }

@@ -6,19 +6,18 @@ package image
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/containerd/containerd/images"
-	"github.com/distribution/reference"
 
 	"github.com/runfinch/finch-daemon/api/handlers/image"
 	"github.com/runfinch/finch-daemon/internal/backend"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/flog"
+	"github.com/runfinch/finch-daemon/pkg/utility/authutility"
 )
 
 // setting getAuthCredsFunc as a variable to allow mocking this function for unit testing.
-var getAuthCredsFunc = (*service).getAuthCreds
+var getAuthCredsFunc = authutility.GetAuthCreds
 
 type service struct {
 	client       backend.ContainerdClient
@@ -73,32 +72,3 @@ const (
 	tagDigestPrefix = "sha256:"
 	eventType       = "image"
 )
-
-func canonicalize(name, tag string) (string, error) {
-	if name != "" {
-		if strings.HasPrefix(tag, tagDigestPrefix) {
-			name += "@" + tag
-		} else if tag != "" {
-			name += ":" + tag
-		}
-	} else {
-		name = tag
-	}
-	ref, err := reference.ParseAnyReference(name)
-	if err != nil {
-		return "", err
-	}
-	if named, ok := ref.(reference.Named); ok && refNeedsTag(ref) {
-		tagged, err := reference.WithTag(named, defaultTag)
-		if err == nil {
-			ref = tagged
-		}
-	}
-	return ref.String(), nil
-}
-
-func refNeedsTag(ref reference.Reference) bool {
-	_, tagged := ref.(reference.Tagged)
-	_, digested := ref.(reference.Digested)
-	return !(tagged || digested)
-}

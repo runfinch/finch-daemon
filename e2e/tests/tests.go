@@ -27,6 +27,7 @@ import (
 
 const (
 	alpineImage              = "public.ecr.aws/docker/library/alpine:latest"
+	newerAlpineImage         = "public.ecr.aws/docker/library/alpine:3.21"
 	olderAlpineImage         = "public.ecr.aws/docker/library/alpine:3.13"
 	amazonLinux2Image        = "public.ecr.aws/amazonlinux/amazonlinux:2"
 	nginxImage               = "public.ecr.aws/docker/library/nginx:latest"
