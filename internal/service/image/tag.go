@@ -28,7 +28,7 @@ func (s *service) Tag(ctx context.Context, srcImg string, repo, tag string) erro
 		return err
 	}
 	rawRef := fmt.Sprintf("%s:%s", repo, tag)
-	target, err := referenceutil.ParseDockerRef(rawRef)
+	target, err := referenceutil.Parse(rawRef)
 	if err != nil {
 		return fmt.Errorf("target parse error: %w", err)
 	}

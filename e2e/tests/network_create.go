@@ -230,7 +230,7 @@ func withUnsupportedNetworkOptions() []types.NetworkCreateOption {
 			Driver: "default",
 			Config: []map[string]string{
 				{
-					"Subnet": "240.10.0.0/24",
+					"Subnet": "240.10.4.0/24",
 				},
 			},
 		}),

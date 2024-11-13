@@ -8,7 +8,7 @@ import (
 	reflect "reflect"
 
 	native "github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
-	types "github.com/docker/docker/api/types"
+	container "github.com/docker/docker/api/types/container"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -36,10 +36,10 @@ func (m *MockStatsUtil) EXPECT() *MockStatsUtilMockRecorder {
 }
 
 // CollectNetworkStats mocks base method.
-func (m *MockStatsUtil) CollectNetworkStats(arg0 int, arg1 []native.NetInterface) (map[string]types.NetworkStats, error) {
+func (m *MockStatsUtil) CollectNetworkStats(arg0 int, arg1 []native.NetInterface) (map[string]container.NetworkStats, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CollectNetworkStats", arg0, arg1)
-	ret0, _ := ret[0].(map[string]types.NetworkStats)
+	ret0, _ := ret[0].(map[string]container.NetworkStats)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

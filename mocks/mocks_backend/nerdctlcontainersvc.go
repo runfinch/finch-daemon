@@ -11,7 +11,7 @@ import (
 	reflect "reflect"
 	time "time"
 
-	containerd "github.com/containerd/containerd/v2/client"
+	client "github.com/containerd/containerd/v2/client"
 	types "github.com/containerd/nerdctl/v2/pkg/api/types"
 	container "github.com/containerd/nerdctl/v2/pkg/cmd/container"
 	containerutil "github.com/containerd/nerdctl/v2/pkg/containerutil"
@@ -45,10 +45,10 @@ func (m *MockNerdctlContainerSvc) EXPECT() *MockNerdctlContainerSvcMockRecorder 
 }
 
 // CreateContainer mocks base method.
-func (m *MockNerdctlContainerSvc) CreateContainer(arg0 context.Context, arg1 []string, arg2 containerutil.NetworkOptionsManager, arg3 types.ContainerCreateOptions) (containerd.Container, func(), error) {
+func (m *MockNerdctlContainerSvc) CreateContainer(arg0 context.Context, arg1 []string, arg2 containerutil.NetworkOptionsManager, arg3 types.ContainerCreateOptions) (client.Container, func(), error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateContainer", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(containerd.Container)
+	ret0, _ := ret[0].(client.Container)
 	ret1, _ := ret[1].(func())
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
@@ -91,7 +91,7 @@ func (mr *MockNerdctlContainerSvcMockRecorder) GetNerdctlExe() *gomock.Call {
 }
 
 // InspectContainer mocks base method.
-func (m *MockNerdctlContainerSvc) InspectContainer(arg0 context.Context, arg1 containerd.Container) (*dockercompat.Container, error) {
+func (m *MockNerdctlContainerSvc) InspectContainer(arg0 context.Context, arg1 client.Container) (*dockercompat.Container, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InspectContainer", arg0, arg1)
 	ret0, _ := ret[0].(*dockercompat.Container)
@@ -180,7 +180,7 @@ func (mr *MockNerdctlContainerSvcMockRecorder) NewNetworkingOptionsManager(arg0 
 }
 
 // RemoveContainer mocks base method.
-func (m *MockNerdctlContainerSvc) RemoveContainer(arg0 context.Context, arg1 containerd.Container, arg2, arg3 bool) error {
+func (m *MockNerdctlContainerSvc) RemoveContainer(arg0 context.Context, arg1 client.Container, arg2, arg3 bool) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RemoveContainer", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
@@ -194,7 +194,7 @@ func (mr *MockNerdctlContainerSvcMockRecorder) RemoveContainer(arg0, arg1, arg2,
 }
 
 // RenameContainer mocks base method.
-func (m *MockNerdctlContainerSvc) RenameContainer(arg0 context.Context, arg1 containerd.Container, arg2 string, arg3 types.ContainerRenameOptions) error {
+func (m *MockNerdctlContainerSvc) RenameContainer(arg0 context.Context, arg1 client.Container, arg2 string, arg3 types.ContainerRenameOptions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RenameContainer", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
@@ -208,7 +208,7 @@ func (mr *MockNerdctlContainerSvcMockRecorder) RenameContainer(arg0, arg1, arg2,
 }
 
 // StartContainer mocks base method.
-func (m *MockNerdctlContainerSvc) StartContainer(arg0 context.Context, arg1 containerd.Container) error {
+func (m *MockNerdctlContainerSvc) StartContainer(arg0 context.Context, arg1 client.Container) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StartContainer", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -222,7 +222,7 @@ func (mr *MockNerdctlContainerSvcMockRecorder) StartContainer(arg0, arg1 interfa
 }
 
 // StopContainer mocks base method.
-func (m *MockNerdctlContainerSvc) StopContainer(arg0 context.Context, arg1 containerd.Container, arg2 *time.Duration) error {
+func (m *MockNerdctlContainerSvc) StopContainer(arg0 context.Context, arg1 client.Container, arg2 *time.Duration) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StopContainer", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)

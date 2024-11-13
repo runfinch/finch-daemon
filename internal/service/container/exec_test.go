@@ -9,9 +9,9 @@ import (
 	"fmt"
 
 	containerd "github.com/containerd/containerd/v2/client"
-	"github.com/containerd/containerd/v2/pkg/cio"
 	"github.com/containerd/containerd/v2/core/containers"
 	"github.com/containerd/containerd/v2/defaults"
+	"github.com/containerd/containerd/v2/pkg/cio"
 	"github.com/containerd/containerd/v2/pkg/oci"
 	cerrdefs "github.com/containerd/errdefs"
 	"github.com/golang/mock/gomock"

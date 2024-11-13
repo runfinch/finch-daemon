@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
 	"github.com/containerd/nerdctl/v2/pkg/netutil"
@@ -18,22 +19,33 @@ import (
 type NerdctlNetworkSvc interface {
 	FilterNetworks(filterf func(networkConfig *netutil.NetworkConfig) bool) ([]*netutil.NetworkConfig, error)
 	AddNetworkList(ctx context.Context, netconflist *libcni.NetworkConfigList, conf *libcni.RuntimeConf) (cnitypes.Result, error)
-	CreateNetwork(opts netutil.CreateOptions) (*netutil.NetworkConfig, error)
+	CreateNetwork(opts types.NetworkCreateOptions) (*netutil.NetworkConfig, error)
 	RemoveNetwork(networkConfig *netutil.NetworkConfig) error
 	InspectNetwork(ctx context.Context, networkConfig *netutil.NetworkConfig) (*dockercompat.Network, error)
 	UsedNetworkInfo(ctx context.Context) (map[string][]string, error)
 	NetconfPath() string
+	Namespace() string
 }
 
 func (w *NerdctlWrapper) FilterNetworks(filterf func(networkConfig *netutil.NetworkConfig) bool) ([]*netutil.NetworkConfig, error) {
-	return w.netClient.FilterNetworks(filterf)
+	networkConfigs, err := w.netClient.NetworkList()
+	if err != nil {
+		return nil, err
+	}
+	result := []*netutil.NetworkConfig{}
+	for _, networkConfig := range networkConfigs {
+		if filterf(networkConfig) {
+			result = append(result, networkConfig)
+		}
+	}
+	return result, nil
 }
 
 func (w *NerdctlWrapper) AddNetworkList(ctx context.Context, netconflist *libcni.NetworkConfigList, conf *libcni.RuntimeConf) (cnitypes.Result, error) {
 	return w.CNI.AddNetworkList(ctx, netconflist, conf)
 }
 
-func (w *NerdctlWrapper) CreateNetwork(opts netutil.CreateOptions) (*netutil.NetworkConfig, error) {
+func (w *NerdctlWrapper) CreateNetwork(opts types.NetworkCreateOptions) (*netutil.NetworkConfig, error) {
 	return w.netClient.CreateNetwork(opts)
 }
 
@@ -57,4 +69,8 @@ func (w *NerdctlWrapper) UsedNetworkInfo(ctx context.Context) (map[string][]stri
 
 func (w *NerdctlWrapper) NetconfPath() string {
 	return w.netClient.NetconfPath
+}
+
+func (w *NerdctlWrapper) Namespace() string {
+	return w.netClient.Namespace
 }

@@ -103,6 +103,20 @@ func (mr *MockNerdctlImageSvcMockRecorder) LoadImage(arg0, arg1, arg2, arg3 inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadImage", reflect.TypeOf((*MockNerdctlImageSvc)(nil).LoadImage), arg0, arg1, arg2, arg3)
 }
 
+// Namespace mocks base method.
+func (m *MockNerdctlImageSvc) Namespace() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Namespace")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Namespace indicates an expected call of Namespace.
+func (mr *MockNerdctlImageSvcMockRecorder) Namespace() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Namespace", reflect.TypeOf((*MockNerdctlImageSvc)(nil).Namespace))
+}
+
 // PullImage mocks base method.
 func (m *MockNerdctlImageSvc) PullImage(arg0 context.Context, arg1, arg2 io.Writer, arg3 remotes.Resolver, arg4 string, arg5 []v1.Platform) (*imgutil.EnsuredImage, error) {
 	m.ctrl.T.Helper()
