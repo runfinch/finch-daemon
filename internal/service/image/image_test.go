@@ -18,6 +18,7 @@ import (
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
+	"github.com/runfinch/finch-daemon/internal/backend"
 	"github.com/runfinch/finch-daemon/mocks/mocks_backend"
 	"github.com/runfinch/finch-daemon/mocks/mocks_logger"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
@@ -151,7 +152,7 @@ type mockGetAuthCreds struct {
 // Return mocks getAuthCreds function with expected input parameters and returns the passed output values.
 func (m *mockGetAuthCreds) Return(creds dockerconfigresolver.AuthCreds, err error) {
 	m.ctrl.RecordCall(m, "GetAuthCreds", m.expectedDomain, m.expectedAuth)
-	getAuthCredsFunc = func(_ *service, domain string, ac dockertypes.AuthConfig) (dockerconfigresolver.AuthCreds, error) {
+	getAuthCredsFunc = func(domain string, _ backend.ContainerdClient, ac dockertypes.AuthConfig) (dockerconfigresolver.AuthCreds, error) {
 		m.GetAuthCreds(domain, ac)
 		return creds, err
 	}

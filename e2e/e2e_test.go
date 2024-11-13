@@ -67,6 +67,9 @@ func TestRun(t *testing.T) {
 		// functional test for system api
 		tests.SystemVersion(opt)
 		tests.SystemEvents(opt)
+
+		// functional test for distribution api
+		tests.DistributionInspect(opt)
 	})
 
 	gomega.RegisterFailHandler(ginkgo.Fail)
