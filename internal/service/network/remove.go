@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/containerd/nerdctl/pkg/netutil"
+	"github.com/runfinch/finch-daemon/internal/service/network/driver"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
 
@@ -25,8 +27,69 @@ func (s *service) Remove(ctx context.Context, networkId string) error {
 	if value, ok := usedNetworkInfo[net.Name]; ok {
 		return errdefs.NewForbidden(fmt.Errorf("network %q is in use by container %q", networkId, value))
 	}
+
 	if net.File == "" {
 		return errdefs.NewForbidden(fmt.Errorf("%s is a pre-defined network and cannot be removed", networkId))
 	}
-	return s.netClient.RemoveNetwork(net)
+
+	// Ensure thread-safety for network operations using a per-network mutex.
+	// RemoveNetwork and CreateNetwork operations on the same network ID are mutually exclusive.
+	// Operations on different network IDs can proceed concurrently.
+	netMu := s.ensureLock(net.Name)
+
+	netMu.Lock()
+	defer netMu.Unlock()
+	defer s.releaseLock(net.Name)
+
+	// Perform additional workflow based on the assigned network labels
+	if err := s.handleNetworkLabels(net); err != nil {
+		return fmt.Errorf("failed to handle nerdctl label: %w", err)
+	}
+
+	err = s.netClient.RemoveNetwork(net)
+	if err != nil {
+		return fmt.Errorf("failed to remove network: %w", err)
+	}
+
+	return nil
+}
+
+func (s *service) handleNetworkLabels(net *netutil.NetworkConfig) error {
+	if net.NerdctlLabels == nil {
+		return nil
+	}
+
+	for key, value := range *net.NerdctlLabels {
+		switch key {
+		case driver.FinchICCLabelIPv4:
+			if err := s.handleICCLabel(net, value, false); err != nil {
+				return fmt.Errorf("error handling IPv4 ICC label: %w", err)
+			}
+		case driver.FinchICCLabelIPv6:
+			if err := s.handleICCLabel(net, value, true); err != nil {
+				return fmt.Errorf("error handling IPv6 ICC label: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+func (s *service) handleICCLabel(net *netutil.NetworkConfig, value string, isIPv6 bool) error {
+	if value != "false" {
+		// for some reason the label value got modified.
+		// we will still try to remove the iptable rules.
+		// iptable.DeleteIfExists is used to ignore non-existent errors
+		s.logger.Warnf("unexpected value for ICC label: %s", value)
+	}
+
+	bridgeDriver, err := driver.NewBridgeDriver(s.netClient, s.logger, isIPv6)
+	if err != nil {
+		return fmt.Errorf("unable to create bridge driver: %w", err)
+	}
+
+	if err := bridgeDriver.HandleRemove(net); err != nil {
+		return fmt.Errorf("error handling ICC label: %w", err)
+	}
+
+	return nil
 }

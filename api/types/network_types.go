@@ -156,8 +156,6 @@ type NetworkCreateRequest struct {
 	IPAM IPAM `json:"IPAM"`
 
 	// EnableIPv6 specifies to enable IPv6 on the network.
-	//
-	// IPv6 networks are not currently supported.
 	EnableIPv6 bool `json:"EnableIPv6"`
 
 	// Options specifies network specific options to be used by the drivers.
