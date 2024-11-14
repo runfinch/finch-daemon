@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/containerd/nerdctl/v2/pkg/config"
-	dockertypes "github.com/docker/docker/api/types"
+	dockertypes "github.com/docker/docker/api/types/container"
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	. "github.com/onsi/ginkgo/v2"

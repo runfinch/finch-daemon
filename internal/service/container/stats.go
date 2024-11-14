@@ -14,7 +14,7 @@ import (
 	cerrdefs "github.com/containerd/errdefs"
 	"github.com/containerd/nerdctl/v2/pkg/labels"
 	"github.com/containerd/typeurl/v2"
-	dockertypes "github.com/docker/docker/api/types"
+	dockertypes "github.com/docker/docker/api/types/container"
 
 	"github.com/runfinch/finch-daemon/api/types"
 )
