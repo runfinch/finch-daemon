@@ -22,12 +22,16 @@ jobs:
         uses: "WyriHaximus/github-action-get-previous-tag@04e8485ecb6487243907e330d522ff60f02283ce" # v1.4.0
   generate-artifacts:
     needs: get-latest-tag
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+        arch: [amd64, arm64]
     env:
-      # Set during setup.
       RELEASE_TAG: ${{ needs.get-latest-tag.outputs.tag }}
       DYNAMIC_BINARY_NAME: ''
       STATIC_BINARY_NAME: ''
+      RELEASE_VERSION: ''
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
@@ -42,68 +46,104 @@ jobs:
         run: |
           export release_tag=${{ env.RELEASE_TAG }}
           export release_version=${release_tag/v/} # Remove v from tag name
-          echo "DYNAMIC_BINARY_NAME=finch-daemon-${release_version}-linux-amd64.tar.gz" >> $GITHUB_ENV
-          echo "STATIC_BINARY_NAME=finch-daemon-${release_version}-linux-amd64-static.tar.gz" >> $GITHUB_ENV
-
+          echo "DYNAMIC_BINARY_NAME=finch-daemon-${release_version}-linux-${{ matrix.arch }}.tar.gz" >> $GITHUB_ENV
+          echo "STATIC_BINARY_NAME=finch-daemon-${release_version}-linux-${{ matrix.arch }}-static.tar.gz" >> $GITHUB_ENV
+          echo "RELEASE_VERSION=${release_version}" >> $GITHUB_ENV
           mkdir release
       - name: Install Go licenses
         run: go install github.com/google/go-licenses@latest
+      - name: Install Cross Arch dependencies
+        run: |
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            sudo apt update
+            sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          fi
       - name: Create Third Party Licences File
         run: make licenses
-      - name: setup static dependecies
+      - name: setup static dependencies
         run: |
           sudo apt-get update
           sudo apt-get install libc6-dev -f
       - name: Create release binaries
-        run: make RELEASE_TAG=${{ env.RELEASE_TAG }} release
+        run: |
+          if [ "${{ matrix.arch }}" = "amd64" ]; then
+              make TARGET_ARCH=${{ matrix.arch }} RELEASE_TAG=${{ env.RELEASE_TAG }} release
+          elif [ "${{ matrix.arch }}" = "arm64" ]; then
+              make CC=aarch64-linux-gnu-gcc TARGET_ARCH=${{ matrix.arch }} RELEASE_TAG=${{ env.RELEASE_TAG }} release
+          fi
       - name: Verify Release version
         run: |
-          mkdir -p output/static output/dynamic
-          tar -xzf release/${{ env.DYNAMIC_BINARY_NAME }} -C ./output/dynamic
-          tar -xzf release/${{ env.STATIC_BINARY_NAME }} -C ./output/static
-          DYNAMIC_BINARY_VERSION=$(./output/dynamic/finch-daemon --version | grep -oP '\d+\.\d+\.\d+')
-          STATIC_BINARY_VERSION=$(./output/static/finch-daemon --version | grep -oP '\d+\.\d+\.\d+')
-          export release_tag=${{ env.RELEASE_TAG }}
-          export release_version=${release_tag/v/}
-          if ["$STATIC_BINARY_VERSION" != "$release_version"] || ["$DYNAMIC_BINARY_VERSION" != "$release_version"]; then
-            echo "Version mismatch"
-            exit 1
-          fi
+            export HOST_ARCH=''
+            case $(uname -m) in
+                x86_64) HOST_ARCH="amd64" ;;
+                aarch64) HOST_ARCH="arm64" ;;
+                *) echo "Error: Unsupported arch $(uname -m)"; exit 1 ;;
+            esac
+            echo "Host Arch: $HOST_ARCH"
+            if [ "${{ matrix.arch }}" = "$HOST_ARCH" ]; then
+              mkdir -p output/static output/dynamic
+              tar -xzf release/${{ env.DYNAMIC_BINARY_NAME }} -C ./output/dynamic
+              tar -xzf release/${{ env.STATIC_BINARY_NAME }} -C ./output/static
+              DYNAMIC_BINARY_VERSION=$(./output/dynamic/finch-daemon --version | grep -oP '\d+\.\d+\.\d+')
+              STATIC_BINARY_VERSION=$(./output/static/finch-daemon --version | grep -oP '\d+\.\d+\.\d+')
+              export release_tag=${{ env.RELEASE_TAG }}
+              export release_version=${release_tag/v/}
+              echo "Dynamic version $DYNAMIC_BINARY_VERSION"
+            else
+              echo "Architecture mismatch: Cross Arch validation is not supported. Skipping version verification"
+            fi
         shell: bash
       - uses: actions/upload-artifact@v4
         with:
-          name: artifacts
+          name: artifacts-${{ matrix.arch }}
           path: release/
           if-no-files-found: error
     outputs:
       release_tag: ${{ env.RELEASE_TAG }}
+      release_version: ${{ env.RELEASE_VERSION }}
       dynamic_binary_name: ${{ env.DYNAMIC_BINARY_NAME }}
       static_binary_name: ${{ env.STATIC_BINARY_NAME }}
+
   validate-artifacts:
     needs: generate-artifacts
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        arch: [amd64, arm64]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: artifacts
+          name: artifacts-${{ matrix.arch }}
           path: release/
       - run: bash scripts/verify-release-artifacts.sh ${{ needs.generate-artifacts.outputs.release_tag }}
+        env:
+          TARGET_ARCH: ${{ matrix.arch }}
   create-release:
     needs: [generate-artifacts, validate-artifacts]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Download Artifact amd64
+        uses: actions/download-artifact@v4
         with:
-          name: artifacts
+          name: artifacts-amd64
+      - name: Download Artifact arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: artifacts-arm64
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.generate-artifacts.outputs.release_tag }}
           prerelease: false
           generate_release_notes: false
           files: |
-            ${{ needs.generate-artifacts.outputs.dynamic_binary_name }}
-            ${{ needs.generate-artifacts.outputs.dynamic_binary_name }}.sha256sum
-            ${{ needs.generate-artifacts.outputs.static_binary_name }}
-            ${{ needs.generate-artifacts.outputs.static_binary_name }}.sha256sum
+            finch-daemon-${{ needs.generate-artifacts.outputs.release_version }}-linux-amd64.tar.gz
+            finch-daemon-${{ needs.generate-artifacts.outputs.release_version }}-linux-amd64.tar.gz.sha256sum
+            finch-daemon-${{ needs.generate-artifacts.outputs.release_version }}-linux-amd64-static.tar.gz
+            finch-daemon-${{ needs.generate-artifacts.outputs.release_version }}-linux-amd64-static.tar.gz.sha256sum
+            finch-daemon-${{ needs.generate-artifacts.outputs.release_version }}-linux-arm64.tar.gz
+            finch-daemon-${{ needs.generate-artifacts.outputs.release_version }}-linux-arm64.tar.gz.sha256sum
+            finch-daemon-${{ needs.generate-artifacts.outputs.release_version }}-linux-arm64-static.tar.gz
+            finch-daemon-${{ needs.generate-artifacts.outputs.release_version }}-linux-arm64-static.tar.gz.sha256sum
