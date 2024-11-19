@@ -92,7 +92,7 @@ func (bd *bridgeDriver) HandlePostCreate(net *netutil.NetworkConfig) (string, er
 		// Since nerdctl currently does not support custom bridge names,
 		// we explicitly override bridge name in the conflist file for the network that was just created
 		if err = bd.setBridgeName(net, bridgeName); err != nil {
-			warning = fmt.Sprintf("Failed to set network bridge name %s: %s", bridgeName, err)
+			return "", fmt.Errorf("failed to set network bridge name %s: %s", bridgeName, err)
 		}
 	}
 
