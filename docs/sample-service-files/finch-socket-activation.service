@@ -1,0 +1,16 @@
+[Unit]
+Description=finch daemon
+Documentation=https://runfinch.com
+After=network.target local-fs.target containerd.service finch.socket
+Wants=network.target containerd.service
+Requires=finch.socket
+
+[Service]
+ExecStart=/usr/local/bin/finch-daemon --debug --socket-addr fd://
+Type=notify
+Delegate=yes
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
