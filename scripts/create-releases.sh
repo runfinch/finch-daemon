@@ -29,22 +29,15 @@ RELEASE_DIR="${FINCH_DAEMON_PROJECT_ROOT}/release"
 LICENSE_FILE=${FINCH_DAEMON_PROJECT_ROOT}/THIRD_PARTY_LICENSES
 TAG_REGEX="v[0-9]+.[0-9]+.[0-9]+"
 
-ARCH="${TARGET_ARCH:-}"
+ARCH=""
+case $(uname -m) in
+    x86_64) ARCH="amd64" ;;
+    *) echo "Error: Unsupported arch"; exit 1 ;;
+esac
 
-if [ -z "$ARCH" ]; then
-    case $(uname -m) in
-        x86_64) ARCH="amd64" ;;
-        aarch64) ARCH="arm64" ;;
-        *) echo "Error: Unsupported arch $(uname -m)"; exit 1 ;;
-    esac
-fi
-
-echo "Using ARCH: $ARCH"
-
-if [ "$#" -lt 1 ]; then
-    echo "Expected 1 parameter (release_tag), got $#."
-    echo "Usage: $0 [architecture] [release_tag]"
-    echo "Supported architectures: amd64, arm64"
+if [ "$#" -ne 1 ]; then
+    echo "Expected 1 parameter, got $#."
+    echo "Usage: $0 [release_tag]"
     exit 1
 fi
 
@@ -53,34 +46,30 @@ if ! [[ "$1" =~ $TAG_REGEX ]]; then
     exit 1
 fi
 
-release_version=${1/v/} # Remove v from tag name
-shift # Remove the release version argument
-
 if [ -d "$RELEASE_DIR" ]; then
     rm -rf "${RELEASE_DIR:?}"/*
 else
     mkdir "$RELEASE_DIR"
 fi
 
+release_version=${1/v/} # Remove v from tag name
 dynamic_binary_name=finch-daemon-${release_version}-linux-${ARCH}.tar.gz
 static_binary_name=finch-daemon-${release_version}-linux-${ARCH}-static.tar.gz
 
-# Build for the selected architecture
-GOARCH=$ARCH  make build
+make build
 cp "$LICENSE_FILE" "${OUT_DIR}"
 pushd "$OUT_DIR"
 tar -czvf "$RELEASE_DIR"/"$dynamic_binary_name" -- *
 popd
 rm -rf "{$OUT_DIR:?}"/*
 
-STATIC=1 GOARCH=$ARCH make build
+STATIC=1 make build
 cp "$LICENSE_FILE" "${OUT_DIR}"
 pushd "$OUT_DIR"
 tar -czvf "$RELEASE_DIR"/"$static_binary_name" -- *
 popd
 rm -rf "{$OUT_DIR:?}"/*
 
-# Create checksums
 pushd "$RELEASE_DIR"
 sha256sum "$dynamic_binary_name" > "$RELEASE_DIR"/"$dynamic_binary_name".sha256sum
 sha256sum "$static_binary_name" > "$RELEASE_DIR"/"$static_binary_name".sha256sum

@@ -22,14 +22,7 @@ cur_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 dinch_daemon_project_root="$(cd -- "$cur_dir"/.. && pwd)"
 release_dir="${dinch_daemon_project_root}/release"
 
-arch="${TARGET_ARCH:-}"
-if [ -z "$arch" ]; then
-    case $(uname -m) in
-        x86_64) arch="amd64" ;;
-        aarch64) arch="arm64" ;;
-        *) echo "Error: Unsupported arch $(uname -m)"; exit 1 ;;
-    esac
-fi
+arch="amd64"
 
 function usage {
     echo "Usage: $0 <release_tag>"
