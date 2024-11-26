@@ -27,6 +27,7 @@ import (
 	"github.com/gofrs/flock"
 	"github.com/moby/moby/pkg/pidfile"
 	"github.com/runfinch/finch-daemon/api/router"
+	"github.com/runfinch/finch-daemon/internal/fs/passwd"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 	"github.com/runfinch/finch-daemon/version"
 	"github.com/sirupsen/logrus"
@@ -149,6 +150,12 @@ func run(options *DaemonOptions) error {
 	serverWg := &sync.WaitGroup{}
 	serverWg.Add(1)
 
+	if options.socketOwner >= 0 {
+		if err := defineDockerConfig(options.socketOwner); err != nil {
+			return fmt.Errorf("failed to get finch config: %w", err)
+		}
+	}
+
 	listener, err := getListener(options)
 	if err != nil {
 		return fmt.Errorf("failed to create a listener: %w", err)
@@ -170,7 +177,6 @@ func run(options *DaemonOptions) error {
 			}
 		}()
 	}
-
 	server := &http.Server{
 		Handler:           r,
 		ReadHeaderTimeout: 5 * time.Minute,
@@ -242,4 +248,20 @@ func sdNotify(state string, logger *flog.Logrus) {
 	// (true, nil) - notification supported, data has been sent
 	notified, err := daemon.SdNotify(false, state)
 	logger.Debugf("systemd-notify result: (signaled %t), (err: %v)", notified, err)
+}
+
+// defineDockerConfig defines the DOCKER_CONFIG environment variable for the process
+// to be $HOME/.finch. When building an image via finch-daemon, buildctl uses this variable
+// to load auth configs.
+//
+// This is a hack and should be fixed by passing the actual credentials that come in
+// via the build API to buildctl instead.
+func defineDockerConfig(uid int) error {
+	return passwd.Walk(func(e passwd.Entry) bool {
+		if e.UID == uid {
+			os.Setenv("DOCKER_CONFIG", fmt.Sprintf("%s/.finch", e.Home))
+			return false
+		}
+		return true
+	})
 }
