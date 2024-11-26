@@ -24,6 +24,7 @@ import (
 
 	"github.com/coreos/go-systemd/v22/activation"
 	"github.com/coreos/go-systemd/v22/daemon"
+	"github.com/gofrs/flock"
 	"github.com/moby/moby/pkg/pidfile"
 	"github.com/runfinch/finch-daemon/api/router"
 	"github.com/runfinch/finch-daemon/internal/fs/passwd"
@@ -105,32 +106,39 @@ func getListener(options *DaemonOptions) (net.Listener, error) {
 	return listener, nil
 }
 
-func handlePidFileOptions(options *DaemonOptions) error {
-	if options.pidFile != "" {
-		if err := os.MkdirAll(filepath.Dir(options.pidFile), 0o640); err != nil {
-			return fmt.Errorf("failed to create pidfile directory %s", err)
-		}
-		if err := pidfile.Write(options.pidFile, os.Getpid()); err != nil {
-			return fmt.Errorf("failed to start daemon, ensure finch daemon is not running or delete %s %w", options.pidFile, err)
-		}
-	}
-	return nil
-}
-
 func run(options *DaemonOptions) error {
 	// This sets the log level of the dependencies that use logrus (e.g., containerd library).
 	if options.debug {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
 
-	defer func() {
-		if err := os.Remove(options.pidFile); err != nil {
-			logrus.Errorf("failed to remove pidfile %s", options.pidFile)
+	if options.pidFile != "" {
+		if err := os.MkdirAll(filepath.Dir(options.pidFile), 0o600); err != nil {
+			return fmt.Errorf("failed to create pidfile directory %s", err)
 		}
-	}()
 
-	if err := handlePidFileOptions(options); err != nil {
-		return err
+		pidFileLock := flock.New(options.pidFile)
+
+		defer func() {
+			pidFileLock.Unlock()
+		}()
+
+		if isLocked, err := pidFileLock.TryLock(); err != nil || !isLocked {
+			return fmt.Errorf("failed to acquire lock on PID file (%s); ensure only one instance is using the PID file path", options.pidFile)
+		}
+
+		if err := pidfile.Write(options.pidFile, os.Getpid()); err != nil {
+			return fmt.Errorf("failed to start daemon, ensure finch daemon is not running or delete %s %w", options.pidFile, err)
+		}
+
+		pidFileLock.Unlock()
+
+		// Defer is at the end of trying to write to PID file so that it doesn't remove the pidfile created by another process when daemon fails to start
+		defer func() {
+			if err := os.Remove(options.pidFile); err != nil {
+				logrus.Errorf("failed to remove pidfile %s", options.pidFile)
+			}
+		}()
 	}
 
 	logger := flog.NewLogrus()

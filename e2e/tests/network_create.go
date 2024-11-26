@@ -64,6 +64,17 @@ func NetworkCreate(opt *option.Option) {
 			}
 		}
 
+		cleanupNetworkWithHTTP := func(network string) func() {
+			return func() {
+				relativeUrl := fmt.Sprintf("/networks/%s", network)
+				apiUrl := client.ConvertToFinchUrl(version, relativeUrl)
+				req, err := http.NewRequest(http.MethodDelete, apiUrl, nil)
+				Expect(err).ShouldNot(HaveOccurred())
+				_, err = uclient.Do(req)
+				Expect(err).Should(BeNil())
+			}
+		}
+
 		When("a create network request is received with required configuration", func() {
 			It("should return 201 Created and the network ID", func() {
 				request := types.NewCreateNetworkRequest(testNetwork)
@@ -172,6 +183,54 @@ func NetworkCreate(opt *option.Option) {
 				Expect(httpResponse).Should(HaveHTTPStatus(http.StatusNotFound))
 			})
 		})
+
+		When("a network create request is made with network option com.docker.network.bridge.enable_icc set to false", func() {
+			It("should return 201 Created and the network ID", func() {
+				testBridge := "br-test"
+				request := types.NewCreateNetworkRequest(testNetwork, withEnableICCdNetworkOptions("false", testBridge)...)
+
+				httpResponse := createNetwork(*request)
+				Expect(httpResponse).Should(HaveHTTPStatus(http.StatusCreated))
+
+				response := unmarshallHTTPResponse(httpResponse)
+				Expect(response.ID).ShouldNot(BeEmpty())
+				Expect(response.Warning).Should(BeEmpty())
+
+				DeferCleanup(cleanupNetworkWithHTTP(testNetwork))
+
+				stdout := command.Stdout(opt, "network", "inspect", testNetwork)
+				Expect(stdout).To(ContainSubstring(`"finch.network.bridge.enable_icc.ipv4": "false"`))
+
+				// check iptables rules exists
+				iptOpt, _ := option.New([]string{"iptables"})
+				command.Run(iptOpt, "-C", "FINCH-ISOLATE-CHAIN",
+					"-i", testBridge, "-o", testBridge, "-j", "DROP")
+			})
+		})
+
+		When("a network create request is made with network option com.docker.network.bridge.enable_icc set to true", func() {
+			It("should create the network without the enable_icc label", func() {
+				testBridge := "br-test"
+				request := types.NewCreateNetworkRequest(testNetwork, withEnableICCdNetworkOptions("true", testBridge)...)
+
+				httpResponse := createNetwork(*request)
+				Expect(httpResponse).Should(HaveHTTPStatus(http.StatusCreated))
+
+				DeferCleanup(cleanupNetworkWithHTTP(testNetwork))
+
+				response := unmarshallHTTPResponse(httpResponse)
+				Expect(response.ID).ShouldNot(BeEmpty())
+				Expect(response.Warning).Should(BeEmpty())
+
+				stdout := command.Stdout(opt, "network", "inspect", testNetwork)
+				Expect(stdout).ShouldNot(ContainSubstring(`"finch.network.bridge.enable_icc.ipv4"`))
+
+				// check iptables rules does not exist
+				iptOpt, _ := option.New([]string{"iptables"})
+				command.RunWithoutSuccessfulExit(iptOpt, "-C", "FINCH-ISOLATE-CHAIN",
+					"-i", testBridge, "-o", testBridge, "-j", "DROP")
+			})
+		})
 	})
 }
 
@@ -242,6 +301,23 @@ func withUnsupportedNetworkOptions() []types.NetworkCreateOption {
 		types.WithLabels(map[string]string{
 			"com.example.some-label":       "some-value",
 			"com.example.some-other-label": "some-other-value",
+		}),
+	}
+}
+
+func withEnableICCdNetworkOptions(enableICC string, bridgeName string) []types.NetworkCreateOption {
+	return []types.NetworkCreateOption{
+		types.WithIPAM(types.IPAM{
+			Driver: "default",
+			Config: []map[string]string{
+				{
+					"Subnet": "240.11.0.0/24",
+				},
+			},
+		}),
+		types.WithOptions(map[string]string{
+			"com.docker.network.bridge.enable_icc": enableICC,
+			"com.docker.network.bridge.name":       bridgeName,
 		}),
 	}
 }
