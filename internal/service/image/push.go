@@ -15,12 +15,11 @@ import (
 
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
-	"github.com/runfinch/finch-daemon/pkg/utility/imageutility"
 )
 
 func (s *service) Push(ctx context.Context, name, tag string, ac *dockertypes.AuthConfig, outStream io.Writer) (*types.PushResult, error) {
 	// Canonicalize and parse raw image reference as "image:tag" or "image@digest"
-	rawRef, err := imageutility.Canonicalize(name, tag)
+	rawRef, err := canonicalize(name, tag)
 	if err != nil {
 		return nil, errdefs.NewInvalidFormat(fmt.Errorf("failed to canonicalize the ref: %w", err))
 	}
@@ -48,7 +47,7 @@ func (s *service) Push(ctx context.Context, name, tag string, ac *dockertypes.Au
 	// Get auth creds and the corresponding docker remotes resolver
 	var creds dockerconfigresolver.AuthCreds
 	if ac != nil {
-		creds, err = getAuthCredsFunc(refDomain, s.client, *ac)
+		creds, err = getAuthCredsFunc(s, refDomain, *ac)
 		if err != nil {
 			return nil, err
 		}
