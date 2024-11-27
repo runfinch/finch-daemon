@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.11.0](https://github.com/runfinch/finch-daemon/compare/v0.10.0...v0.11.0) (2024-11-27)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/containernetworking/cni from 1.2.2 to 1.2.3 ([#87](https://github.com/runfinch/finch-daemon/issues/87)) ([46df1b6](https://github.com/runfinch/finch-daemon/commit/46df1b631d6d9cf77d1a34b1162c9ac0226e5ff6))
+* **deps:** Bump github.com/coreos/go-iptables from 0.7.0 to 0.8.0 ([#106](https://github.com/runfinch/finch-daemon/issues/106)) ([9905569](https://github.com/runfinch/finch-daemon/commit/990556941eee136457e190de217e9e64249b54d1))
+* **deps:** Bump github.com/stretchr/testify from 1.9.0 to 1.10.0 ([#107](https://github.com/runfinch/finch-daemon/issues/107)) ([e5b9878](https://github.com/runfinch/finch-daemon/commit/e5b987880954c14b90a2f984a586b2b02eeec44c))
+* **deps:** Bump golang.org/x/net from 0.29.0 to 0.31.0 ([#93](https://github.com/runfinch/finch-daemon/issues/93)) ([dcffe39](https://github.com/runfinch/finch-daemon/commit/dcffe399140761198e2fec7de08005a7c56c5c3f))
+* **deps:** Bump github.com/containerd/containerd from 1.7.22 to 1.7.24 ([#102](https://github.com/runfinch/finch-daemon/issues/102)) ([0d6cd12](https://github.com/runfinch/finch-daemon/commit/0d6cd122af858ed4431ebf37a673ad933054c833))
+* **deps:** Bump github.com/containerd/errdefs from 0.1.0 to 1.0.0 ([#102](https://github.com/runfinch/finch-daemon/issues/102)) ([0d6cd12](https://github.com/runfinch/finch-daemon/commit/0d6cd122af858ed4431ebf37a673ad933054c833))
+
+
+### Features
+
+* Implementation of enable_icc option ([#69](https://github.com/runfinch/finch-daemon/issues/69)) ([5fd2e3e](https://github.com/runfinch/finch-daemon/commit/5fd2e3ee7cf1f17f59c58028fd931bc9a9f51b38))
+
+
+### Bug Fixes
+
+* Make DOCKER_CONFIG available to buildctl ([#94](https://github.com/runfinch/finch-daemon/issues/94)) ([f5b426d](https://github.com/runfinch/finch-daemon/commit/f5b426d058c8700e4a4111143db131b4582287d8))
+* Pidfile handling and socket docs ([#101](https://github.com/runfinch/finch-daemon/issues/101)) ([5c2e99f](https://github.com/runfinch/finch-daemon/commit/5c2e99f22388d184b2f7916432cac1173622143c))
+* return an error if custom bridge name is not set successfully ([#100](https://github.com/runfinch/finch-daemon/issues/100)) ([0469999](https://github.com/runfinch/finch-daemon/commit/0469999c87b8659b149617cc99ab919e1a09b752))
+
+
 ## [0.10.0](https://github.com/runfinch/finch-daemon/compare/v0.9.0...v0.10.0) (2024-10-31)
 
 
