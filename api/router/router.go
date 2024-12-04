@@ -17,7 +17,6 @@ import (
 
 	"github.com/runfinch/finch-daemon/api/handlers/builder"
 	"github.com/runfinch/finch-daemon/api/handlers/container"
-	"github.com/runfinch/finch-daemon/api/handlers/distribution"
 	"github.com/runfinch/finch-daemon/api/handlers/exec"
 	"github.com/runfinch/finch-daemon/api/handlers/image"
 	"github.com/runfinch/finch-daemon/api/handlers/network"
@@ -32,15 +31,14 @@ import (
 
 // Options defines the router options to be passed into the handlers.
 type Options struct {
-	Config              *config.Config
-	ContainerService    container.Service
-	ImageService        image.Service
-	NetworkService      network.Service
-	SystemService       system.Service
-	BuilderService      builder.Service
-	VolumeService       volume.Service
-	ExecService         exec.Service
-	DistributionService distribution.Service
+	Config           *config.Config
+	ContainerService container.Service
+	ImageService     image.Service
+	NetworkService   network.Service
+	SystemService    system.Service
+	BuilderService   builder.Service
+	VolumeService    volume.Service
+	ExecService      exec.Service
 
 	// NerdctlWrapper wraps the interactions with nerdctl to build
 	NerdctlWrapper *backend.NerdctlWrapper
@@ -61,7 +59,6 @@ func New(opts *Options) http.Handler {
 	builder.RegisterHandlers(vr, opts.BuilderService, opts.Config, logger, opts.NerdctlWrapper)
 	volume.RegisterHandlers(vr, opts.VolumeService, opts.Config, logger)
 	exec.RegisterHandlers(vr, opts.ExecService, opts.Config, logger)
-	distribution.RegisterHandlers(vr, opts.DistributionService, opts.Config, logger)
 	return ghandlers.LoggingHandler(os.Stderr, r)
 }
 
