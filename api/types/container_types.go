@@ -42,11 +42,11 @@ type ContainerConfig struct {
 	Cmd []string `json:",omitempty"` // Command to run when starting the container
 	// TODO Healthcheck     *HealthConfig       `json:",omitempty"` // Healthcheck describes how to check the container is healthy
 	// TODO: ArgsEscaped     bool                `json:",omitempty"` // True if command is already escaped (meaning treat as a command line) (Windows specific).
-	Image      string              // Name of the image as it was passed by the operator (e.g. could be symbolic)
-	Volumes    map[string]struct{} `json:",omitempty"` // List of volumes (mounts) used for the container
-	WorkingDir string              `json:",omitempty"` // Current directory (PWD) in the command will be launched
-	Entrypoint []string            `json:",omitempty"` // Entrypoint to run when starting the container
-	// TODO: NetworkDisabled bool                `json:",omitempty"` // Is network disabled
+	Image           string              // Name of the image as it was passed by the operator (e.g. could be symbolic)
+	Volumes         map[string]struct{} `json:",omitempty"` // List of volumes (mounts) used for the container
+	WorkingDir      string              `json:",omitempty"` // Current directory (PWD) in the command will be launched
+	Entrypoint      []string            `json:",omitempty"` // Entrypoint to run when starting the container
+	NetworkDisabled bool                `json:",omitempty"` // Is network disabled
 	// TODO: MacAddress      string              `json:",omitempty"` // Mac Address of the container
 	// TODO: OnBuild         []string            // ONBUILD metadata that were defined on the image Dockerfile
 	Labels      map[string]string `json:",omitempty"` // List of labels set to this container

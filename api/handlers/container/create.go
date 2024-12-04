@@ -260,13 +260,16 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	if networkMode == "" || networkMode == "default" {
 		networkMode = "bridge"
 	}
+	if req.NetworkDisabled {
+		networkMode = "none"
+	}
 	dnsOpt := []string{}
 	if req.HostConfig.DNSOptions != nil {
 		dnsOpt = req.HostConfig.DNSOptions
 	}
 	netOpt := ncTypes.NetworkOptions{
 		Hostname:             req.Hostname,
-		NetworkSlice:         []string{networkMode},    // TODO: Set to none if "NetworkDisabled" is true in request
+		NetworkSlice:         []string{networkMode},
 		DNSServers:           req.HostConfig.DNS,       // Custom DNS lookup servers.
 		DNSResolvConfOptions: dnsOpt,                   // DNS options.
 		DNSSearchDomains:     req.HostConfig.DNSSearch, // Custom DNS search domains.
