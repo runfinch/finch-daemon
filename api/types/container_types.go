@@ -81,6 +81,7 @@ type ContainerHostConfig struct {
 	// TODO: IpcMode         IpcMode           // IPC namespace to use for the container
 	// TODO: Cgroup          CgroupSpec        // Cgroup to use for the container
 	// TODO: Links           []string          // List of links (in the name:alias form)
+	OomKillDisable bool //specifies whether to disable OOM Killer
 	// TODO: OomScoreAdj     int               // Container preference for OOM-killing
 	// TODO: PidMode         PidMode           // PID namespace to use for the container
 	// TODO: Privileged      bool              // Is the container in privileged mode
