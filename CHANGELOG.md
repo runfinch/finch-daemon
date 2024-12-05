@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.1](https://github.com/runfinch/finch-daemon/compare/v0.11.0...v0.11.1) (2024-12-05)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/vishvananda/netns from 0.0.4 to 0.0.5 ([#112](https://github.com/runfinch/finch-daemon/issues/112)) ([40d3991](https://github.com/runfinch/finch-daemon/commit/40d3991864516be6816abbb788118aaaf6e29802))
+
 ## [0.11.0](https://github.com/runfinch/finch-daemon/compare/v0.10.0...v0.11.0) (2024-11-27)
 
 
