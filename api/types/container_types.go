@@ -47,7 +47,7 @@ type ContainerConfig struct {
 	WorkingDir      string              `json:",omitempty"` // Current directory (PWD) in the command will be launched
 	Entrypoint      []string            `json:",omitempty"` // Entrypoint to run when starting the container
 	NetworkDisabled bool                `json:",omitempty"` // Is network disabled
-	// TODO: MacAddress      string              `json:",omitempty"` // Mac Address of the container
+	MacAddress      string              `json:",omitempty"` // Mac Address of the container
 	// TODO: OnBuild         []string            // ONBUILD metadata that were defined on the image Dockerfile
 	Labels      map[string]string `json:",omitempty"` // List of labels set to this container
 	StopSignal  string            `json:",omitempty"` // Signal to stop a container
