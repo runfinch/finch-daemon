@@ -277,6 +277,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		DNSSearchDomains:     req.HostConfig.DNSSearch, // Custom DNS search domains.
 		PortMappings:         portMappings,
 		AddHost:              req.HostConfig.ExtraHosts, // Extra hosts.
+		MACAddress:           req.MacAddress,
 	}
 
 	ctx := namespaces.WithNamespace(r.Context(), h.Config.Namespace)
