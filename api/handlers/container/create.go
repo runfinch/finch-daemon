@@ -204,6 +204,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		MemorySwap:         memorySwap,                       // Total memory usage (memory + swap); set `-1` to enable unlimited swap
 		Ulimit:             ulimits,                          // List of ulimits to be set in the container
 		CPUPeriod:          uint64(req.HostConfig.CPUPeriod),
+		BlkioWeight:        req.HostConfig.BlkioWeight, // block IO weight (relative)
 		// #endregion
 
 		// #region for user flags
