@@ -357,6 +357,43 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
+		It("should set specified NetworkDisabled setting", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"NetworkDisabled": true
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected network options
+			netOpt.NetworkSlice = []string{"none"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set the MACAddress to a user specified value", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"MacAddress": "12:34:56:78:9a:bc"
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected network options
+			netOpt.MACAddress = "12:34:56:78:9a:bc"
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
 		It("should set CPUPeriod create options for resources", func() {
 			body := []byte(`{
 				"Image": "test-image",
@@ -369,6 +406,26 @@ var _ = Describe("Container Create API ", func() {
 			// expected create options
 			createOpt.CPUPeriod = 100000
 
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set the OomKillDisable option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"OomKillDisable": true
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected network options
+			createOpt.OomKillDisable = true
 			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
 				cid, nil)
 
