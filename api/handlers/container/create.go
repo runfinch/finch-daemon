@@ -153,6 +153,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		PidsLimit:          -1,                               // nerdctl default.
 		Cgroupns:           defaults.CgroupnsMode(),          // nerdctl default.
 		BlkioWeight:        req.HostConfig.BlkioWeight,       // block IO weight (relative)
+		CPUPeriod:          uint64(req.HostConfig.CPUPeriod),
 		// #endregion
 
 		// #region for user flags
