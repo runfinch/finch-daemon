@@ -112,10 +112,11 @@ type ContainerHostConfig struct {
 	MemorySwappiness  int64 // MemorySwappiness64 specifies the tune container memory swappiness (0 to 100) (default -1)
 	// TODO: Resources
 
-	Ulimits []*Ulimit // List of ulimits to be set in the container
-	// TODO: BlkioWeight uint16          // Block IO weight (relative weight vs. other containers)
+	Ulimits     []*Ulimit // List of ulimits to be set in the container
+	BlkioWeight uint16    // Block IO weight (relative weight vs. other containers)
 	// TODO: Devices     []DeviceMapping // List of devices to map inside the container
 	PidsLimit int64 // Setting PIDs limit for a container; Set `0` or `-1` for unlimited, or `null` to not change.
+
 	// Mounts specs used by the container
 	// TODO: Mounts []mount.Mount `json:",omitempty"`
 
