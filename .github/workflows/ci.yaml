@@ -17,6 +17,7 @@ env:
 jobs:
   git-secrets:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Pull latest awslabs/git-secrets repo
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -34,10 +35,11 @@ jobs:
           git secrets --register-aws
           git secrets --scan-history
   lint:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         working_dir: ['.']
-    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - uses: golangci/golangci-lint-action@v6 # v6.1.0
@@ -53,6 +55,7 @@ jobs:
       - run: yamllint .
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # v5.1.0
         with:
@@ -77,6 +80,7 @@ jobs:
       matrix:
         containerd: ["1.7.22", "2.0.0"]
       fail-fast: false
+    timeout-minutes: 10
     env:
       CONTAINERD_VERSION: ${{ matrix.containerd }}
     steps:
