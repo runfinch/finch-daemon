@@ -152,6 +152,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		MemorySwappiness64: -1,                               // nerdctl default.
 		PidsLimit:          -1,                               // nerdctl default.
 		Cgroupns:           defaults.CgroupnsMode(),          // nerdctl default.
+		BlkioWeight:        req.HostConfig.BlkioWeight,       // block IO weight (relative)
 		// #endregion
 
 		// #region for user flags

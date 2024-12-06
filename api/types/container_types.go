@@ -104,6 +104,7 @@ type ContainerHostConfig struct {
 	Memory    int64 // Memory limit (in bytes)
 	// TODO: Resources
 
+	BlkioWeight uint16 // Block IO weight (relative weight vs. other containers)
 	// Mounts specs used by the container
 	// TODO: Mounts []mount.Mount `json:",omitempty"`
 
