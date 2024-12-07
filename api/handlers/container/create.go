@@ -119,6 +119,11 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		capAdd = req.HostConfig.CapAdd
 	}
 
+	CpuQuota := int64(-1)
+	if req.HostConfig.CPUQuota != 0 {
+		CpuQuota = int64(req.HostConfig.CPUQuota)
+	}
+
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
 		Stdout:   nil,
@@ -148,7 +153,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #region for resource flags
 		CPUShares:          uint64(req.HostConfig.CPUShares), // CPU shares (relative weight)
 		Memory:             memory,                           // memory limit (in bytes)
-		CPUQuota:           -1,                               // nerdctl default.
+		CPUQuota:           CpuQuota,                         // nerdctl default.
 		MemorySwappiness64: -1,                               // nerdctl default.
 		PidsLimit:          -1,                               // nerdctl default.
 		Cgroupns:           defaults.CgroupnsMode(),          // nerdctl default.
