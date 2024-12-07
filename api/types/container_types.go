@@ -103,6 +103,7 @@ type ContainerHostConfig struct {
 	CPUShares int64 `json:"CpuShares"` // CPU shares (relative weight vs. other containers)
 	Memory    int64 // Memory limit (in bytes)
 	CPUPeriod int64 `json:"CpuPeriod"` // CPU CFS (Completely Fair Scheduler) period
+	CPUQuota  int64 `json:"CpuQuota"`  // CPU CFS (Completely Fair Scheduler) quota
 	// TODO: Resources
 
 	BlkioWeight uint16 // Block IO weight (relative weight vs. other containers)
