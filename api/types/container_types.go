@@ -41,12 +41,12 @@ type ContainerConfig struct {
 	Cmd []string `json:",omitempty"` // Command to run when starting the container
 	// TODO Healthcheck     *HealthConfig       `json:",omitempty"` // Healthcheck describes how to check the container is healthy
 	// TODO: ArgsEscaped     bool                `json:",omitempty"` // True if command is already escaped (meaning treat as a command line) (Windows specific).
-	Image      string              // Name of the image as it was passed by the operator (e.g. could be symbolic)
-	Volumes    map[string]struct{} `json:",omitempty"` // List of volumes (mounts) used for the container
-	WorkingDir string              `json:",omitempty"` // Current directory (PWD) in the command will be launched
-	Entrypoint []string            `json:",omitempty"` // Entrypoint to run when starting the container
-	// TODO: NetworkDisabled bool                `json:",omitempty"` // Is network disabled
-	// TODO: MacAddress      string              `json:",omitempty"` // Mac Address of the container
+	Image           string              // Name of the image as it was passed by the operator (e.g. could be symbolic)
+	Volumes         map[string]struct{} `json:",omitempty"` // List of volumes (mounts) used for the container
+	WorkingDir      string              `json:",omitempty"` // Current directory (PWD) in the command will be launched
+	Entrypoint      []string            `json:",omitempty"` // Entrypoint to run when starting the container
+	NetworkDisabled bool                `json:",omitempty"` // Is network disabled
+	MacAddress      string              `json:",omitempty"` // Mac Address of the container
 	// TODO: OnBuild         []string            // ONBUILD metadata that were defined on the image Dockerfile
 	Labels      map[string]string `json:",omitempty"` // List of labels set to this container
 	StopSignal  string            `json:",omitempty"` // Signal to stop a container
@@ -81,6 +81,7 @@ type ContainerHostConfig struct {
 	// TODO: IpcMode         IpcMode           // IPC namespace to use for the container
 	// TODO: Cgroup          CgroupSpec        // Cgroup to use for the container
 	// TODO: Links           []string          // List of links (in the name:alias form)
+	OomKillDisable bool //specifies whether to disable OOM Killer
 	// TODO: OomScoreAdj     int               // Container preference for OOM-killing
 	// TODO: PidMode         PidMode           // PID namespace to use for the container
 	// TODO: Privileged      bool              // Is the container in privileged mode
@@ -99,10 +100,18 @@ type ContainerHostConfig struct {
 	// TODO: Isolation Isolation // Isolation technology of the container (e.g. default, hyperv)
 
 	// Contains container's resources (cgroups, ulimits)
-	CPUShares int64 `json:"CpuShares"` // CPU shares (relative weight vs. other containers)
-	Memory    int64 // Memory limit (in bytes)
+	CPUShares         int64  `json:"CpuShares"` // CPU shares (relative weight vs. other containers)
+	Memory            int64  // Memory limit (in bytes)
+	CPUPeriod         int64  `json:"CpuPeriod"`  // CPU CFS (Completely Fair Scheduler) period
+	CPUQuota          int64  `json:"CpuQuota"`   // CPU CFS (Completely Fair Scheduler) quota
+	CPUSetCPUs        string `json:"CpusetCpus"` // CPUSetCPUs specifies the CPUs in which to allow execution (0-3, 0,1)
+	CPUSetMems        string `json:"CpusetMems"` // CPUSetMems specifies the memory nodes (MEMs) in which to allow execution (0-3, 0,1). Only effective on NUMA systems.
+	MemoryReservation int64  // MemoryReservation specifies the memory soft limit (in bytes)
+	MemorySwap        int64  // Total memory usage (memory + swap); set `-1` to enable unlimited swap
+	MemorySwappiness  int64  // MemorySwappiness64 specifies the tune container memory swappiness (0 to 100) (default -1)
 	// TODO: Resources
 
+	BlkioWeight uint16 // Block IO weight (relative weight vs. other containers)
 	// Mounts specs used by the container
 	// TODO: Mounts []mount.Mount `json:",omitempty"`
 

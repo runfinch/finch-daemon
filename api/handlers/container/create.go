@@ -119,6 +119,26 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		capAdd = req.HostConfig.CapAdd
 	}
 
+	CpuQuota := int64(-1)
+	if req.HostConfig.CPUQuota != 0 {
+		CpuQuota = int64(req.HostConfig.CPUQuota)
+	}
+
+	memoryReservation := ""
+	if req.HostConfig.MemoryReservation != 0 {
+		memoryReservation = strconv.FormatInt(req.HostConfig.MemoryReservation, 10)
+	}
+
+	memorySwap := ""
+	if req.HostConfig.MemorySwap != 0 {
+		memorySwap = strconv.FormatInt(req.HostConfig.MemorySwap, 10)
+	}
+
+	memorySwappiness := int64(-1)
+	if req.HostConfig.MemorySwappiness != 0 && req.HostConfig.MemorySwappiness > -1 {
+		memorySwappiness = req.HostConfig.MemorySwappiness
+	}
+
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
 		Stdout:   nil,
@@ -126,14 +146,15 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		GOptions: globalOpt,
 
 		// #region for basic flags
-		Interactive: false,                     // TODO: update this after attach supports STDIN
-		TTY:         false,                     // TODO: update this after attach supports STDIN
-		Detach:      true,                      // TODO: current implementation of create does not support AttachStdin, AttachStdout, and AttachStderr flags
-		Restart:     restart,                   // Restart policy to apply when a container exits.
-		Rm:          req.HostConfig.AutoRemove, // Automatically remove container upon exit.
-		Pull:        "missing",                 // nerdctl default.
-		StopSignal:  stopSignal,
-		StopTimeout: stopTimeout,
+		Interactive:    false,                     // TODO: update this after attach supports STDIN
+		TTY:            false,                     // TODO: update this after attach supports STDIN
+		Detach:         true,                      // TODO: current implementation of create does not support AttachStdin, AttachStdout, and AttachStderr flags
+		Restart:        restart,                   // Restart policy to apply when a container exits.
+		Rm:             req.HostConfig.AutoRemove, // Automatically remove container upon exit.
+		Pull:           "missing",                 // nerdctl default.
+		StopSignal:     stopSignal,
+		StopTimeout:    stopTimeout,
+		OomKillDisable: req.HostConfig.OomKillDisable,
 		// #endregion
 
 		// #region for platform flags
@@ -147,10 +168,16 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #region for resource flags
 		CPUShares:          uint64(req.HostConfig.CPUShares), // CPU shares (relative weight)
 		Memory:             memory,                           // memory limit (in bytes)
-		CPUQuota:           -1,                               // nerdctl default.
-		MemorySwappiness64: -1,                               // nerdctl default.
+		CPUQuota:           CpuQuota,                         // nerdctl default.
+		MemorySwappiness64: memorySwappiness,                 // Tuning container memory swappiness behaviour
 		PidsLimit:          -1,                               // nerdctl default.
 		Cgroupns:           defaults.CgroupnsMode(),          // nerdctl default.
+		BlkioWeight:        req.HostConfig.BlkioWeight,       // block IO weight (relative)
+		CPUPeriod:          uint64(req.HostConfig.CPUPeriod), // CPU CFS (Completely Fair Scheduler) period
+		CPUSetCPUs:         req.HostConfig.CPUSetCPUs,        // CpusetCpus 0-2, 0,1
+		CPUSetMems:         req.HostConfig.CPUSetMems,        // CpusetMems 0-2, 0,1
+		MemoryReservation:  memoryReservation,                // Memory soft limit (in bytes)
+		MemorySwap:         memorySwap,                       // Total memory usage (memory + swap); set `-1` to enable unlimited swap
 		// #endregion
 
 		// #region for user flags
@@ -210,18 +237,22 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	if networkMode == "" || networkMode == "default" {
 		networkMode = "bridge"
 	}
+	if req.NetworkDisabled {
+		networkMode = "none"
+	}
 	dnsOpt := []string{}
 	if req.HostConfig.DNSOptions != nil {
 		dnsOpt = req.HostConfig.DNSOptions
 	}
 	netOpt := ncTypes.NetworkOptions{
 		Hostname:             req.Hostname,
-		NetworkSlice:         []string{networkMode},    // TODO: Set to none if "NetworkDisabled" is true in request
+		NetworkSlice:         []string{networkMode},
 		DNSServers:           req.HostConfig.DNS,       // Custom DNS lookup servers.
 		DNSResolvConfOptions: dnsOpt,                   // DNS options.
 		DNSSearchDomains:     req.HostConfig.DNSSearch, // Custom DNS search domains.
 		PortMappings:         portMappings,
 		AddHost:              req.HostConfig.ExtraHosts, // Extra hosts.
+		MACAddress:           req.MacAddress,
 	}
 
 	ctx := namespaces.WithNamespace(r.Context(), h.Config.Namespace)
