@@ -124,6 +124,21 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CpuQuota = int64(req.HostConfig.CPUQuota)
 	}
 
+	memoryReservation := ""
+	if req.HostConfig.MemoryReservation != 0 {
+		memoryReservation = strconv.FormatInt(req.HostConfig.MemoryReservation, 10)
+	}
+
+	memorySwap := ""
+	if req.HostConfig.MemorySwap != 0 {
+		memorySwap = strconv.FormatInt(req.HostConfig.MemorySwap, 10)
+	}
+
+	memorySwappiness := int64(-1)
+	if req.HostConfig.MemorySwappiness != 0 && req.HostConfig.MemorySwappiness > -1 {
+		memorySwappiness = req.HostConfig.MemorySwappiness
+	}
+
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
 		Stdout:   nil,
@@ -154,11 +169,15 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CPUShares:          uint64(req.HostConfig.CPUShares), // CPU shares (relative weight)
 		Memory:             memory,                           // memory limit (in bytes)
 		CPUQuota:           CpuQuota,                         // nerdctl default.
-		MemorySwappiness64: -1,                               // nerdctl default.
+		MemorySwappiness64: memorySwappiness,                 // Tuning container memory swappiness behaviour
 		PidsLimit:          -1,                               // nerdctl default.
 		Cgroupns:           defaults.CgroupnsMode(),          // nerdctl default.
 		BlkioWeight:        req.HostConfig.BlkioWeight,       // block IO weight (relative)
-		CPUPeriod:          uint64(req.HostConfig.CPUPeriod),
+		CPUPeriod:          uint64(req.HostConfig.CPUPeriod), // CPU CFS (Completely Fair Scheduler) period
+		CPUSetCPUs:         req.HostConfig.CPUSetCPUs,        // CpusetCpus 0-2, 0,1
+		CPUSetMems:         req.HostConfig.CPUSetMems,        // CpusetMems 0-2, 0,1
+		MemoryReservation:  memoryReservation,                // Memory soft limit (in bytes)
+		MemorySwap:         memorySwap,                       // Total memory usage (memory + swap); set `-1` to enable unlimited swap
 		// #endregion
 
 		// #region for user flags
