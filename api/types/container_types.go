@@ -65,8 +65,8 @@ type ContainerHostConfig struct {
 	PortBindings    nat.PortMap   // Port mapping between the exposed port (container) and the host
 	RestartPolicy   RestartPolicy // Restart policy to be used for the container
 	AutoRemove      bool          // Automatically remove container when it exits
+	VolumesFrom     []string      // List of volumes to take from other container
 	// TODO: VolumeDriver    string            // Name of the volume driver used to mount volumes
-	// TODO: VolumesFrom     []string      // List of volumes to take from other container
 	// TODO: ConsoleSize     [2]uint           // Initial console size (height,width)
 	// TODO: Annotations     map[string]string `json:",omitempty"` // Arbitrary non-identifying metadata attached to container and provided to the runtime
 
