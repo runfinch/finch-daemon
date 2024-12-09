@@ -172,6 +172,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		OomKillDisable: req.HostConfig.OomKillDisable,
 		CidFile:        req.HostConfig.ContainerIDFile, // CidFile write the container ID to the file
 		OomScoreAdj:    req.HostConfig.OomScoreAdj,
+		Pid:            req.HostConfig.PidMode, // Pid namespace to use
 		// #endregion
 
 		// #region for platform flags
@@ -207,6 +208,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		SecurityOpt: []string{}, // nerdctl default.
 		CapAdd:      capAdd,
 		CapDrop:     capDrop,
+		Privileged:  req.HostConfig.Privileged,
 		// #endregion
 
 		// #region for runtime flags
