@@ -57,13 +57,13 @@ type ContainerConfig struct {
 // HostConfig is from https://github.com/moby/moby/blob/v24.0.2/api/types/container/hostconfig.go#L376-L436
 type ContainerHostConfig struct {
 	// Applicable to all platforms
-	Binds []string // List of volume bindings for this container
-	// TODO: ContainerIDFile string            // File (path) where the containerId is written
-	LogConfig     LogConfig     // Configuration of the logs for this container
-	NetworkMode   string        // Network mode to use for the container
-	PortBindings  nat.PortMap   // Port mapping between the exposed port (container) and the host
-	RestartPolicy RestartPolicy // Restart policy to be used for the container
-	AutoRemove    bool          // Automatically remove container when it exits
+	Binds           []string      // List of volume bindings for this container
+	ContainerIDFile string        // File (path) where the containerId is written
+	LogConfig       LogConfig     // Configuration of the logs for this container
+	NetworkMode     string        // Network mode to use for the container
+	PortBindings    nat.PortMap   // Port mapping between the exposed port (container) and the host
+	RestartPolicy   RestartPolicy // Restart policy to be used for the container
+	AutoRemove      bool          // Automatically remove container when it exits
 	// TODO: VolumeDriver    string            // Name of the volume driver used to mount volumes
 	// TODO: VolumesFrom     []string          // List of volumes to take from other container
 	// TODO: ConsoleSize     [2]uint           // Initial console size (height,width)

@@ -155,6 +155,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		StopSignal:     stopSignal,
 		StopTimeout:    stopTimeout,
 		OomKillDisable: req.HostConfig.OomKillDisable,
+		CidFile:        req.HostConfig.ContainerIDFile, // CidFile write the container ID to the file
 		// #endregion
 
 		// #region for platform flags
