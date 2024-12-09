@@ -78,8 +78,8 @@ type ContainerHostConfig struct {
 	DNSOptions []string `json:"DnsOptions"` // List of DNSOption to look for
 	DNSSearch  []string `json:"DnsSearch"`  // List of DNSSearch to look for
 	ExtraHosts []string // List of extra hosts
-	// TODO: GroupAdd []string // List of additional groups that the container process will run as
-	// TODO: IpcMode IpcMode // IPC namespace to use for the container
+	GroupAdd   []string // List of additional groups that the container process will run as
+	// TODO: IpcMode         IpcMode           // IPC namespace to use for the container
 	// TODO: Cgroup          CgroupSpec        // Cgroup to use for the container
 	// TODO: Links           []string          // List of links (in the name:alias form)
 	OomKillDisable bool // specifies whether to disable OOM Killer
