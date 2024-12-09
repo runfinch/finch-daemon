@@ -193,6 +193,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CidFile:        req.HostConfig.ContainerIDFile, // CidFile write the container ID to the file
 		OomKillDisable: req.HostConfig.OomKillDisable,
 		OomScoreAdj:    req.HostConfig.OomScoreAdj,
+		Pid:            req.HostConfig.PidMode, // Pid namespace to use
 		// #endregion
 
 		// #region for platform flags
