@@ -180,6 +180,11 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		memorySwappiness = req.HostConfig.MemorySwappiness
 	}
 
+	volumesFrom := []string{}
+	if req.HostConfig.VolumesFrom != nil {
+		volumesFrom = req.HostConfig.VolumesFrom
+	}
+
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
 		Stdout:   nil,
@@ -238,7 +243,8 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #endregion
 
 		// #region for volume flags
-		Volume: volumes,
+		Volume:      volumes,
+		VolumesFrom: volumesFrom,
 		// #endregion
 
 		// #region for env flags
