@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.1](https://github.com/runfinch/finch-daemon/compare/v0.11.0...v0.11.1) (2024-12-09)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/vishvananda/netns from 0.0.4 to 0.0.5 ([#112](https://github.com/runfinch/finch-daemon/issues/112)) ([40d3991](https://github.com/runfinch/finch-daemon/commit/40d3991864516be6816abbb788118aaaf6e29802))
+* **deps:** Bump google.golang.org/protobuf from 1.35.1 to 1.35.2 ([#116](https://github.com/runfinch/finch-daemon/issues/116)) ([682d4cd](https://github.com/runfinch/finch-daemon/commit/682d4cddf09c19a254e5341d9c7842d4da3e2d3c))
+
 ## [0.11.0](https://github.com/runfinch/finch-daemon/compare/v0.10.0...v0.11.0) (2024-11-27)
 
 
