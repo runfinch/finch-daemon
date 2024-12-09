@@ -171,6 +171,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		StopTimeout:    stopTimeout,
 		OomKillDisable: req.HostConfig.OomKillDisable,
 		CidFile:        req.HostConfig.ContainerIDFile, // CidFile write the container ID to the file
+		OomScoreAdj:    req.HostConfig.OomScoreAdj,
 		// #endregion
 
 		// #region for platform flags
@@ -194,6 +195,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CPUSetMems:         req.HostConfig.CPUSetMems,        // CpusetMems 0-2, 0,1
 		MemoryReservation:  memoryReservation,                // Memory soft limit (in bytes)
 		MemorySwap:         memorySwap,                       // Total memory usage (memory + swap); set `-1` to enable unlimited swap
+		IPC:                req.HostConfig.IpcMode,           // IPC namespace to use
 		// #endregion
 
 		// #region for user flags

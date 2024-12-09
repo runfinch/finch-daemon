@@ -78,11 +78,11 @@ type ContainerHostConfig struct {
 	DNSSearch  []string `json:"DnsSearch"`  // List of DNSSearch to look for
 	ExtraHosts []string // List of extra hosts
 	GroupAdd   []string // List of additional groups that the container process will run as
-	// TODO: IpcMode         IpcMode           // IPC namespace to use for the container
+	IpcMode    string   // IPC namespace to use for the container
 	// TODO: Cgroup          CgroupSpec        // Cgroup to use for the container
 	// TODO: Links           []string          // List of links (in the name:alias form)
-	OomKillDisable bool //specifies whether to disable OOM Killer
-	// TODO: OomScoreAdj     int               // Container preference for OOM-killing
+	OomKillDisable bool // specifies whether to disable OOM Killer
+	OomScoreAdj    int  // specifies the tune container’s OOM preferences (-1000 to 1000, rootless: 100 to 1000)
 	// TODO: PidMode         PidMode           // PID namespace to use for the container
 	// TODO: Privileged      bool              // Is the container in privileged mode
 	// TODO: PublishAllPorts bool              // Should docker publish all exposed port for the container
