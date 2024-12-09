@@ -149,6 +149,11 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		volumesFrom = req.HostConfig.VolumesFrom
 	}
 
+	groupAdd := []string{}
+	if req.HostConfig.GroupAdd != nil {
+		groupAdd = req.HostConfig.GroupAdd
+	}
+
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
 		Stdout:   nil,
@@ -193,7 +198,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 
 		// #region for user flags
 		User:     req.User,
-		GroupAdd: []string{}, // nerdctl default.
+		GroupAdd: groupAdd,
 		// #endregion
 
 		// #region for security flags
