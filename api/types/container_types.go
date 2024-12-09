@@ -70,8 +70,8 @@ type ContainerHostConfig struct {
 	// TODO: Annotations     map[string]string `json:",omitempty"` // Arbitrary non-identifying metadata attached to container and provided to the runtime
 
 	// Applicable to UNIX platforms
-	CapAdd []string // List of kernel capabilities to add to the container
-	// TODO: CapDrop         strslice.StrSlice // List of kernel capabilities to remove from the container
+	CapAdd  []string // List of kernel capabilities to add to the container
+	CapDrop []string // List of kernel capabilities to remove from the container
 	// TODO: CgroupnsMode    CgroupnsMode      // Cgroup namespace mode to use for the container
 	DNS        []string `json:"Dns"`        // List of DNS server to lookup
 	DNSOptions []string `json:"DnsOptions"` // List of DNSOption to look for

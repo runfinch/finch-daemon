@@ -119,6 +119,11 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		capAdd = req.HostConfig.CapAdd
 	}
 
+	capDrop := []string{}
+	if req.HostConfig.CapDrop != nil {
+		capDrop = req.HostConfig.CapDrop
+	}
+
 	CpuQuota := int64(-1)
 	if req.HostConfig.CPUQuota != 0 {
 		CpuQuota = req.HostConfig.CPUQuota
@@ -194,7 +199,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #region for security flags
 		SecurityOpt: []string{}, // nerdctl default.
 		CapAdd:      capAdd,
-		CapDrop:     []string{}, // nerdctl default.
+		CapDrop:     capDrop,
 		// #endregion
 
 		// #region for runtime flags
