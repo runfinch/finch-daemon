@@ -192,6 +192,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		StopTimeout:    stopTimeout,
 		CidFile:        req.HostConfig.ContainerIDFile, // CidFile write the container ID to the file
 		OomKillDisable: req.HostConfig.OomKillDisable,
+		OomScoreAdj:    req.HostConfig.OomScoreAdj,
 		// #endregion
 
 		// #region for platform flags
@@ -216,6 +217,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CPUPeriod:          uint64(req.HostConfig.CPUPeriod), // CPU CFS (Completely Fair Scheduler) period
 		CPUSetCPUs:         req.HostConfig.CPUSetCPUs,        // CpusetCpus 0-2, 0,1
 		CPUSetMems:         req.HostConfig.CPUSetMems,        // CpusetMems 0-2, 0,1
+		IPC:                req.HostConfig.IpcMode,           // IPC namespace to use
 		// #endregion
 
 		// #region for user flags
