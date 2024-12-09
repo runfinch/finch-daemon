@@ -165,21 +165,6 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CpuQuota = req.HostConfig.CPUQuota
 	}
 
-	memoryReservation := ""
-	if req.HostConfig.MemoryReservation != 0 {
-		memoryReservation = strconv.FormatInt(req.HostConfig.MemoryReservation, 10)
-	}
-
-	memorySwap := ""
-	if req.HostConfig.MemorySwap != 0 {
-		memorySwap = strconv.FormatInt(req.HostConfig.MemorySwap, 10)
-	}
-
-	memorySwappiness := int64(-1)
-	if req.HostConfig.MemorySwappiness != 0 && req.HostConfig.MemorySwappiness > -1 {
-		memorySwappiness = req.HostConfig.MemorySwappiness
-	}
-
 	volumesFrom := []string{}
 	if req.HostConfig.VolumesFrom != nil {
 		volumesFrom = req.HostConfig.VolumesFrom
