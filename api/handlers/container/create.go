@@ -121,7 +121,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 
 	CpuQuota := int64(-1)
 	if req.HostConfig.CPUQuota != 0 {
-		CpuQuota = int64(req.HostConfig.CPUQuota)
+		CpuQuota = req.HostConfig.CPUQuota
 	}
 
 	memoryReservation := ""
@@ -137,6 +137,11 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	memorySwappiness := int64(-1)
 	if req.HostConfig.MemorySwappiness != 0 && req.HostConfig.MemorySwappiness > -1 {
 		memorySwappiness = req.HostConfig.MemorySwappiness
+	}
+
+	volumesFrom := []string{}
+	if req.HostConfig.VolumesFrom != nil {
+		volumesFrom = req.HostConfig.VolumesFrom
 	}
 
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
@@ -197,7 +202,8 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #endregion
 
 		// #region for volume flags
-		Volume: volumes,
+		Volume:      volumes,
+		VolumesFrom: volumesFrom,
 		// #endregion
 
 		// #region for env flags
