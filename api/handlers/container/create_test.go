@@ -747,17 +747,19 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
-		It("should set CapDrop option", func() {
+		It("should set CapDrop and GroupAdd option", func() {
 			body := []byte(`{
 				"Image": "test-image",
 				"HostConfig": {
-					"CapDrop": ["MKNOD"]
+					"CapDrop": ["MKNOD"],
+					"GroupAdd": ["someGroup"]
 				}
 			}`)
 			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
 
 			// expected create options
 			createOpt.CapDrop = []string{"MKNOD"}
+			createOpt.GroupAdd = []string{"someGroup"}
 
 			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
 				cid, nil)
