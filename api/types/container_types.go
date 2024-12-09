@@ -79,10 +79,11 @@ type ContainerHostConfig struct {
 	DNSSearch  []string `json:"DnsSearch"`  // List of DNSSearch to look for
 	ExtraHosts []string // List of extra hosts
 	GroupAdd   []string // List of additional groups that the container process will run as
-	// TODO: IpcMode         IpcMode           // IPC namespace to use for the container
+	IpcMode    string   // IPC namespace to use for the container
 	// TODO: Cgroup          CgroupSpec        // Cgroup to use for the container
 	// TODO: Links           []string          // List of links (in the name:alias form)
 	OomKillDisable bool // specifies whether to disable OOM Killer
+<<<<<<< HEAD
 	// TODO: OomScoreAdj    int               // specifies the tune container’s OOM preferences (-1000 to 1000, rootless: 100 to 1000)
 	// TODO: PidMode        string            // PID namespace to use for the container
 	Privileged bool // Is the container in privileged mode
@@ -93,6 +94,11 @@ type ContainerHostConfig struct {
 	// TODO: ShmSize int64             // Size of /dev/shm in bytes. The size must be greater than 0.
 	// TODO: Sysctls map[string]string `json:",omitempty"` // List of Namespaced sysctls used for the container
 	// TODO: Runtime string            `json:",omitempty"` // Runtime to use with this container
+=======
+	OomScoreAdj    int  // specifies the tune container’s OOM preferences (-1000 to 1000, rootless: 100 to 1000)
+	// TODO: PidMode         PidMode           // PID namespace to use for the container
+	// TODO: Privileged      bool              // Is the container in privileged mode
+>>>>>>> 59e99f3 (chore: add IPC and OomScoreAdj option)
 	// TODO: PublishAllPorts bool              // Should docker publish all exposed port for the container
 	// TODO: StorageOpt      map[string]string `json:",omitempty"` // Storage driver options per container.
 	// TODO: UsernsMode      UsernsMode        // The user namespace to use for the container
