@@ -357,6 +357,324 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
+		It("should set specified NetworkDisabled setting", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"NetworkDisabled": true
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected network options
+			netOpt.NetworkSlice = []string{"none"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set the OomKillDisable option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"OomKillDisable": true
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected network options
+			createOpt.OomKillDisable = true
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set the MACAddress to a user specified value", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"MacAddress": "12:34:56:78:9a:bc"
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected network options
+			netOpt.MACAddress = "12:34:56:78:9a:bc"
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set the BlkioWeight to a user specified value", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"BlkioWeight": 300
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected network options
+			createOpt.BlkioWeight = 300
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set CPUPeriod create options for resources", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"CpuPeriod": 100000
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.CPUPeriod = 100000
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set CpuQuota create options for resources", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"CpuQuota": 50000
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.CPUQuota = 50000
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set CpuQuota to -1 by default", func() {
+			body := []byte(`{
+				"Image": "test-image"
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.CPUQuota = -1
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set CpuSet create options for resources", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"CpusetCpus": "0,1",
+					"CpusetMems": "0,3"
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.CPUSetCPUs = "0,1"
+			createOpt.CPUSetMems = "0,3"
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set MemoryReservation, MemorySwap and MemorySwappiness create options for resources", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"MemoryReservation": 209715200,
+					"MemorySwap": 514288000,
+					"MemorySwappiness": 25
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.MemoryReservation = "209715200"
+			createOpt.MemorySwap = "514288000"
+			createOpt.MemorySwappiness64 = 25
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set ContainerIdFile option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"ContainerIDFile": "/lib/example.txt"
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.CidFile = "/lib/example.txt"
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set VolumesFrom option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"VolumesFrom": [ "parent", "other:ro"]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.VolumesFrom = []string{"parent", "other:ro"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set CapDrop and GroupAdd option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"CapDrop": ["MKNOD"],
+					"GroupAdd": ["someGroup"]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.CapDrop = []string{"MKNOD"}
+			createOpt.GroupAdd = []string{"someGroup"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set IPC and OomScoreAdj option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"IpcMode": "host",
+					"OomScoreAdj": 200
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.IPC = "host"
+			createOpt.OomScoreAdj = 200
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set PidMode and Privileged option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"PidMode": "host",
+					"Privileged": true
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.Pid = "host"
+			createOpt.Privileged = true
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set ReadonlyRootfs and SecurityOpt option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"ReadonlyRootfs": true,
+					"SecurityOpt": [ "seccomp=/path/to/custom_seccomp.json", "apparmor=unconfined"]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.ReadOnly = true
+			createOpt.SecurityOpt = []string{"seccomp=/path/to/custom_seccomp.json", "apparmor=unconfined"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
 		It("should return 404 if the image was not found", func() {
 			body := []byte(`{"Image": "test-image"}`)
 			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
@@ -553,6 +871,7 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 		SecurityOpt: []string{}, // nerdctl default.
 		CapAdd:      []string{}, // nerdctl default.
 		CapDrop:     []string{}, // nerdctl default.
+		Privileged:  false,
 		// #endregion
 
 		// #region for runtime flags
@@ -560,7 +879,8 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 		// #endregion
 
 		// #region for volume flags
-		Volume: nil,
+		Volume:      nil,
+		VolumesFrom: []string{}, // nerdctl default.
 		// #endregion
 
 		// #region for env flags
