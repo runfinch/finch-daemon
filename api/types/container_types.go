@@ -82,10 +82,12 @@ type ContainerHostConfig struct {
 	IpcMode    string   // IPC namespace to use for the container
 	// TODO: Cgroup          CgroupSpec        // Cgroup to use for the container
 	// TODO: Links           []string          // List of links (in the name:alias form)
-	OomKillDisable bool   // specifies whether to disable OOM Killer
-	OomScoreAdj    int    // specifies the tune container’s OOM preferences (-1000 to 1000, rootless: 100 to 1000)
-	PidMode        string // PID namespace to use for the container
-	Privileged     bool   // Is the container in privileged mode
+	OomKillDisable bool     // specifies whether to disable OOM Killer
+	OomScoreAdj    int      // specifies the tune container’s OOM preferences (-1000 to 1000, rootless: 100 to 1000)
+	PidMode        string   // PID namespace to use for the container
+	Privileged     bool     // Is the container in privileged mode
+	ReadonlyRootfs bool     // Is the container root filesystem in read-only
+	SecurityOpt    []string // List of string values to customize labels for MLS systems, such as SELinux. (["key=value"])
 	// TODO: PublishAllPorts bool              // Should docker publish all exposed port for the container
 	// TODO: StorageOpt      map[string]string `json:",omitempty"` // Storage driver options per container.
 	// TODO: UsernsMode      UsernsMode        // The user namespace to use for the container
