@@ -123,6 +123,16 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 			ulimits = append(ulimits, ulimit.String())
 		}
 	}
+	// Tmpfs:
+	// Tmpfs are passed in as a map of strings,
+	// but nerdctl expects an array of strings with format [TMPFS1:VALUE1, TMPFS2:VALUE2, ...].
+	tmpfs := []string{}
+	if req.HostConfig.Tmpfs != nil {
+		for key, val := range req.HostConfig.Tmpfs {
+			tmpfs = append(tmpfs, fmt.Sprintf("%s:%s", key, val))
+		}
+	}
+
 	// Environment vars:
 	env := []string{}
 	if req.Env != nil {
@@ -244,6 +254,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #region for volume flags
 		Volume:      volumes,
 		VolumesFrom: volumesFrom,
+		Tmpfs:       tmpfs,
 		// #endregion
 
 		// #region for env flags
@@ -303,6 +314,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		PortMappings:         portMappings,
 		AddHost:              req.HostConfig.ExtraHosts, // Extra hosts.
 		MACAddress:           req.MacAddress,
+		UTSNamespace:         req.HostConfig.UTSMode,
 	}
 
 	ctx := namespaces.WithNamespace(r.Context(), h.Config.Namespace)

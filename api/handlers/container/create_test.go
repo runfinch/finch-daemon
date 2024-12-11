@@ -839,6 +839,29 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
+		It("should set Tmpfs and UTSMode option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"Tmpfs": { "/run": "rw,noexec,nosuid,size=65536k" },
+					"UTSMode": "host"
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.Tmpfs = []string{"/run:rw,noexec,nosuid,size=65536k"}
+			netOpt.UTSNamespace = "host"
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
 		It("should return 404 if the image was not found", func() {
 			body := []byte(`{"Image": "test-image"}`)
 			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
@@ -1045,6 +1068,7 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 		// #region for volume flags
 		Volume:      nil,
 		VolumesFrom: []string{}, // nerdctl default.
+		Tmpfs:       []string{},
 		// #endregion
 
 		// #region for env flags
