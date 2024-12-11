@@ -862,6 +862,31 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
+		It("should set ShmSize, Sysctl and Runtime option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"Sysctls": { "net.ipv4.ip_forward": "1" },
+					"ShmSize": 302348,
+					"Runtime": "crun"
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.ShmSize = "302348"
+			createOpt.Sysctl = []string{"net.ipv4.ip_forward=1"}
+			createOpt.Runtime = "crun"
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
 		It("should return 404 if the image was not found", func() {
 			body := []byte(`{"Image": "test-image"}`)
 			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
@@ -1063,6 +1088,7 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 
 		// #region for runtime flags
 		Runtime: defaults.Runtime, // nerdctl default.
+		Sysctl:  []string{},
 		// #endregion
 
 		// #region for volume flags
