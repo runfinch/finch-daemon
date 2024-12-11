@@ -90,6 +90,9 @@ type ContainerHostConfig struct {
 	SecurityOpt    []string          // List of string values to customize labels for MLS systems, such as SELinux. (["key=value"])
 	Tmpfs          map[string]string `json:",omitempty"` // List of tmpfs (mounts) used for the container
 	UTSMode        string            // UTS namespace to use for the container
+	ShmSize        int64             // Size of /dev/shm in bytes. The size must be greater than 0.
+	Sysctls        map[string]string `json:",omitempty"` // List of Namespaced sysctls used for the container
+	Runtime        string            `json:",omitempty"` // Runtime to use with this container
 	// TODO: PublishAllPorts bool              // Should docker publish all exposed port for the container
 	// TODO: StorageOpt      map[string]string `json:",omitempty"` // Storage driver options per container.
 	// TODO: UsernsMode      UsernsMode        // The user namespace to use for the container

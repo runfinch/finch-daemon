@@ -133,6 +133,16 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Sysctls:
+	// Sysctls are passed in as a map of strings,
+	// but nerdctl expects an array of strings with format [Sysctls1=VALUE1, Sysctls2=VALUE2, ...].
+	sysctls := []string{}
+	if req.HostConfig.Sysctls != nil {
+		for key, val := range req.HostConfig.Sysctls {
+			sysctls = append(sysctls, fmt.Sprintf("%s=%s", key, val))
+		}
+	}
+
 	// Environment vars:
 	env := []string{}
 	if req.Env != nil {
@@ -173,6 +183,15 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	CpuQuota := int64(-1)
 	if req.HostConfig.CPUQuota != 0 {
 		CpuQuota = req.HostConfig.CPUQuota
+	}
+	shmSize := ""
+	if req.HostConfig.ShmSize > 0 {
+		shmSize = fmt.Sprint(req.HostConfig.ShmSize)
+	}
+
+	runtime := defaults.Runtime
+	if req.HostConfig.Runtime != "" {
+		runtime = req.HostConfig.Runtime
 	}
 
 	volumesFrom := []string{}
@@ -234,6 +253,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CPUSetCPUs:         req.HostConfig.CPUSetCPUs,        // CpusetCpus 0-2, 0,1
 		CPUSetMems:         req.HostConfig.CPUSetMems,        // CpusetMems 0-2, 0,1
 		IPC:                req.HostConfig.IpcMode,           // IPC namespace to use
+		ShmSize:            shmSize,                          // ShmSize set the size of /dev/shm
 		// #endregion
 
 		// #region for user flags
@@ -248,7 +268,8 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		Privileged:  req.HostConfig.Privileged,
 		// #endregion
 		// #region for runtime flags
-		Runtime: defaults.Runtime, // nerdctl default.
+		Runtime: runtime, // Runtime to use for this container, e.g. "crun", or "io.containerd.runc.v2".
+		Sysctl:  sysctls, // Sysctl set sysctl options, e.g "net.ipv4.ip_forward=1"
 		// #endregion
 
 		// #region for volume flags
@@ -286,6 +307,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 
 		// #region for rootfs flags
 		ReadOnly: req.HostConfig.ReadonlyRootfs, // Is the container root filesystem in read-only
+		// #endregion
 	}
 
 	portMappings, err := translatePortMappings(req.HostConfig.PortBindings)
