@@ -127,6 +127,13 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	ulimits := []string{}
+	if req.HostConfig.Ulimits != nil {
+		for _, ulimit := range req.HostConfig.Ulimits {
+			ulimits = append(ulimits, ulimit.String())
+		}
+	}
+
 	// Environment vars:
 	env := []string{}
 	if req.Env != nil {
@@ -233,6 +240,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		MemorySwap:         memorySwap,                       // Total memory usage (memory + swap); set `-1` to enable unlimited swap
 		IPC:                req.HostConfig.IpcMode,           // IPC namespace to use
 		ShmSize:            shmSize,                          // ShmSize set the size of /dev/shm
+		Ulimit:             ulimits,                          // List of ulimits to be set in the container
 		// #endregion
 
 		// #region for user flags

@@ -11,6 +11,7 @@ import (
 	"github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/go-connections/nat"
+	"github.com/docker/go-units"
 )
 
 // AttachOptions defines the available options for the container attach call.
@@ -111,7 +112,8 @@ type ContainerHostConfig struct {
 	MemorySwappiness  int64  // MemorySwappiness64 specifies the tune container memory swappiness (0 to 100) (default -1)
 	// TODO: Resources
 
-	BlkioWeight uint16 // Block IO weight (relative weight vs. other containers)
+	Ulimits     []*Ulimit // List of ulimits to be set in the container
+	BlkioWeight uint16    // Block IO weight (relative weight vs. other containers)
 	// Mounts specs used by the container
 	// TODO: Mounts []mount.Mount `json:",omitempty"`
 
@@ -258,3 +260,5 @@ type StatsJSON struct {
 	// Networks request version >=1.21
 	Networks map[string]dockertypes.NetworkStats `json:"networks,omitempty"`
 }
+
+type Ulimit = units.Ulimit
