@@ -143,6 +143,13 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	ulimits := []string{}
+	if req.HostConfig.Ulimits != nil {
+		for _, ulimit := range req.HostConfig.Ulimits {
+			ulimits = append(ulimits, ulimit.String())
+		}
+	}
+
 	// Environment vars:
 	env := []string{}
 	if req.Env != nil {
@@ -254,6 +261,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CPUSetMems:         req.HostConfig.CPUSetMems,        // CpusetMems 0-2, 0,1
 		IPC:                req.HostConfig.IpcMode,           // IPC namespace to use
 		ShmSize:            shmSize,                          // ShmSize set the size of /dev/shm
+		Ulimit:             ulimits,                          // List of ulimits to be set in the container
 		// #endregion
 
 		// #region for user flags
