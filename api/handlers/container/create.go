@@ -117,6 +117,16 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Sysctls:
+	// Sysctls are passed in as a map of strings,
+	// but nerdctl expects an array of strings with format [Sysctls1=VALUE1, Sysctls2=VALUE2, ...].
+	sysctls := []string{}
+	if req.HostConfig.Sysctls != nil {
+		for key, val := range req.HostConfig.Sysctls {
+			sysctls = append(sysctls, fmt.Sprintf("%s=%s", key, val))
+		}
+	}
+
 	// Environment vars:
 	env := []string{}
 	if req.Env != nil {
@@ -141,17 +151,27 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 
 	memoryReservation := ""
 	if req.HostConfig.MemoryReservation != 0 {
-		memoryReservation = strconv.FormatInt(req.HostConfig.MemoryReservation, 10)
+		memoryReservation = fmt.Sprint(req.HostConfig.MemoryReservation)
 	}
 
 	memorySwap := ""
 	if req.HostConfig.MemorySwap != 0 {
-		memorySwap = strconv.FormatInt(req.HostConfig.MemorySwap, 10)
+		memorySwap = fmt.Sprint(req.HostConfig.MemorySwap)
 	}
 
 	memorySwappiness := int64(-1)
-	if req.HostConfig.MemorySwappiness != 0 && req.HostConfig.MemorySwappiness > -1 {
+	if req.HostConfig.MemorySwappiness > 0 {
 		memorySwappiness = req.HostConfig.MemorySwappiness
+	}
+
+	shmSize := ""
+	if req.HostConfig.ShmSize > 0 {
+		shmSize = fmt.Sprint(req.HostConfig.ShmSize)
+	}
+
+	runtime := defaults.Runtime
+	if req.HostConfig.Runtime != "" {
+		runtime = req.HostConfig.Runtime
 	}
 
 	volumesFrom := []string{}
@@ -212,6 +232,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		MemoryReservation:  memoryReservation,                // Memory soft limit (in bytes)
 		MemorySwap:         memorySwap,                       // Total memory usage (memory + swap); set `-1` to enable unlimited swap
 		IPC:                req.HostConfig.IpcMode,           // IPC namespace to use
+		ShmSize:            shmSize,                          // ShmSize set the size of /dev/shm
 		// #endregion
 
 		// #region for user flags
@@ -227,7 +248,8 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #endregion
 
 		// #region for runtime flags
-		Runtime: defaults.Runtime, // nerdctl default.
+		Runtime: runtime, // Runtime to use for this container, e.g. "crun", or "io.containerd.runc.v2".
+		Sysctl:  sysctls, // Sysctl set sysctl options, e.g "net.ipv4.ip_forward=1"
 		// #endregion
 
 		// #region for volume flags
@@ -265,6 +287,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 
 		// #region for rootfs flags
 		ReadOnly: req.HostConfig.ReadonlyRootfs, // Is the container root filesystem in read-only
+		// #endregion
 	}
 
 	portMappings, err := translatePortMappings(req.HostConfig.PortBindings)
