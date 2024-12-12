@@ -908,6 +908,27 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
+		It("should set Devices option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"Devices": [{"PathOnHost": "/dev/null", "PathInContainer": "/dev/null", "CgroupPermissions": "rwm"},{"PathOnHost": "/var/lib", "CgroupPermissions": "ro"}]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.Device = []string{"/dev/null:/dev/null:rwm", "/var/lib:ro"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
 		It("should return 404 if the image was not found", func() {
 			body := []byte(`{"Image": "test-image"}`)
 			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
@@ -1094,6 +1115,7 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 		PidsLimit:          -1,                      // nerdctl default.
 		Cgroupns:           defaults.CgroupnsMode(), // nerdctl default.
 		Ulimit:             []string{},
+		Device:             []string{},
 		// #endregion
 
 		// #region for user flags
