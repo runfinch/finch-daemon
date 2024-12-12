@@ -136,7 +136,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 
 	// devices:
 	// devices are passed in as a map of DeviceMapping,
-	// but nerdctl expects an array of strings with format [devices1:VALUE1, devices2:VALUE2, ...].
+	// but nerdctl expects an array of strings with format [PathOnHost1:PathInContainer1:CgroupPermissions1, PathOnHost2:PathInContainer2:CgroupPermissions2, ...].
 	devices := []string{}
 	if req.HostConfig.Devices != nil {
 		for _, deviceMap := range req.HostConfig.Devices {
@@ -220,6 +220,10 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		securityOpt = req.HostConfig.SecurityOpt
 	}
 
+	pidLimit := int64(-1)
+	if req.HostConfig.PidsLimit > 0 {
+		pidLimit = req.HostConfig.PidsLimit
+	}
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
 		Stdout:   nil,
@@ -254,7 +258,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		Memory:             memory,                           // memory limit (in bytes)
 		CPUQuota:           CpuQuota,                         // nerdctl default.
 		MemorySwappiness64: memorySwappiness,                 // Tuning container memory swappiness behaviour
-		PidsLimit:          -1,                               // nerdctl default.
+		PidsLimit:          pidLimit,                         // PidsLimit specifies the tune container pids limit
 		Cgroupns:           defaults.CgroupnsMode(),          // nerdctl default.
 		BlkioWeight:        req.HostConfig.BlkioWeight,       // block IO weight (relative)
 		CPUPeriod:          uint64(req.HostConfig.CPUPeriod), // CPU CFS (Completely Fair Scheduler) period
