@@ -150,6 +150,30 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// devices:
+	// devices are passed in as a map of DeviceMapping,
+	// but nerdctl expects an array of strings with format [devices1:VALUE1, devices2:VALUE2, ...].
+	devices := []string{}
+	if req.HostConfig.Devices != nil {
+		for _, deviceMap := range req.HostConfig.Devices {
+			deviceString := ""
+			if deviceMap.PathOnHost != "" {
+				deviceString += deviceMap.PathOnHost
+			}
+
+			if deviceMap.PathInContainer != "" {
+				deviceString += ":"
+				deviceString += deviceMap.PathInContainer
+			}
+
+			if deviceMap.CgroupPermissions != "" {
+				deviceString += ":"
+				deviceString += deviceMap.CgroupPermissions
+			}
+			devices = append(devices, deviceString)
+		}
+	}
+
 	// Environment vars:
 	env := []string{}
 	if req.Env != nil {
@@ -262,6 +286,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		IPC:                req.HostConfig.IpcMode,           // IPC namespace to use
 		ShmSize:            shmSize,                          // ShmSize set the size of /dev/shm
 		Ulimit:             ulimits,                          // List of ulimits to be set in the container
+		Device:             devices,                          // Device specifies add a host device to the container
 		// #endregion
 
 		// #region for user flags
