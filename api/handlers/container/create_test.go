@@ -908,17 +908,19 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
-		It("should set Devices option", func() {
+		It("should set Devices and PidLimit option", func() {
 			body := []byte(`{
 				"Image": "test-image",
 				"HostConfig": {
-					"Devices": [{"PathOnHost": "/dev/null", "PathInContainer": "/dev/null", "CgroupPermissions": "rwm"},{"PathOnHost": "/var/lib", "CgroupPermissions": "ro"}]
+					"Devices": [{"PathOnHost": "/dev/null", "PathInContainer": "/dev/null", "CgroupPermissions": "rwm"},{"PathOnHost": "/var/lib", "CgroupPermissions": "ro"}],
+					"PidsLimit": 200
 				}
 			}`)
 			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
 
 			// expected create options
 			createOpt.Device = []string{"/dev/null:/dev/null:rwm", "/var/lib:ro"}
+			createOpt.PidsLimit = 200
 
 			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
 				cid, nil)
