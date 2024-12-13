@@ -931,6 +931,27 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
+		It("should set CgroupnsMode option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"CgroupnsMode": "host"
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.Cgroupns = "host"
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
 		It("should return 404 if the image was not found", func() {
 			body := []byte(`{"Image": "test-image"}`)
 			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))

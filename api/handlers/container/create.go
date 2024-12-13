@@ -143,6 +143,16 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Annotations: TODO - available in nerdctl 2.0
+	// Annotations are passed in as a map of strings,
+	// but nerdctl expects an array of strings with format [annotations1=VALUE1, annotations2=VALUE2, ...].
+	// annotations := []string{}
+	// if req.HostConfig.Annotations != nil {
+	// 	for key, val := range req.HostConfig.Annotations {
+	// 		annotations = append(annotations, fmt.Sprintf("%s=%s", key, val))
+	// 	}
+	// }
+
 	ulimits := []string{}
 	if req.HostConfig.Ulimits != nil {
 		for _, ulimit := range req.HostConfig.Ulimits {
@@ -244,6 +254,12 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	if req.HostConfig.PidsLimit > 0 {
 		pidLimit = req.HostConfig.PidsLimit
 	}
+
+	cgroupnsMode := defaults.CgroupnsMode()
+	if req.HostConfig.CgroupnsMode.Valid() {
+		cgroupnsMode = string(req.HostConfig.CgroupnsMode)
+	}
+
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
 		Stdout:   nil,
@@ -279,7 +295,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CPUQuota:           CpuQuota,                         // CPUQuota limits the CPU CFS (Completely Fair Scheduler) quota
 		MemorySwappiness64: memorySwappiness,                 // Tuning container memory swappiness behaviour
 		PidsLimit:          pidLimit,                         // PidsLimit specifies the tune container pids limit
-		Cgroupns:           defaults.CgroupnsMode(),          // nerdctl default.
+		Cgroupns:           cgroupnsMode,                     // Cgroupns specifies the cgroup namespace to use
 		MemoryReservation:  memoryReservation,                // Memory soft limit (in bytes)
 		MemorySwap:         memorySwap,                       // Total memory usage (memory + swap); set `-1` to enable unlimited swap
 		Ulimit:             ulimits,                          // List of ulimits to be set in the container
