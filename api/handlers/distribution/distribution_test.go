@@ -92,7 +92,7 @@ var _ = Describe("Distribution Inspect API", func() {
 			Expect(rr).Should(HaveHTTPStatus(http.StatusOK))
 		})
 		It("should return 403 status code if image resolution fails due to lack of credentials", func() {
-			service.EXPECT().Inspect(gomock.Any(), name, gomock.Any()).Return(nil, errdefs.NewForbidden(fmt.Errorf("access denied")))
+			service.EXPECT().Inspect(gomock.Any(), name, gomock.Any()).Return(nil, errdefs.NewUnauthenticated(fmt.Errorf("access denied")))
 			logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
 
 			// handler should return error message with 404 status code
@@ -100,14 +100,14 @@ var _ = Describe("Distribution Inspect API", func() {
 			Expect(rr.Body).Should(MatchJSON(`{"message": "access denied"}`))
 			Expect(rr).Should(HaveHTTPStatus(http.StatusForbidden))
 		})
-		It("should return 404 status code if image was not found", func() {
+		It("should return 403 status code if image was not found", func() {
 			service.EXPECT().Inspect(gomock.Any(), name, gomock.Any()).Return(nil, errdefs.NewNotFound(fmt.Errorf("no such image")))
 			logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
 
 			// handler should return error message with 404 status code
 			h.inspect(rr, req)
 			Expect(rr.Body).Should(MatchJSON(`{"message": "no such image"}`))
-			Expect(rr).Should(HaveHTTPStatus(http.StatusNotFound))
+			Expect(rr).Should(HaveHTTPStatus(http.StatusForbidden))
 		})
 		It("should return 500 status code if service returns an error message", func() {
 			service.EXPECT().Inspect(gomock.Any(), name, gomock.Any()).Return(nil, fmt.Errorf("error"))
