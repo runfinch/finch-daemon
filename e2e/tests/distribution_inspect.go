@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -50,10 +49,9 @@ func DistributionInspect(opt *option.Option) {
 			// 2. It's unlikely that we will have to update this in the future.
 			// 3. It's not the thing we want to validate by the functional tests. We only want the output produced by it.
 			// Same password/logic from runfinch/common-tests
-			//nolint:gosec // This password is only used for testing purpose.
 			htpasswd := "testUser:$2y$05$wE0sj3r9O9K9q7R0MXcfPuIerl/06L1IsxXkCuUr3QZ8lHWwicIdS"
 			htpasswdDir := filepath.Dir(ffs.CreateTempFile(filename, htpasswd))
-			ginkgo.DeferCleanup(os.RemoveAll, htpasswdDir)
+			DeferCleanup(os.RemoveAll, htpasswdDir)
 			port := fnet.GetFreePort()
 			command.Run(opt, "run",
 				"-dp", fmt.Sprintf("%d:5000", port),
@@ -68,7 +66,7 @@ func DistributionInspect(opt *option.Option) {
 			buildContext := ffs.CreateBuildContext(fmt.Sprintf(`FROM %s
 	CMD ["echo", "bar"]
 		`, defaultImage))
-			ginkgo.DeferCleanup(os.RemoveAll, buildContext)
+			DeferCleanup(os.RemoveAll, buildContext)
 			command.Run(opt, "build", "-t", authImageTag, buildContext)
 		})
 
@@ -133,7 +131,7 @@ func DistributionInspect(opt *option.Option) {
 				"may require authorization: server message: insufficient_scope: authorization failed"))
 		})
 
-		It("should fail to inpsect an image with a malformed image name", func() {
+		It("should fail to inspect an image with a malformed image name", func() {
 			malformedImage := "alpine:image:latest"
 			relativeUrl := client.ConvertToFinchUrl(version, fmt.Sprintf("/distribution/%s/json", malformedImage))
 			res, err := uClient.Get(relativeUrl)
@@ -149,7 +147,7 @@ func DistributionInspect(opt *option.Option) {
 		It("should inspect an image with registry credentials when logged in", func() {
 			command.New(opt, "login", registry, "-u", testUser, "--password-stdin").
 				WithStdin(gbytes.BufferWithBytes([]byte(testPassword))).Run()
-			ginkgo.DeferCleanup(func() {
+			DeferCleanup(func() {
 				command.Run(opt, "logout", registry)
 			})
 			command.Run(opt, "push", authImageTag)
@@ -157,6 +155,7 @@ func DistributionInspect(opt *option.Option) {
 			relativeUrl := client.ConvertToFinchUrl(version, fmt.Sprintf("/distribution/%s/json", authImageTag))
 
 			req, err := http.NewRequest(http.MethodGet, relativeUrl, nil)
+			Expect(err).Should(BeNil())
 			req.Header.Set("X-Registry-Auth", b64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`{
   "username": "%s",
   "password": "%s",
