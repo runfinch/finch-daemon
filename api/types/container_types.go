@@ -271,17 +271,17 @@ type DeviceMapping struct {
 	CgroupPermissions string
 }
 
-// CgroupnsMode represents the cgroup namespace mode of the container
+// CgroupnsMode represents the cgroup namespace mode of the container.
 type CgroupnsMode string
 
-// cgroup namespace modes for containers
+// cgroup namespace modes for containers.
 const (
 	CgroupnsModeEmpty   CgroupnsMode = ""
 	CgroupnsModePrivate CgroupnsMode = "private"
 	CgroupnsModeHost    CgroupnsMode = "host"
 )
 
-// Valid indicates whether the cgroup namespace mode is valid
+// Valid indicates whether the cgroup namespace mode is valid.
 func (c CgroupnsMode) Valid() bool {
 	return c == CgroupnsModePrivate || c == CgroupnsModeHost
 }
