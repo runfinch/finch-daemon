@@ -685,7 +685,7 @@ var _ = Describe("Container Create API ", func() {
 			body := []byte(`{
 				"Image": "test-image",
 				"HostConfig": {
-					"MemoryReservation": 209715200,
+					"MemoryReservation": 209710,
 					"MemorySwap": 514288000,
 					"MemorySwappiness": 25
 				}
@@ -693,7 +693,7 @@ var _ = Describe("Container Create API ", func() {
 			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
 
 			// expected create options
-			createOpt.MemoryReservation = "209715200"
+			createOpt.MemoryReservation = "209710"
 			createOpt.MemorySwap = "514288000"
 			createOpt.MemorySwappiness64 = 25
 			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
