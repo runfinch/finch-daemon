@@ -17,6 +17,7 @@ env:
 jobs:
   git-secrets:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Pull latest awslabs/git-secrets repo
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -34,10 +35,11 @@ jobs:
           git secrets --register-aws
           git secrets --scan-history
   lint:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         working_dir: ['.']
-    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - uses: golangci/golangci-lint-action@v6 # v6.1.0
@@ -51,31 +53,54 @@ jobs:
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - run: yamllint .
-  unit-test:
+  build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # v5.1.0
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache: false
       - name: Checkout finch-deamon repo
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-      - name: Build and run unit tests
-        run: |
-          make build
-          make test-unit
+      - name: Build the daemon
+        run: make build
+      - name: Run unit tests
+        run: make test-unit
+      - name: Create build artifacts
+        run: tar -cvf build-artifacts.tar bin/
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with:
+          name: build-artifacts
+          path: build-artifacts.tar
   e2e-test:
     runs-on: ubuntu-latest
+    needs: [build]
+    strategy:
+      matrix:
+        containerd: ["1.7.22", "2.0.0"]
+      fail-fast: false
+    timeout-minutes: 10
+    env:
+      CONTAINERD_VERSION: ${{ matrix.containerd }}
     steps:
       - uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # v5.1.0
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Checkout finch-daemon repo
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - name: Stop pre-existing containerd and docker services
+        run: |
+          sudo systemctl stop docker
+          sudo systemctl stop containerd
       - name: Install Dependencies for e2e Testing
         run: ./setup-test-env.sh
-      - name: Build the daemon
-        run: make build
+      - name: Download build artifacts
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: build-artifacts
+      - name: Extract build artifacts
+        run: tar -xvf build-artifacts.tar
       - name: Remove default podman network config
         run: |
           sudo ls /etc/cni/net.d
