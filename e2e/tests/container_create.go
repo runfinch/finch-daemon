@@ -432,6 +432,171 @@ func ContainerCreate(opt *option.Option) {
 			// verify log path exists
 			Expect(inspect[0].LogPath).ShouldNot(BeNil())
 		})
+
+		It("should create a container with specified CPU qouta and period options", func() {
+			// define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.CPUQuota = 11111
+			options.HostConfig.CPUShares = 2048
+			options.HostConfig.CPUPeriod = 100000
+
+			// create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Navigate to the CPU quota value
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			linux, ok := spec["linux"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			resources, ok := linux["resources"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			cpu, ok := resources["cpu"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			quota, ok := cpu["quota"].(float64)
+			Expect(ok).Should(BeTrue())
+			period, ok := cpu["period"].(float64)
+			Expect(ok).Should(BeTrue())
+			shares, ok := cpu["shares"].(float64)
+			Expect(ok).Should(BeTrue())
+
+			// Verify the CPU quota
+			Expect(int64(quota)).Should(Equal(int64(11111)))
+			Expect(int64(shares)).Should(Equal(int64(2048)))
+			Expect(int64(period)).Should(Equal(int64(100000)))
+		})
+
+		It("should create a container with specified Memory qouta and PidLimits options", func() {
+			// define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.Memory = 4048
+			options.HostConfig.PidsLimit = 200
+			options.HostConfig.MemoryReservation = 28
+			options.HostConfig.MemorySwap = 514288000
+			options.HostConfig.MemorySwappiness = 25
+
+			// create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Navigate to the CPU quota value
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			linux, ok := spec["linux"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			resources, ok := linux["resources"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			memory, _ := resources["memory"].(map[string]interface{})
+
+			pids, _ := resources["pids"].(map[string]interface{})
+
+			Expect(int64(pids["limit"].(float64))).Should(Equal(options.HostConfig.PidsLimit))
+			Expect(int64(memory["limit"].(float64))).Should(Equal(options.HostConfig.Memory))
+		})
+
+		It("should create a container with specified Ulimit options", func() {
+			// define options
+			options.Cmd = []string{"sleep", "Infinity"}
+
+			options.HostConfig.Ulimits = []*types.Ulimit{
+				{
+					Name: "nofile",
+					Soft: 1024,
+					Hard: 2048,
+				},
+			}
+
+			// create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Navigate to the CPU quota value
+			spec, _ := nativeInspect[0]["Spec"].(map[string]interface{})
+			rlimits := spec["process"].(map[string]interface{})["rlimits"].([]interface{})
+			for _, ulimit := range options.HostConfig.Ulimits {
+				found := false
+				for _, rlimit := range rlimits {
+					r := rlimit.(map[string]interface{})
+					if r["type"] == "RLIMIT_NOFILE" {
+						Expect(r["hard"]).To(Equal(float64(ulimit.Hard)))
+						Expect(r["soft"]).To(Equal(float64(ulimit.Soft)))
+						found = true
+						break
+					}
+				}
+				Expect(found).To(BeTrue())
+			}
+		})
+
+		It("should create a container with Priviledged options", func() {
+			// define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.Privileged = true
+
+			// create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Navigate to the CPU quota value
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			capabilities := spec["process"].(map[string]interface{})["capabilities"].(map[string]interface{})
+			Expect(capabilities["bounding"]).To(ContainElements("CAP_SYS_ADMIN", "CAP_NET_ADMIN", "CAP_SYS_MODULE"))
+		})
+
+		It("should correctly apply CapAdd and CapDrop", func() {
+			// define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.CapAdd = []string{"SYS_TIME", "NET_ADMIN"}
+			options.HostConfig.CapDrop = []string{"CHOWN", "NET_RAW"}
+
+			// create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Navigate to the CPU quota value
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			capabilities := spec["process"].(map[string]interface{})["capabilities"].(map[string]interface{})
+			Expect(capabilities["bounding"]).To(ContainElements("CAP_SYS_TIME", "CAP_NET_ADMIN"))
+			Expect(capabilities["bounding"]).NotTo(ContainElements("CAP_CHOWN", "CAP_NET_RAW"))
+		})
+
 		It("should create a container with specified network options", func() {
 			// define options
 			options.Cmd = []string{"sleep", "Infinity"}

@@ -107,6 +107,22 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Annotations: TODO - available in nerdctl 2.0
+	// Annotations are passed in as a map of strings,
+	// but nerdctl expects an array of strings with format [annotations1=VALUE1, annotations2=VALUE2, ...].
+	// annotations := []string{}
+	// if req.HostConfig.Annotations != nil {
+	// 	for key, val := range req.HostConfig.Annotations {
+	// 		annotations = append(annotations, fmt.Sprintf("%s=%s", key, val))
+	// 	}
+	// }
+
+	ulimits := []string{}
+	if req.HostConfig.Ulimits != nil {
+		for _, ulimit := range req.HostConfig.Ulimits {
+			ulimits = append(ulimits, ulimit.String())
+		}
+	}
 	// Environment vars:
 	env := []string{}
 	if req.Env != nil {
@@ -117,6 +133,36 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	capAdd := []string{}
 	if req.HostConfig.CapAdd != nil {
 		capAdd = req.HostConfig.CapAdd
+	}
+
+	capDrop := []string{}
+	if req.HostConfig.CapDrop != nil {
+		capDrop = req.HostConfig.CapDrop
+	}
+
+	memoryReservation := ""
+	if req.HostConfig.MemoryReservation != 0 {
+		memoryReservation = fmt.Sprint(req.HostConfig.MemoryReservation)
+	}
+
+	memorySwap := ""
+	if req.HostConfig.MemorySwap != 0 {
+		memorySwap = fmt.Sprint(req.HostConfig.MemorySwap)
+	}
+
+	memorySwappiness := int64(-1)
+	if req.HostConfig.MemorySwappiness > 0 {
+		memorySwappiness = req.HostConfig.MemorySwappiness
+	}
+
+	pidLimit := int64(-1)
+	if req.HostConfig.PidsLimit > 0 {
+		pidLimit = req.HostConfig.PidsLimit
+	}
+
+	CpuQuota := int64(-1)
+	if req.HostConfig.CPUQuota != 0 {
+		CpuQuota = req.HostConfig.CPUQuota
 	}
 
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
@@ -134,6 +180,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		Pull:        "missing",                 // nerdctl default.
 		StopSignal:  stopSignal,
 		StopTimeout: stopTimeout,
+		CidFile:     req.HostConfig.ContainerIDFile, // CidFile write the container ID to the file
 		// #endregion
 
 		// #region for platform flags
@@ -147,23 +194,26 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #region for resource flags
 		CPUShares:          uint64(req.HostConfig.CPUShares), // CPU shares (relative weight)
 		Memory:             memory,                           // memory limit (in bytes)
-		CPUQuota:           -1,                               // nerdctl default.
-		MemorySwappiness64: -1,                               // nerdctl default.
-		PidsLimit:          -1,                               // nerdctl default.
+		CPUQuota:           CpuQuota,                         // CPUQuota limits the CPU CFS (Completely Fair Scheduler) quota
+		MemorySwappiness64: memorySwappiness,                 // Tuning container memory swappiness behaviour
+		PidsLimit:          pidLimit,                         // PidsLimit specifies the tune container pids limit
 		Cgroupns:           defaults.CgroupnsMode(),          // nerdctl default.
+		MemoryReservation:  memoryReservation,                // Memory soft limit (in bytes)
+		MemorySwap:         memorySwap,                       // Total memory usage (memory + swap); set `-1` to enable unlimited swap
+		Ulimit:             ulimits,                          // List of ulimits to be set in the container
+		CPUPeriod:          uint64(req.HostConfig.CPUPeriod),
 		// #endregion
 
 		// #region for user flags
-		User:     req.User,
-		GroupAdd: []string{}, // nerdctl default.
+		User: req.User,
 		// #endregion
 
 		// #region for security flags
 		SecurityOpt: []string{}, // nerdctl default.
 		CapAdd:      capAdd,
-		CapDrop:     []string{}, // nerdctl default.
+		CapDrop:     capDrop,
+		Privileged:  req.HostConfig.Privileged,
 		// #endregion
-
 		// #region for runtime flags
 		Runtime: defaults.Runtime, // nerdctl default.
 		// #endregion
