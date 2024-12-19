@@ -11,6 +11,7 @@ import (
 	"github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/go-connections/nat"
+	"github.com/docker/go-units"
 )
 
 // AttachOptions defines the available options for the container attach call.
@@ -57,43 +58,44 @@ type ContainerConfig struct {
 // HostConfig is from https://github.com/moby/moby/blob/v24.0.2/api/types/container/hostconfig.go#L376-L436
 type ContainerHostConfig struct {
 	// Applicable to all platforms
-	Binds []string // List of volume bindings for this container
-	// TODO: ContainerIDFile string            // File (path) where the containerId is written
-	LogConfig     LogConfig     // Configuration of the logs for this container
-	NetworkMode   string        // Network mode to use for the container
-	PortBindings  nat.PortMap   // Port mapping between the exposed port (container) and the host
-	RestartPolicy RestartPolicy // Restart policy to be used for the container
-	AutoRemove    bool          // Automatically remove container when it exits
+	Binds           []string      // List of volume bindings for this container
+	ContainerIDFile string        // File (path) where the containerId is written
+	LogConfig       LogConfig     // Configuration of the logs for this container
+	NetworkMode     string        // Network mode to use for the container
+	PortBindings    nat.PortMap   // Port mapping between the exposed port (container) and the host
+	RestartPolicy   RestartPolicy // Restart policy to be used for the container
+	AutoRemove      bool          // Automatically remove container when it exits
 	// TODO: VolumeDriver    string            // Name of the volume driver used to mount volumes
-	// TODO: VolumesFrom     []string          // List of volumes to take from other container
+	// TODO: VolumesFrom     []string      // List of volumes to take from other container
 	// TODO: ConsoleSize     [2]uint           // Initial console size (height,width)
 	// TODO: Annotations     map[string]string `json:",omitempty"` // Arbitrary non-identifying metadata attached to container and provided to the runtime
 
 	// Applicable to UNIX platforms
-	CapAdd []string // List of kernel capabilities to add to the container
-	// TODO: CapDrop         strslice.StrSlice // List of kernel capabilities to remove from the container
-	// TODO: CgroupnsMode    CgroupnsMode      // Cgroup namespace mode to use for the container
+	CapAdd  []string // List of kernel capabilities to add to the container
+	CapDrop []string // List of kernel capabilities to remove from the container
+	// TODO: CgroupnsMode CgroupnsMode // Cgroup namespace mode to use for the container
 	DNS        []string `json:"Dns"`        // List of DNS server to lookup
 	DNSOptions []string `json:"DnsOptions"` // List of DNSOption to look for
 	DNSSearch  []string `json:"DnsSearch"`  // List of DNSSearch to look for
 	ExtraHosts []string // List of extra hosts
-	// TODO: GroupAdd        []string          // List of additional groups that the container process will run as
-	// TODO: IpcMode         IpcMode           // IPC namespace to use for the container
+	// TODO: GroupAdd []string // List of additional groups that the container process will run as
+	// TODO: IpcMode IpcMode // IPC namespace to use for the container
 	// TODO: Cgroup          CgroupSpec        // Cgroup to use for the container
 	// TODO: Links           []string          // List of links (in the name:alias form)
-	// TODO: OomScoreAdj     int               // Container preference for OOM-killing
-	// TODO: PidMode         PidMode           // PID namespace to use for the container
-	// TODO: Privileged      bool              // Is the container in privileged mode
+	// TODO: OomKillDisable bool // specifies whether to disable OOM Killer
+	// TODO: OomScoreAdj    int               // specifies the tune container’s OOM preferences (-1000 to 1000, rootless: 100 to 1000)
+	// TODO: PidMode        string            // PID namespace to use for the container
+	Privileged bool // Is the container in privileged mode
+	// TODO: ReadonlyRootfs bool              // Is the container root filesystem in read-only
+	// TODO: SecurityOpt []string          // List of string values to customize labels for MLS systems, such as SELinux. (["key=value"])
+	// TODO: Tmpfs   map[string]string `json:",omitempty"` // List of tmpfs (mounts) used for the container
+	// TODO: UTSMode string            // UTS namespace to use for the container
+	// TODO: ShmSize int64             // Size of /dev/shm in bytes. The size must be greater than 0.
+	// TODO: Sysctls map[string]string `json:",omitempty"` // List of Namespaced sysctls used for the container
+	// TODO: Runtime string            `json:",omitempty"` // Runtime to use with this container
 	// TODO: PublishAllPorts bool              // Should docker publish all exposed port for the container
-	// TODO: ReadonlyRootfs  bool              // Is the container root filesystem in read-only
-	// TODO: SecurityOpt     []string          // List of string values to customize labels for MLS systems, such as SELinux.
 	// TODO: StorageOpt      map[string]string `json:",omitempty"` // Storage driver options per container.
-	// TODO: Tmpfs           map[string]string `json:",omitempty"` // List of tmpfs (mounts) used for the container
-	// TODO: UTSMode         UTSMode           // UTS namespace to use for the container
 	// TODO: UsernsMode      UsernsMode        // The user namespace to use for the container
-	// TODO: ShmSize         int64             // Total shm memory usage
-	// TODO: Sysctls         map[string]string `json:",omitempty"` // List of Namespaced sysctls used for the container
-	// TODO: Runtime         string            `json:",omitempty"` // Runtime to use with this container
 
 	// Applicable to Windows
 	// TODO: Isolation Isolation // Isolation technology of the container (e.g. default, hyperv)
@@ -101,8 +103,19 @@ type ContainerHostConfig struct {
 	// Contains container's resources (cgroups, ulimits)
 	CPUShares int64 `json:"CpuShares"` // CPU shares (relative weight vs. other containers)
 	Memory    int64 // Memory limit (in bytes)
+	CPUPeriod int64 `json:"CpuPeriod"` // CPU CFS (Completely Fair Scheduler) period
+	CPUQuota  int64 `json:"CpuQuota"`  // CPU CFS (Completely Fair Scheduler) quota
+	// TODO: CPUSetCPUs        string `json:"CpusetCpus"` // CPUSetCPUs specifies the CPUs in which to allow execution (0-3, 0,1)
+	// TODO: CPUSetMems        string `json:"CpusetMems"` // CPUSetMems specifies the memory nodes (MEMs) in which to allow execution (0-3, 0,1). Only effective on NUMA systems.
+	MemoryReservation int64 // MemoryReservation specifies the memory soft limit (in bytes)
+	MemorySwap        int64 // Total memory usage (memory + swap); set `-1` to enable unlimited swap
+	MemorySwappiness  int64 // MemorySwappiness64 specifies the tune container memory swappiness (0 to 100) (default -1)
 	// TODO: Resources
 
+	Ulimits []*Ulimit // List of ulimits to be set in the container
+	// TODO: BlkioWeight uint16          // Block IO weight (relative weight vs. other containers)
+	// TODO: Devices     []DeviceMapping // List of devices to map inside the container
+	PidsLimit int64 // Setting PIDs limit for a container; Set `0` or `-1` for unlimited, or `null` to not change.
 	// Mounts specs used by the container
 	// TODO: Mounts []mount.Mount `json:",omitempty"`
 
@@ -249,3 +262,5 @@ type StatsJSON struct {
 	// Networks request version >=1.21
 	Networks map[string]dockertypes.NetworkStats `json:"networks,omitempty"`
 }
+
+type Ulimit = units.Ulimit

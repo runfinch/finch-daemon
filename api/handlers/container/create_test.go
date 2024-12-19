@@ -357,6 +357,172 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
+		It("should set CPUPeriod create options for resources", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"CpuPeriod": 100000
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.CPUPeriod = 100000
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set CpuQuota create options for resources", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"CpuQuota": 50000
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.CPUQuota = 50000
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set CpuQuota to -1 by default", func() {
+			body := []byte(`{
+				"Image": "test-image"
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.CPUQuota = -1
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set MemoryReservation, MemorySwap and MemorySwappiness create options for resources", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"MemoryReservation": 209710,
+					"MemorySwap": 514288000,
+					"MemorySwappiness": 25
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.MemoryReservation = "209710"
+			createOpt.MemorySwap = "514288000"
+			createOpt.MemorySwappiness64 = 25
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set CapDrop option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"CapDrop": ["MKNOD"]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.CapDrop = []string{"MKNOD"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set Privileged option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"Privileged": true
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.Privileged = true
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set Ulimit option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"Ulimits": [{"Name": "nofile", "Soft": 1024, "Hard": 2048},{"Name": "nproc", "Soft": 1024, "Hard": 4048}]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.Ulimit = []string{"nofile=1024:2048", "nproc=1024:4048"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set PidLimit option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"PidsLimit": 200
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.PidsLimit = 200
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
 		It("should return 404 if the image was not found", func() {
 			body := []byte(`{"Image": "test-image"}`)
 			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
@@ -542,17 +708,18 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 		MemorySwappiness64: -1,                      // nerdctl default.
 		PidsLimit:          -1,                      // nerdctl default.
 		Cgroupns:           defaults.CgroupnsMode(), // nerdctl default.
+		Ulimit:             []string{},
 		// #endregion
 
 		// #region for user flags
-		User:     "",
-		GroupAdd: []string{}, // nerdctl default.
+		User: "",
 		// #endregion
 
 		// #region for security flags
 		SecurityOpt: []string{}, // nerdctl default.
 		CapAdd:      []string{}, // nerdctl default.
 		CapDrop:     []string{}, // nerdctl default.
+		Privileged:  false,
 		// #endregion
 
 		// #region for runtime flags
