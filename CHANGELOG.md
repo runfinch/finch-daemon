@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.11.1](https://github.com/runfinch/finch-daemon/compare/v0.11.0...v0.11.1) (2024-12-19)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/vishvananda/netns from 0.0.4 to 0.0.5 ([#112](https://github.com/runfinch/finch-daemon/issues/112)) ([40d3991](https://github.com/runfinch/finch-daemon/commit/40d3991864516be6816abbb788118aaaf6e29802))
+* **deps:** Bump golang.org/x/crypto from 0.29.0 to 0.31.0 ([#120](https://github.com/runfinch/finch-daemon/issues/120)) ([5c99f3e](https://github.com/runfinch/finch-daemon/commit/5c99f3e7ddfacdf5793c7eac32c6d7e1aa54d780))
+* **deps:** Bump google.golang.org/protobuf from 1.35.1 to 1.35.2 ([#116](https://github.com/runfinch/finch-daemon/issues/116)) ([682d4cd](https://github.com/runfinch/finch-daemon/commit/682d4cddf09c19a254e5341d9c7842d4da3e2d3c))
+
+
+### Bug Fixes
+
+* Update go mod to fix CVE-2024-45338 ([#124](https://github.com/runfinch/finch-daemon/issues/124)) ([19a3980](https://github.com/runfinch/finch-daemon/commit/19a3980b0bd897fb814143eeb8255837f42c1014))
+
 ## [0.11.0](https://github.com/runfinch/finch-daemon/compare/v0.10.0...v0.11.0) (2024-11-27)
 
 
