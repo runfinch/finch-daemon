@@ -158,14 +158,9 @@ func (s *service) Inspect(ctx context.Context, name string, ac *dockertypes.Auth
 
 	return &registrytypes.DistributionInspect{
 		Descriptor: ocispec.Descriptor{
-			MediaType:    desc.MediaType,
-			Digest:       desc.Digest,
-			Size:         desc.Size,
-			URLs:         desc.URLs,
-			Annotations:  desc.Annotations,
-			Data:         desc.Data,
-			Platform:     desc.Platform,
-			ArtifactType: desc.ArtifactType,
+			MediaType: desc.MediaType,
+			Digest:    desc.Digest,
+			Size:      desc.Size,
 		},
 		Platforms: platforms,
 	}, nil

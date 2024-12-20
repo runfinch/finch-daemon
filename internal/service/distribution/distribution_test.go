@@ -96,10 +96,10 @@ var _ = Describe("Distribution Inspect API ", func() {
 				MediaType:   ocispec.MediaTypeImageIndex,
 				Digest:      "sha256:9bae60c369e612488c2a089c38737277a4823a3af97ec6866c3b4ad05251bfa5",
 				Size:        2,
-				URLs:        []string{},
-				Annotations: map[string]string{},
-				Data:        []byte{},
-				Platform:    &ociPlatformAmd,
+				URLs:        nil,
+				Annotations: nil,
+				Data:        nil,
+				Platform:    nil,
 			}
 
 			imageDescriptor1 = ocispec.Descriptor{
@@ -140,9 +140,9 @@ var _ = Describe("Distribution Inspect API ", func() {
 				MediaType:   ocispec.MediaTypeImageManifest,
 				Digest:      "sha256:9b13590c9a50929020dc76a30ad813e42514a4e34de2f04f5a088f5a1320367c",
 				Size:        2,
-				URLs:        []string{},
-				Annotations: map[string]string{},
-				Data:        []byte{},
+				URLs:        nil,
+				Annotations: nil,
+				Data:        nil,
 			}
 
 			imageManifest = ocispec.Manifest{
