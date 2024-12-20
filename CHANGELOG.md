@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.12.0](https://github.com/runfinch/finch-daemon/compare/v0.11.0...v0.12.0) (2024-12-20)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/containerd/cgroups/v3 from 3.0.3 to 3.0.5 ([#130](https://github.com/runfinch/finch-daemon/issues/130)) ([bc69841](https://github.com/runfinch/finch-daemon/commit/bc6984128b4c47bb933f6aba46b7802d9bf9e70d))
+* **deps:** Bump github.com/onsi/ginkgo/v2 from 2.20.2 to 2.22.1 ([#129](https://github.com/runfinch/finch-daemon/issues/129)) ([606c16b](https://github.com/runfinch/finch-daemon/commit/606c16b0ccbf018aa65cdc4b4c3cbc3e0071061c))
+* **deps:** Bump github.com/vishvananda/netns from 0.0.4 to 0.0.5 ([#112](https://github.com/runfinch/finch-daemon/issues/112)) ([40d3991](https://github.com/runfinch/finch-daemon/commit/40d3991864516be6816abbb788118aaaf6e29802))
+* **deps:** Bump golang.org/x/crypto from 0.29.0 to 0.31.0 ([#120](https://github.com/runfinch/finch-daemon/issues/120)) ([5c99f3e](https://github.com/runfinch/finch-daemon/commit/5c99f3e7ddfacdf5793c7eac32c6d7e1aa54d780))
+* **deps:** Bump google.golang.org/protobuf from 1.35.1 to 1.35.2 ([#116](https://github.com/runfinch/finch-daemon/issues/116)) ([682d4cd](https://github.com/runfinch/finch-daemon/commit/682d4cddf09c19a254e5341d9c7842d4da3e2d3c))
+
+
+### Features
+
+* add distribution API (with bug fix) ([#121](https://github.com/runfinch/finch-daemon/issues/121)) ([da0dab7](https://github.com/runfinch/finch-daemon/commit/da0dab73d84aac1d7e7ac432774480d49ccf495e))
+
+
+### Bug Fixes
+
+* Update go mod to fix CVE-2024-45338 ([#124](https://github.com/runfinch/finch-daemon/issues/124)) ([19a3980](https://github.com/runfinch/finch-daemon/commit/19a3980b0bd897fb814143eeb8255837f42c1014))
+
 ## [0.11.0](https://github.com/runfinch/finch-daemon/compare/v0.10.0...v0.11.0) (2024-11-27)
 
 
