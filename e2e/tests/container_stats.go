@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	dockertypes "github.com/docker/docker/api/types"
+	dockertypes "github.com/docker/docker/api/types/container"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
