@@ -21,6 +21,7 @@ require (
 	github.com/docker/cli v26.0.0+incompatible
 	github.com/docker/docker v27.4.1+incompatible
 	github.com/docker/go-connections v0.5.0
+	github.com/docker/go-units v0.5.0
 	github.com/getlantern/httptest v0.0.0-20161025015934-4b40f4c7e590
 	github.com/gofrs/flock v0.12.1
 	github.com/golang/mock v1.6.0
@@ -43,7 +44,7 @@ require (
 	github.com/vishvananda/netns v0.0.5
 	golang.org/x/net v0.33.0
 	golang.org/x/sys v0.28.0
-	google.golang.org/protobuf v1.35.2
+	google.golang.org/protobuf v1.36.0
 )
 
 require (
@@ -74,7 +75,6 @@ require (
 	github.com/djherbis/times v1.6.0 // indirect
 	github.com/docker/docker-credential-helpers v0.8.1 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
-	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fahedouch/go-logrotate v0.2.0 // indirect
 	github.com/fatih/color v1.17.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
