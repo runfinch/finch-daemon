@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.12.0](https://github.com/runfinch/finch-daemon/compare/v0.11.0...v0.12.0) (2024-12-27)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/containerd/cgroups/v3 from 3.0.3 to 3.0.5 ([#130](https://github.com/runfinch/finch-daemon/issues/130)) ([bc69841](https://github.com/runfinch/finch-daemon/commit/bc6984128b4c47bb933f6aba46b7802d9bf9e70d))
+* **deps:** Bump github.com/containerd/go-cni from 1.1.10 to 1.1.11 ([#134](https://github.com/runfinch/finch-daemon/issues/134)) ([82f9629](https://github.com/runfinch/finch-daemon/commit/82f9629b3088450c7bf6ef178344993a44aea785))
+* **deps:** Bump github.com/containerd/typeurl/v2 from 2.2.0 to 2.2.3 ([#133](https://github.com/runfinch/finch-daemon/issues/133)) ([d9704ff](https://github.com/runfinch/finch-daemon/commit/d9704ff415483774bdffe1b474b4d25315346abd))
+* **deps:** Bump github.com/docker/cli from 26.0.0+incompatible to 27.4.1+incompatible ([#125](https://github.com/runfinch/finch-daemon/issues/125)) ([bff4a1f](https://github.com/runfinch/finch-daemon/commit/bff4a1fe3eae771e491583e99dad3d14ee11d97c))
+* **deps:** Bump github.com/docker/docker from 26.1.5+incompatible to 27.4.1+incompatible ([#127](https://github.com/runfinch/finch-daemon/issues/127)) ([f77066d](https://github.com/runfinch/finch-daemon/commit/f77066dd388b1290dc4c31c3f8e28301c0b96f8d))
+* **deps:** Bump github.com/moby/moby from 26.0.0+incompatible to 27.4.1+incompatible ([#132](https://github.com/runfinch/finch-daemon/issues/132)) ([da5f7cd](https://github.com/runfinch/finch-daemon/commit/da5f7cd3339d3164fd1c51fe8b55bd42d4c92757))
+* **deps:** Bump github.com/onsi/ginkgo/v2 from 2.20.2 to 2.22.1 ([#129](https://github.com/runfinch/finch-daemon/issues/129)) ([606c16b](https://github.com/runfinch/finch-daemon/commit/606c16b0ccbf018aa65cdc4b4c3cbc3e0071061c))
+* **deps:** Bump github.com/onsi/gomega from 1.36.1 to 1.36.2 ([#136](https://github.com/runfinch/finch-daemon/issues/136)) ([72facd2](https://github.com/runfinch/finch-daemon/commit/72facd29138b19bae5302fc06efd281a26c28cdd))
+* **deps:** Bump github.com/vishvananda/netns from 0.0.4 to 0.0.5 ([#112](https://github.com/runfinch/finch-daemon/issues/112)) ([40d3991](https://github.com/runfinch/finch-daemon/commit/40d3991864516be6816abbb788118aaaf6e29802))
+* **deps:** Bump golang.org/x/crypto from 0.29.0 to 0.31.0 ([#120](https://github.com/runfinch/finch-daemon/issues/120)) ([5c99f3e](https://github.com/runfinch/finch-daemon/commit/5c99f3e7ddfacdf5793c7eac32c6d7e1aa54d780))
+* **deps:** Bump google.golang.org/protobuf from 1.35.1 to 1.35.2 ([#116](https://github.com/runfinch/finch-daemon/issues/116)) ([682d4cd](https://github.com/runfinch/finch-daemon/commit/682d4cddf09c19a254e5341d9c7842d4da3e2d3c))
+* **deps:** Bump google.golang.org/protobuf from 1.35.2 to 1.36.0 ([#128](https://github.com/runfinch/finch-daemon/issues/128)) ([b46d499](https://github.com/runfinch/finch-daemon/commit/b46d49935a6001c63f884c1d184346ea7445a8b8))
+
+
+### Features
+
+* add distribution API (with bug fix) ([#121](https://github.com/runfinch/finch-daemon/issues/121)) ([da0dab7](https://github.com/runfinch/finch-daemon/commit/da0dab73d84aac1d7e7ac432774480d49ccf495e))
+* add more options to container create API ([#122](https://github.com/runfinch/finch-daemon/pull/122)) ([9fda9cd](https://github.com/runfinch/finch-daemon/commit/9fda9cd9d4ae6355588410871b71ef5217082bbb))
+
+
+### Bug Fixes
+
+* Update go mod to fix CVE-2024-45338 ([#124](https://github.com/runfinch/finch-daemon/issues/124)) ([19a3980](https://github.com/runfinch/finch-daemon/commit/19a3980b0bd897fb814143eeb8255837f42c1014))
+
 ## [0.11.0](https://github.com/runfinch/finch-daemon/compare/v0.10.0...v0.11.0) (2024-11-27)
 
 
