@@ -13,7 +13,7 @@ require (
 	github.com/containerd/go-cni v1.1.11
 	github.com/containerd/nerdctl v1.7.7
 	github.com/containerd/platforms v0.2.1
-	github.com/containerd/typeurl/v2 v2.2.0
+	github.com/containerd/typeurl/v2 v2.2.3
 	github.com/containernetworking/cni v1.2.3
 	github.com/coreos/go-iptables v0.8.0
 	github.com/coreos/go-systemd/v22 v22.5.0
