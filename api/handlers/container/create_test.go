@@ -1150,6 +1150,7 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 		CapAdd:      []string{}, // nerdctl default.
 		CapDrop:     []string{}, // nerdctl default.
 		Privileged:  false,
+		GroupAdd:    []string{}, // nerdctl default.
 		// #endregion
 
 		// #region for runtime flags
