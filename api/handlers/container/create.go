@@ -143,23 +143,6 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Annotations: TODO - available in nerdctl 2.0
-	// Annotations are passed in as a map of strings,
-	// but nerdctl expects an array of strings with format [annotations1=VALUE1, annotations2=VALUE2, ...].
-	// annotations := []string{}
-	// if req.HostConfig.Annotations != nil {
-	// 	for key, val := range req.HostConfig.Annotations {
-	// 		annotations = append(annotations, fmt.Sprintf("%s=%s", key, val))
-	// 	}
-	// }
-
-	ulimits := []string{}
-	if req.HostConfig.Ulimits != nil {
-		for _, ulimit := range req.HostConfig.Ulimits {
-			ulimits = append(ulimits, ulimit.String())
-		}
-	}
-
 	// devices:
 	// devices are passed in as a map of DeviceMapping,
 	// but nerdctl expects an array of strings with format [PathOnHost1:PathInContainer1:CgroupPermissions1, PathOnHost2:PathInContainer2:CgroupPermissions2, ...].
@@ -250,11 +233,6 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		securityOpt = req.HostConfig.SecurityOpt
 	}
 
-	pidLimit := int64(-1)
-	if req.HostConfig.PidsLimit > 0 {
-		pidLimit = req.HostConfig.PidsLimit
-	}
-
 	cgroupnsMode := defaults.CgroupnsMode()
 	if req.HostConfig.CgroupnsMode.Valid() {
 		cgroupnsMode = string(req.HostConfig.CgroupnsMode)
@@ -305,7 +283,6 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CPUSetMems:         req.HostConfig.CPUSetMems,        // CpusetMems 0-2, 0,1
 		IPC:                req.HostConfig.IpcMode,           // IPC namespace to use
 		ShmSize:            shmSize,                          // ShmSize set the size of /dev/shm
-		Ulimit:             ulimits,                          // List of ulimits to be set in the container
 		Device:             devices,                          // Device specifies add a host device to the container
 		// #endregion
 
