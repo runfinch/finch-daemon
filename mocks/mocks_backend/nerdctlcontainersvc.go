@@ -120,6 +120,20 @@ func (mr *MockNerdctlContainerSvcMockRecorder) InspectNetNS(arg0, arg1 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InspectNetNS", reflect.TypeOf((*MockNerdctlContainerSvc)(nil).InspectNetNS), arg0, arg1)
 }
 
+// KillContainer mocks base method.
+func (m *MockNerdctlContainerSvc) KillContainer(arg0 context.Context, arg1 string, arg2 types.ContainerKillOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "KillContainer", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// KillContainer indicates an expected call of KillContainer.
+func (mr *MockNerdctlContainerSvcMockRecorder) KillContainer(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KillContainer", reflect.TypeOf((*MockNerdctlContainerSvc)(nil).KillContainer), arg0, arg1, arg2)
+}
+
 // ListContainers mocks base method.
 func (m *MockNerdctlContainerSvc) ListContainers(arg0 context.Context, arg1 types.ContainerListOptions) ([]container.ListItem, error) {
 	m.ctrl.T.Helper()
