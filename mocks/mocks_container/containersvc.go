@@ -127,6 +127,20 @@ func (mr *MockServiceMockRecorder) Inspect(arg0, arg1 interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Inspect", reflect.TypeOf((*MockService)(nil).Inspect), arg0, arg1)
 }
 
+// Kill mocks base method.
+func (m *MockService) Kill(arg0 context.Context, arg1 string, arg2 types.ContainerKillOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Kill", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Kill indicates an expected call of Kill.
+func (mr *MockServiceMockRecorder) Kill(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Kill", reflect.TypeOf((*MockService)(nil).Kill), arg0, arg1, arg2)
+}
+
 // List mocks base method.
 func (m *MockService) List(arg0 context.Context, arg1 types.ContainerListOptions) ([]types0.ContainerListItem, error) {
 	m.ctrl.T.Helper()
