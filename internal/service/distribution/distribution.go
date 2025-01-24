@@ -10,9 +10,9 @@ import (
 	"fmt"
 	"io"
 
-	cremoteerrors "github.com/containerd/containerd/remotes/errors"
 	containerdimages "github.com/containerd/containerd/v2/core/images"
 	dockerresolver "github.com/containerd/containerd/v2/core/remotes/docker"
+	cremoteerrors "github.com/containerd/containerd/v2/core/remotes/errors"
 	cerrdefs "github.com/containerd/errdefs"
 	"github.com/containerd/nerdctl/v2/pkg/imgutil/dockerconfigresolver"
 	dockertypes "github.com/docker/cli/cli/config/types"

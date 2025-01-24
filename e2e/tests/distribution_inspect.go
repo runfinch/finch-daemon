@@ -194,8 +194,10 @@ func DistributionInspect(opt *option.Option) {
 			var message response.Error
 			err = json.NewDecoder(res.Body).Decode(&message)
 			Expect(err).Should(BeNil())
-			Expect(message.Message).Should(Equal(fmt.Sprintf("unexpected status from HEAD request "+
-				"to http://%s/v2/test-login/manifests/tag: 401 Unauthorized", registry)))
+			Expect(message.Message).Should(And(
+				ContainSubstring("pull access denied, repository does not exist or may require authorization"),
+				ContainSubstring("no basic auth credentials"),
+			))
 		})
 	})
 }
