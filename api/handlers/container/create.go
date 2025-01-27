@@ -238,6 +238,11 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		cgroupnsMode = string(req.HostConfig.CgroupnsMode)
 	}
 
+	var oomScoreAdjChanged bool
+	if req.HostConfig.OomScoreAdj != 0 || req.HostConfig.OomScoreAdjChanged {
+		oomScoreAdjChanged = req.HostConfig.OomScoreAdjChanged
+	}
+
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
 		Stdout:   nil,
@@ -245,18 +250,19 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		GOptions: globalOpt,
 
 		// #region for basic flags
-		Interactive:    false,                     // TODO: update this after attach supports STDIN
-		TTY:            false,                     // TODO: update this after attach supports STDIN
-		Detach:         true,                      // TODO: current implementation of create does not support AttachStdin, AttachStdout, and AttachStderr flags
-		Restart:        restart,                   // Restart policy to apply when a container exits.
-		Rm:             req.HostConfig.AutoRemove, // Automatically remove container upon exit.
-		Pull:           "missing",                 // nerdctl default.
-		StopSignal:     stopSignal,
-		StopTimeout:    stopTimeout,
-		CidFile:        req.HostConfig.ContainerIDFile, // CidFile write the container ID to the file
-		OomKillDisable: req.HostConfig.OomKillDisable,
-		OomScoreAdj:    req.HostConfig.OomScoreAdj,
-		Pid:            req.HostConfig.PidMode, // Pid namespace to use
+		Interactive:        false,                     // TODO: update this after attach supports STDIN
+		TTY:                false,                     // TODO: update this after attach supports STDIN
+		Detach:             true,                      // TODO: current implementation of create does not support AttachStdin, AttachStdout, and AttachStderr flags
+		Restart:            restart,                   // Restart policy to apply when a container exits.
+		Rm:                 req.HostConfig.AutoRemove, // Automatically remove container upon exit.
+		Pull:               "missing",                 // nerdctl default.
+		StopSignal:         stopSignal,
+		StopTimeout:        stopTimeout,
+		CidFile:            req.HostConfig.ContainerIDFile, // CidFile write the container ID to the file
+		OomKillDisable:     req.HostConfig.OomKillDisable,
+		OomScoreAdj:        req.HostConfig.OomScoreAdj,
+		OomScoreAdjChanged: oomScoreAdjChanged,
+		Pid:                req.HostConfig.PidMode, // Pid namespace to use
 		// #endregion
 
 		// #region for platform flags

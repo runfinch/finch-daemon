@@ -82,17 +82,18 @@ type ContainerHostConfig struct {
 	IpcMode      string       // IPC namespace to use for the container
 	// TODO: Cgroup          CgroupSpec        // Cgroup to use for the container
 	// TODO: Links           []string          // List of links (in the name:alias form)
-	OomKillDisable bool              // specifies whether to disable OOM Killer
-	OomScoreAdj    int               // specifies the tune container’s OOM preferences (-1000 to 1000, rootless: 100 to 1000)
-	PidMode        string            // PID namespace to use for the container
-	Privileged     bool              // Is the container in privileged mode
-	ReadonlyRootfs bool              // Is the container root filesystem in read-only
-	SecurityOpt    []string          // List of string values to customize labels for MLS systems, such as SELinux. (["key=value"])
-	Tmpfs          map[string]string `json:",omitempty"` // List of tmpfs (mounts) used for the container
-	UTSMode        string            // UTS namespace to use for the container
-	ShmSize        int64             // Size of /dev/shm in bytes. The size must be greater than 0.
-	Sysctls        map[string]string `json:",omitempty"` // List of Namespaced sysctls used for the container
-	Runtime        string            `json:",omitempty"` // Runtime to use with this container
+	OomKillDisable     bool              // specifies whether to disable OOM Killer
+	OomScoreAdj        int               // specifies the tune container’s OOM preferences (-1000 to 1000, rootless: 100 to 1000)
+	OomScoreAdjChanged bool              // OomScoreAdjChanged specifies whether the OOM preferences has been changed
+	PidMode            string            // PID namespace to use for the container
+	Privileged         bool              // Is the container in privileged mode
+	ReadonlyRootfs     bool              // Is the container root filesystem in read-only
+	SecurityOpt        []string          // List of string values to customize labels for MLS systems, such as SELinux. (["key=value"])
+	Tmpfs              map[string]string `json:",omitempty"` // List of tmpfs (mounts) used for the container
+	UTSMode            string            // UTS namespace to use for the container
+	ShmSize            int64             // Size of /dev/shm in bytes. The size must be greater than 0.
+	Sysctls            map[string]string `json:",omitempty"` // List of Namespaced sysctls used for the container
+	Runtime            string            `json:",omitempty"` // Runtime to use with this container
 	// TODO: PublishAllPorts bool              // Should docker publish all exposed port for the container
 	// TODO: StorageOpt      map[string]string `json:",omitempty"` // Storage driver options per container.
 	// TODO: UsernsMode      UsernsMode        // The user namespace to use for the container
