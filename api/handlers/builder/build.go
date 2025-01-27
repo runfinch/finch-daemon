@@ -53,6 +53,22 @@ func (h *handler) getBuildOptions(w http.ResponseWriter, r *http.Request, stream
 		h.logger.Warnf("Failed to get buildkit host: %v", err.Error())
 		return nil, err
 	}
+
+	buildArgs, err := getQueryParamMap(r, "buildargs", []string{})
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse buildargs query: %s", err)
+	}
+
+	labels, err := getQueryParamMap(r, "labels", []string{})
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse labels query: %s", err)
+	}
+
+	cacheFrom, err := getQueryParamMap(r, "cachefrom", []string{})
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse cacheFrom query: %s", err)
+	}
+
 	options := types.BuilderBuildOptions{
 		// TODO: investigate - interestingly nerdctl prints all the build log in stderr for some reason.
 		Stdout: stream,
@@ -73,17 +89,15 @@ func (h *handler) getBuildOptions(w http.ResponseWriter, r *http.Request, stream
 		Platform:     getQueryParamList(r, "platform", []string{}),
 		Rm:           getQueryParamBool(r, "rm", true),
 		Progress:     "auto",
+		Quiet:        getQueryParamBool(r, "q", true),
+		NoCache:      getQueryParamBool(r, "nocache", false),
+		CacheFrom:    cacheFrom,
+		BuildArgs:    buildArgs,
+		Label:        labels,
+		NetworkMode:  getQueryParamStr(r, "networkmode", ""),
+		Output:       getQueryParamStr(r, "output", ""),
 	}
 
-	argsQuery := r.URL.Query().Get("buildargs")
-	if argsQuery != "" {
-		buildargs := make(map[string]string)
-		err := json.Unmarshal([]byte(argsQuery), &buildargs)
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse buildargs query: %s", err)
-		}
-		options.BuildArgs = maputility.Flatten(buildargs, maputility.KeyEqualsValueFormat)
-	}
 	return &options, nil
 }
 
@@ -116,4 +130,19 @@ func getQueryParamList(r *http.Request, paramName string, defaultValue []string)
 		return defaultValue
 	}
 	return params[paramName]
+}
+
+func getQueryParamMap(r *http.Request, paramName string, defaultValue []string) ([]string, error) {
+	query := r.URL.Query().Get(paramName)
+	if query == "" {
+		return defaultValue, nil
+	}
+
+	var parsedMap map[string]string
+	err := json.Unmarshal([]byte(query), &parsedMap)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse %s query: %s", paramName, err)
+	}
+
+	return maputility.Flatten(parsedMap, maputility.KeyEqualsValueFormat), nil
 }
