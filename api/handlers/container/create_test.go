@@ -783,6 +783,7 @@ var _ = Describe("Container Create API ", func() {
 			// expected create options
 			createOpt.IPC = "host"
 			createOpt.OomScoreAdj = 200
+			createOpt.OomScoreAdjChanged = true
 
 			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
 				cid, nil)
