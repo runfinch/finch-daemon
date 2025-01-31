@@ -6,8 +6,8 @@ toolchain go1.22.7
 
 require (
 	github.com/containerd/cgroups/v3 v3.0.5
-	github.com/containerd/containerd v1.7.24
-	github.com/containerd/containerd/api v1.7.19
+	github.com/containerd/containerd v1.7.25
+	github.com/containerd/containerd/api v1.8.0
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/fifo v1.1.0
 	github.com/containerd/go-cni v1.1.11
@@ -58,7 +58,7 @@ require (
 	github.com/cilium/ebpf v0.16.0 // indirect
 	github.com/containerd/accelerated-container-image v1.1.2 // indirect
 	github.com/containerd/console v1.0.4 // indirect
-	github.com/containerd/continuity v0.4.3 // indirect
+	github.com/containerd/continuity v0.4.4 // indirect
 	github.com/containerd/go-runc v1.1.0 // indirect
 	github.com/containerd/imgcrypt v1.1.10 // indirect
 	github.com/containerd/log v0.1.0 // indirect
