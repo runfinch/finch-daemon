@@ -9,12 +9,12 @@ import (
 	io "io"
 	reflect "reflect"
 
-	images "github.com/containerd/containerd/images"
-	remotes "github.com/containerd/containerd/remotes"
-	docker "github.com/containerd/containerd/remotes/docker"
-	imgutil "github.com/containerd/nerdctl/pkg/imgutil"
-	dockerconfigresolver "github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
-	dockercompat "github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
+	images "github.com/containerd/containerd/v2/core/images"
+	remotes "github.com/containerd/containerd/v2/core/remotes"
+	docker "github.com/containerd/containerd/v2/core/remotes/docker"
+	imgutil "github.com/containerd/nerdctl/v2/pkg/imgutil"
+	dockerconfigresolver "github.com/containerd/nerdctl/v2/pkg/imgutil/dockerconfigresolver"
+	dockercompat "github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	platforms "github.com/containerd/platforms"
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -101,6 +101,20 @@ func (m *MockNerdctlImageSvc) LoadImage(arg0 context.Context, arg1 string, arg2 
 func (mr *MockNerdctlImageSvcMockRecorder) LoadImage(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadImage", reflect.TypeOf((*MockNerdctlImageSvc)(nil).LoadImage), arg0, arg1, arg2, arg3)
+}
+
+// Namespace mocks base method.
+func (m *MockNerdctlImageSvc) Namespace() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Namespace")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Namespace indicates an expected call of Namespace.
+func (mr *MockNerdctlImageSvcMockRecorder) Namespace() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Namespace", reflect.TypeOf((*MockNerdctlImageSvc)(nil).Namespace))
 }
 
 // PullImage mocks base method.

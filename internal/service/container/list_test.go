@@ -8,10 +8,10 @@ import (
 	"errors"
 	"time"
 
-	"github.com/containerd/containerd"
-	ncTypes "github.com/containerd/nerdctl/pkg/api/types"
-	ncContainer "github.com/containerd/nerdctl/pkg/cmd/container"
-	"github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
+	containerd "github.com/containerd/containerd/v2/client"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
+	ncContainer "github.com/containerd/nerdctl/v2/pkg/cmd/container"
+	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -49,8 +49,8 @@ var _ = Describe("Container List API ", func() {
 		listOpts = ncTypes.ContainerListOptions{}
 		created = time.Now()
 		containers = []ncContainer.ListItem{
-			{ID: "id1", Names: "name1", Image: "img1", CreatedAt: created, Labels: nil},
-			{ID: "id2", Names: "name2", Image: "img2", CreatedAt: created, Labels: nil},
+			{ID: "id1", Names: "name1", Image: "img1", CreatedAt: created, LabelsMap: nil},
+			{ID: "id2", Names: "name2", Image: "img2", CreatedAt: created, LabelsMap: nil},
 		}
 		tarExtractor = mocks_archive.NewMockTarExtractor(mockCtrl)
 		con = mocks_container.NewMockContainer(mockCtrl)

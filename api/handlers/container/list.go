@@ -10,8 +10,8 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/containerd/containerd/namespaces"
-	ncTypes "github.com/containerd/nerdctl/pkg/api/types"
+	"github.com/containerd/containerd/v2/pkg/namespaces"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 
 	"github.com/runfinch/finch-daemon/api/response"
 )

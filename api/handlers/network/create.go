@@ -8,7 +8,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/containerd/containerd/namespaces"
+	"github.com/containerd/containerd/v2/pkg/namespaces"
 
 	respond "github.com/runfinch/finch-daemon/api/response"
 	"github.com/runfinch/finch-daemon/api/types"

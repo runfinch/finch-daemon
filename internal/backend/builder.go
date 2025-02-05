@@ -6,9 +6,9 @@ package backend
 import (
 	"context"
 
-	"github.com/containerd/nerdctl/pkg/api/types"
-	"github.com/containerd/nerdctl/pkg/buildkitutil"
-	"github.com/containerd/nerdctl/pkg/cmd/builder"
+	"github.com/containerd/nerdctl/v2/pkg/api/types"
+	"github.com/containerd/nerdctl/v2/pkg/buildkitutil"
+	"github.com/containerd/nerdctl/v2/pkg/cmd/builder"
 )
 
 //go:generate mockgen --destination=../../mocks/mocks_backend/nerdctlbuildersvc.go -package=mocks_backend github.com/runfinch/finch-daemon/internal/backend NerdctlBuilderSvc

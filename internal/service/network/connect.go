@@ -9,13 +9,13 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/containerd/containerd"
+	containerd "github.com/containerd/containerd/v2/client"
 	cerrdefs "github.com/containerd/errdefs"
 	gocni "github.com/containerd/go-cni"
-	"github.com/containerd/nerdctl/pkg/labels"
-	"github.com/containerd/nerdctl/pkg/netutil"
-	"github.com/containerd/nerdctl/pkg/netutil/nettype"
-	"github.com/containerd/nerdctl/pkg/strutil"
+	"github.com/containerd/nerdctl/v2/pkg/labels"
+	"github.com/containerd/nerdctl/v2/pkg/netutil"
+	"github.com/containerd/nerdctl/v2/pkg/netutil/nettype"
+	"github.com/containerd/nerdctl/v2/pkg/strutil"
 	"github.com/containernetworking/cni/libcni"
 	"github.com/sirupsen/logrus"
 )

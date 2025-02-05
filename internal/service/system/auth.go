@@ -11,30 +11,33 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/containerd/containerd/remotes/docker"
-	dockerconfig "github.com/containerd/containerd/remotes/docker/config"
-	remoteerrs "github.com/containerd/containerd/remotes/errors"
-	"github.com/containerd/nerdctl/pkg/imgutil/dockerconfigresolver"
+	"github.com/containerd/containerd/v2/core/remotes/docker"
+	dockerconfig "github.com/containerd/containerd/v2/core/remotes/docker/config"
+	remoteerrs "github.com/containerd/containerd/v2/core/remotes/errors"
+	"github.com/containerd/nerdctl/v2/pkg/imgutil/dockerconfigresolver"
 	"golang.org/x/net/context/ctxhttp"
 
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
 
 // To be consistent with nerdctl: https://github.com/containerd/nerdctl/blob/2b06050d782c27571c98947ac9fa790d5f2d0bde/cmd/nerdctl/login.go#L90
-const defaultRegHost = dockerconfigresolver.IndexServer
+const defaultRegHost = "https://index.docker.io/v1/"
 
 func (s *service) Auth(ctx context.Context, username, password, serverAddr string) (string, error) {
 	if serverAddr == "" {
 		serverAddr = defaultRegHost
 	}
 
-	host := dockerconfigresolver.ConvertToHostname(serverAddr)
+	host, err := dockerconfigresolver.Parse(serverAddr)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse server address: %v", err)
+	}
 	// TODO: Support server addr that starts with "http://" (probably useful when testing)
 	// Currently TLS is enforced.
 	// Check dockerconfigresolver.WithSkipVerifyCerts and dockerconfigresolver.WithPlainHTTP.
-	ho, err := dockerconfigresolver.NewHostOptions(ctx, host, dockerconfigresolver.WithAuthCreds(
+	ho, err := dockerconfigresolver.NewHostOptions(ctx, host.CanonicalIdentifier(), dockerconfigresolver.WithAuthCreds(
 		func(acArg string) (string, string, error) {
-			if acArg == host {
+			if acArg == host.CanonicalIdentifier() {
 				return username, password, nil
 			}
 			return "", "", fmt.Errorf("expected acArg to be %q, got %q", host, acArg)
@@ -55,7 +58,7 @@ func (s *service) Auth(ctx context.Context, username, password, serverAddr strin
 			fetchedRefreshTokens[req.URL.Host] = token
 		},
 	))
-	regHosts, err := dockerconfig.ConfigureHosts(ctx, *ho)(host)
+	regHosts, err := dockerconfig.ConfigureHosts(ctx, *ho)(host.CanonicalIdentifier())
 	if err != nil {
 		return "", fmt.Errorf("failed to configure registry host: %w", err)
 	}

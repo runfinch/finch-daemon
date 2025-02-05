@@ -8,8 +8,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	config "github.com/containerd/nerdctl/pkg/config"
-	dockercompat "github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
+	config "github.com/containerd/nerdctl/v2/pkg/config"
+	dockercompat "github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	gomock "github.com/golang/mock/gomock"
 	events "github.com/runfinch/finch-daemon/api/events"
 	types "github.com/runfinch/finch-daemon/api/types"

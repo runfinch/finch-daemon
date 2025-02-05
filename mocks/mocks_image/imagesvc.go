@@ -9,7 +9,7 @@ import (
 	io "io"
 	reflect "reflect"
 
-	dockercompat "github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
+	dockercompat "github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	types "github.com/docker/cli/cli/config/types"
 	gomock "github.com/golang/mock/gomock"
 	types0 "github.com/runfinch/finch-daemon/api/types"
