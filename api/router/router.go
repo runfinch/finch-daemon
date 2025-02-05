@@ -5,6 +5,7 @@ package router
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"github.com/moby/moby/api/server/httputils"
 	"github.com/moby/moby/api/types/versions"
 
+	"github.com/open-policy-agent/opa/v1/rego"
 	"github.com/runfinch/finch-daemon/api/handlers/builder"
 	"github.com/runfinch/finch-daemon/api/handlers/container"
 	"github.com/runfinch/finch-daemon/api/handlers/distribution"
@@ -30,6 +32,14 @@ import (
 	"github.com/runfinch/finch-daemon/version"
 )
 
+var errRego = errors.New("error in rego policy file")
+var errInput = errors.New("error in HTTP request")
+
+type inputRegoRequest struct {
+	Method string
+	Path   string
+}
+
 // Options defines the router options to be passed into the handlers.
 type Options struct {
 	Config              *config.Config
@@ -41,6 +51,7 @@ type Options struct {
 	VolumeService       volume.Service
 	ExecService         exec.Service
 	DistributionService distribution.Service
+	RegoFilePath        string
 
 	// NerdctlWrapper wraps the interactions with nerdctl to build
 	NerdctlWrapper *backend.NerdctlWrapper
@@ -48,9 +59,16 @@ type Options struct {
 
 // New creates a new router and registers the handlers to it. Returns a handler object
 // The struct definitions of the HTTP responses come from https://github.com/moby/moby/tree/master/api/types.
-func New(opts *Options) http.Handler {
+func New(opts *Options) (http.Handler, error) {
 	r := mux.NewRouter()
 	r.Use(VersionMiddleware)
+	if opts.RegoFilePath != "" {
+		regoMiddleware, err := CreateRegoMiddleware(opts.RegoFilePath)
+		if err != nil {
+			return nil, err
+		}
+		r.Use(regoMiddleware)
+	}
 	vr := types.VersionedRouter{Router: r}
 
 	logger := flog.NewLogrus()
@@ -62,7 +80,7 @@ func New(opts *Options) http.Handler {
 	volume.RegisterHandlers(vr, opts.VolumeService, opts.Config, logger)
 	exec.RegisterHandlers(vr, opts.ExecService, opts.Config, logger)
 	distribution.RegisterHandlers(vr, opts.DistributionService, opts.Config, logger)
-	return ghandlers.LoggingHandler(os.Stderr, r)
+	return ghandlers.LoggingHandler(os.Stderr, r), nil
 }
 
 // VersionMiddleware checks for the requested version of the api and makes sure it falls within the bounds
@@ -89,4 +107,47 @@ func VersionMiddleware(next http.Handler) http.Handler {
 		newReq := r.WithContext(ctx)
 		next.ServeHTTP(w, newReq)
 	})
+}
+
+// CreateRegoMiddleware dynamically parses the rego file at the path specified in options
+// and allows or denies the request based on the policy.
+// Will return a nil function and an error if the given file path is blank or invalid.
+func CreateRegoMiddleware(regoFilePath string) (func(next http.Handler) http.Handler, error) {
+	if regoFilePath == "" {
+		return nil, errRego
+	}
+
+	query := "data.finch.authz.allow"
+	nr := rego.New(
+		rego.Load([]string{regoFilePath}, nil),
+		rego.Query(query),
+	)
+
+	preppedQuery, err := nr.PrepareForEval(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			input := inputRegoRequest{
+				Method: r.Method,
+				Path:   r.URL.Path,
+			}
+
+			rs, err := preppedQuery.Eval(r.Context(), rego.EvalInput(input))
+			if err != nil {
+				response.SendErrorResponse(w, http.StatusInternalServerError, errInput)
+				return
+			}
+
+			if !rs.Allowed() {
+				response.SendErrorResponse(w, http.StatusForbidden,
+					fmt.Errorf("method %s not allowed for path %s", r.Method, r.URL.Path))
+				return
+			}
+			newReq := r.WithContext(r.Context())
+			next.ServeHTTP(w, newReq)
+		})
+	}, nil
 }
