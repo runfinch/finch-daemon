@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.13.0](https://github.com/runfinch/finch-daemon/compare/v0.12.0...v0.13.0) (2025-02-05)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/onsi/ginkgo/v2 from 2.22.1 to 2.22.2 ([#138](https://github.com/runfinch/finch-daemon/issues/138)) ([776946b](https://github.com/runfinch/finch-daemon/commit/776946b2de620d679980083596486446d41a8b73))
+* **deps:** Bump github.com/runfinch/common-tests from 0.8.0 to 0.9.1 ([#140](https://github.com/runfinch/finch-daemon/issues/140)) ([96b109e](https://github.com/runfinch/finch-daemon/commit/96b109e29c592a36dbe39f81134669f6f9525249))
+* **deps:** Bump golang.org/x/net from 0.33.0 to 0.34.0 ([#141](https://github.com/runfinch/finch-daemon/issues/141)) ([5b1fe1c](https://github.com/runfinch/finch-daemon/commit/5b1fe1ca1f7a00356bd24f5f85367f24f242e6b7))
+* **deps:** Bump google.golang.org/protobuf from 1.36.1 to 1.36.4 ([#151](https://github.com/runfinch/finch-daemon/issues/151)) ([f7c7b30](https://github.com/runfinch/finch-daemon/commit/f7c7b3070d141c7d90405a230d4a48062fde56ac))
+
+
+### Features
+
+* Add container kill API ([#146](https://github.com/runfinch/finch-daemon/issues/146)) ([8a40617](https://github.com/runfinch/finch-daemon/commit/8a4061717384385c51910f9e8522a0268e6238ed))
+
 ## [0.12.0](https://github.com/runfinch/finch-daemon/compare/v0.11.0...v0.12.0) (2024-12-27)
 
 
