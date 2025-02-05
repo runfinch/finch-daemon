@@ -96,6 +96,7 @@ func createRouterOptions(
 	clientWrapper *backend.ContainerdClientWrapper,
 	ncWrapper *backend.NerdctlWrapper,
 	logger *flog.Logrus,
+	regoFilePath string,
 ) *router.Options {
 	fs := afero.NewOsFs()
 	tarCreator := archive.NewTarCreator(ecc.NewExecCmdCreator(), logger)
@@ -112,5 +113,6 @@ func createRouterOptions(
 		ExecService:         exec.NewService(clientWrapper, logger),
 		DistributionService: distribution.NewService(clientWrapper, ncWrapper, logger),
 		NerdctlWrapper:      ncWrapper,
+		RegoFilePath:        regoFilePath,
 	}
 }
