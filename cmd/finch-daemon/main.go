@@ -49,6 +49,9 @@ type DaemonOptions struct {
 	debugAddress string
 	configPath   string
 	pidFile      string
+	regoFilePath string
+	enableOpa    bool
+	regoFileLock *flock.Flock
 }
 
 var options = new(DaemonOptions)
@@ -67,6 +70,8 @@ func main() {
 	rootCmd.Flags().StringVar(&options.debugAddress, "debug-addr", "", "")
 	rootCmd.Flags().StringVar(&options.configPath, "config-file", defaultConfigPath, "Daemon Config Path")
 	rootCmd.Flags().StringVar(&options.pidFile, "pidfile", defaultPidFile, "pid file location")
+	rootCmd.Flags().StringVar(&options.regoFilePath, "rego-file", "", "Rego Policy Path")
+	rootCmd.Flags().BoolVar(&options.enableOpa, "enable-opa", false, "turn on opa allowlisting")
 	if err := rootCmd.Execute(); err != nil {
 		log.Printf("got error: %v", err)
 		log.Fatal(err)
@@ -193,6 +198,16 @@ func run(options *DaemonOptions) error {
 		}
 	}()
 
+	defer func() {
+		if options.regoFileLock != nil {
+			if err := options.regoFileLock.Unlock(); err != nil {
+				logrus.Errorf("failed to unlock Rego file: %v", err)
+			}
+			logger.Infof("rego file unlocked")
+			// todo : chmod to read-write permissions
+		}
+	}()
+
 	sdNotify(daemon.SdNotifyReady, logger)
 	serverWg.Wait()
 	logger.Debugln("Server stopped. Exiting...")
@@ -215,8 +230,20 @@ func newRouter(options *DaemonOptions, logger *flog.Logrus) (http.Handler, error
 		return nil, err
 	}
 
-	opts := createRouterOptions(conf, clientWrapper, ncWrapper, logger)
-	return router.New(opts), nil
+	var regoFilePath string
+	if options.enableOpa {
+		regoFilePath, err = sanitizeRegoFile(options)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	opts := createRouterOptions(conf, clientWrapper, ncWrapper, logger, regoFilePath)
+	newRouter, err := router.New(opts)
+	if err != nil {
+		return nil, err
+	}
+	return newRouter, nil
 }
 
 func handleSignal(socket string, server *http.Server, logger *flog.Logrus) {
@@ -264,4 +291,72 @@ func defineDockerConfig(uid int) error {
 		}
 		return true
 	})
+}
+
+func checkRegoFileValidity(filePath string) error {
+	fmt.Println("checking file validity.....")
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return fmt.Errorf("provided Rego file path does not exist: %s", filePath)
+	}
+
+	// Check if the file has a valid extension (.rego, .yaml, or .json)
+	// validExtensions := []string{".rego", ".yaml", ".yml", ".json"}
+	fileExt := strings.ToLower(filepath.Ext(options.regoFilePath))
+
+	if fileExt != ".rego" {
+		return fmt.Errorf("invalid file extension for Rego file. Only .rego files are supported")
+	}
+
+	// isValidExtension := false
+	// for _, ext := range validExtensions {
+	//     if fileExt == ext {
+	//         isValidExtension = true
+	//         break
+	//     }
+	// }
+
+	// if !isValidExtension {
+	//     return fmt.Errorf("Invalid file extension for Rego file. Allowed extensions are: %v", validExtensions)
+	// }
+
+	fmt.Println(" file valid!")
+	return nil
+}
+
+// todo : rename this function to be more descriptve
+func sanitizeRegoFile(options *DaemonOptions) (string, error) {
+	fmt.Println("sanitizeRegoFile called.....")
+	if options.regoFilePath != "" {
+		if !options.enableOpa {
+			return "", fmt.Errorf("rego file path was provided without the --enable-opa flag, please provide the --enable-opa flag") // todo, can we default to setting this flag ourselves is this better UX?
+		}
+
+		if err := checkRegoFileValidity(options.regoFilePath); err != nil {
+			return "", err
+		}
+	}
+
+	if options.enableOpa && options.regoFilePath == "" {
+		return "", fmt.Errorf("rego file path not provided, please provide the policy file path using the --rego-file flag")
+	}
+
+	fileLock := flock.New(options.regoFilePath)
+
+	locked, err := fileLock.TryLock()
+	if err != nil {
+		return "", fmt.Errorf("error acquiring lock on rego file: %v", err)
+	}
+	if !locked {
+		return "", fmt.Errorf("unable to acquire lock on rego file, it may be in use by another process")
+	}
+
+	// Change file permissions to read-only
+	err = os.Chmod(options.regoFilePath, 0444) // read-only for all users
+	if err != nil {
+		fileLock.Unlock()
+		return "", fmt.Errorf("error changing rego file permissions: %v", err)
+	}
+	options.regoFileLock = fileLock
+
+	return options.regoFilePath, nil
 }
