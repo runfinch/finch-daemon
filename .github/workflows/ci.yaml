@@ -109,3 +109,13 @@ jobs:
         run: sudo bin/finch-daemon  --debug --socket-owner $UID &
       - name: Run e2e test
         run: sudo make test-e2e
+      - name: Clean up Daemon socket
+        run: sudo rm /var/run/finch.sock && sudo rm /run/finch.pid
+      - name: Verify Rego file presence
+        run: ls -l ${{ github.workspace }}/sample.rego
+      - name: Set Rego file path
+        run: echo "REGO_FILE_PATH=${{ github.workspace }}/sample.rego" >> $GITHUB_ENV
+      - name: Start finch-daemon with opa Authz
+        run: sudo bin/finch-daemon --debug --enable-opa --rego-file ${{ github.workspace }}/sample.rego --socket-owner $UID &
+      - name: Run opa e2e tests
+        run: sudo -E make test-e2e-opa
