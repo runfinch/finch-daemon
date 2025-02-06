@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -25,8 +26,12 @@ var SubjectPrefix = flag.String("daemon-context-subject-prefix", "", `A string w
 var PrefixedSubjectEnv = flag.String("daemon-context-subject-env", "", `Environment to add when running a prefixed subject, in the form of a string like "EXAMPLE=foo EXAMPLE2=bar"`)
 
 func TestRun(t *testing.T) {
-	if os.Getenv("TEST_E2E") != "1" {
-		t.Skip("E2E tests skipped. Set TEST_E2E=1 to run these tests")
+	if os.Getenv("OPA_E2E") == "1" {
+		runOPATests(t)
+	} else if os.Getenv("TEST_E2E") == "1" {
+		runE2ETests(t)
+	} else {
+		t.Skip("E2E tests skipped. Set TEST_E2E=1 to run regular E2E tests or OPA_E2E=1 to run OPA middleware tests")
 	}
 
 	if err := parseTestFlags(); err != nil {
@@ -34,6 +39,34 @@ func TestRun(t *testing.T) {
 		os.Exit(1)
 	}
 
+	opt, _ := option.New([]string{*Subject, "--namespace", "finch"})
+}
+
+func runOPATests(t *testing.T) {
+	opt, _ := option.New([]string{*Subject, "--namespace", "finch"})
+
+	ginkgo.SynchronizedBeforeSuite(func() []byte {
+		tests.SetupLocalRegistry(opt)
+		return nil
+	}, func(bytes []byte) {})
+
+	ginkgo.SynchronizedAfterSuite(func() {
+		tests.CleanupLocalRegistry(opt)
+		// clean up everything after the local registry is cleaned up
+		command.RemoveAll(opt)
+	}, func() {})
+
+	const description = "Finch Daemon OPA E2E Tests"
+	ginkgo.Describe(description, func() {
+		tests.OpaMiddlewareTest(opt)
+		fmt.Print(opt)
+	})
+
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	ginkgo.RunSpecs(t, description)
+}
+
+func runE2ETests(t *testing.T) {
 	opt, _ := option.New([]string{*Subject, "--namespace", "finch"})
 
 	ginkgo.SynchronizedBeforeSuite(func() []byte {

@@ -200,11 +200,16 @@ func run(options *DaemonOptions) error {
 
 	defer func() {
 		if options.regoFileLock != nil {
+			// unlock the rego file upon daemon exit
 			if err := options.regoFileLock.Unlock(); err != nil {
 				logrus.Errorf("failed to unlock Rego file: %v", err)
 			}
 			logger.Infof("rego file unlocked")
-			// todo : chmod to read-write permissions
+
+			// make rego file editable upon daemon exit
+			if err := os.Chmod(options.regoFilePath, 0600); err != nil {
+				logrus.Errorf("failed to change file permissions of rego file: %v", err)
+			}
 		}
 	}()
 
@@ -293,39 +298,26 @@ func defineDockerConfig(uid int) error {
 	})
 }
 
+// checkRegoFileValidity verifies that the given rego file exists and has the right file extension
 func checkRegoFileValidity(filePath string) error {
-	fmt.Println("checking file validity.....")
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return fmt.Errorf("provided Rego file path does not exist: %s", filePath)
 	}
 
-	// Check if the file has a valid extension (.rego, .yaml, or .json)
-	// validExtensions := []string{".rego", ".yaml", ".yml", ".json"}
+	// Check if the file has a valid extension (.rego)
 	fileExt := strings.ToLower(filepath.Ext(options.regoFilePath))
 
 	if fileExt != ".rego" {
 		return fmt.Errorf("invalid file extension for Rego file. Only .rego files are supported")
 	}
 
-	// isValidExtension := false
-	// for _, ext := range validExtensions {
-	//     if fileExt == ext {
-	//         isValidExtension = true
-	//         break
-	//     }
-	// }
-
-	// if !isValidExtension {
-	//     return fmt.Errorf("Invalid file extension for Rego file. Allowed extensions are: %v", validExtensions)
-	// }
-
-	fmt.Println(" file valid!")
 	return nil
 }
 
-// todo : rename this function to be more descriptve
+// sanitizeRegoFile validates and prepares the Rego policy file for use.
+// It checks validates the file, acquires a file lock,
+// and sets rego file to be read-only.
 func sanitizeRegoFile(options *DaemonOptions) (string, error) {
-	fmt.Println("sanitizeRegoFile called.....")
 	if options.regoFilePath != "" {
 		if !options.enableOpa {
 			return "", fmt.Errorf("rego file path was provided without the --enable-opa flag, please provide the --enable-opa flag") // todo, can we default to setting this flag ourselves is this better UX?
@@ -351,7 +343,7 @@ func sanitizeRegoFile(options *DaemonOptions) (string, error) {
 	}
 
 	// Change file permissions to read-only
-	err = os.Chmod(options.regoFilePath, 0444) // read-only for all users
+	err = os.Chmod(options.regoFilePath, 0400)
 	if err != nil {
 		fileLock.Unlock()
 		return "", fmt.Errorf("error changing rego file permissions: %v", err)
