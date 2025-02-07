@@ -17,12 +17,12 @@ import (
 )
 
 func TestRun(t *testing.T) {
-	if os.Getenv("OPA_E2E") == "1" {
+	if os.Getenv("MIDDLEWARE_E2E") == "1" {
 		runOPATests(t)
 	} else if os.Getenv("TEST_E2E") == "1" {
 		runE2ETests(t)
 	} else {
-		t.Skip("E2E tests skipped. Set TEST_E2E=1 to run regular E2E tests or OPA_E2E=1 to run OPA middleware tests")
+		t.Skip("E2E tests skipped. Set TEST_E2E=1 to run regular E2E tests or MIDDLEWARE_E2E=1 to run OPA middleware tests")
 	}
 }
 
