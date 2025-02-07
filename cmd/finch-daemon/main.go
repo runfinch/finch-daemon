@@ -298,7 +298,7 @@ func defineDockerConfig(uid int) error {
 	})
 }
 
-// checkRegoFileValidity verifies that the given rego file exists and has the right file extension
+// checkRegoFileValidity verifies that the given rego file exists and has the right file extension.
 func checkRegoFileValidity(filePath string) error {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return fmt.Errorf("provided Rego file path does not exist: %s", filePath)
