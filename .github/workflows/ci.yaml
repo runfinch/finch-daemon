@@ -116,6 +116,6 @@ jobs:
       - name: Set Rego file path
         run: echo "REGO_FILE_PATH=${{ github.workspace }}/sample.rego" >> $GITHUB_ENV
       - name: Start finch-daemon with opa Authz
-        run: sudo bin/finch-daemon --debug --enable-opa --rego-file ${{ github.workspace }}/sample.rego --socket-owner $UID &
+        run: sudo bin/finch-daemon --debug --enable-middleware --rego-file ${{ github.workspace }}/sample.rego --socket-owner $UID &
       - name: Run opa e2e tests
         run: sudo -E make test-e2e-opa
