@@ -43,15 +43,15 @@ const (
 )
 
 type DaemonOptions struct {
-	debug        bool
-	socketAddr   string
-	socketOwner  int
-	debugAddress string
-	configPath   string
-	pidFile      string
-	regoFilePath string
-	enableOpa    bool
-	regoFileLock *flock.Flock
+	debug            bool
+	socketAddr       string
+	socketOwner      int
+	debugAddress     string
+	configPath       string
+	pidFile          string
+	regoFilePath     string
+	enableMiddleware bool
+	regoFileLock     *flock.Flock
 }
 
 var options = new(DaemonOptions)
@@ -71,7 +71,7 @@ func main() {
 	rootCmd.Flags().StringVar(&options.configPath, "config-file", defaultConfigPath, "Daemon Config Path")
 	rootCmd.Flags().StringVar(&options.pidFile, "pidfile", defaultPidFile, "pid file location")
 	rootCmd.Flags().StringVar(&options.regoFilePath, "rego-file", "", "Rego Policy Path")
-	rootCmd.Flags().BoolVar(&options.enableOpa, "enable-opa", false, "turn on opa allowlisting")
+	rootCmd.Flags().BoolVar(&options.enableMiddleware, "enable-middleware", false, "turn on middleware for allowlisting")
 	if err := rootCmd.Execute(); err != nil {
 		log.Printf("got error: %v", err)
 		log.Fatal(err)
@@ -236,7 +236,7 @@ func newRouter(options *DaemonOptions, logger *flog.Logrus) (http.Handler, error
 	}
 
 	var regoFilePath string
-	if options.enableOpa {
+	if options.enableMiddleware {
 		regoFilePath, err = sanitizeRegoFile(options)
 		if err != nil {
 			return nil, err
@@ -319,8 +319,8 @@ func checkRegoFileValidity(filePath string) error {
 // and sets rego file to be read-only.
 func sanitizeRegoFile(options *DaemonOptions) (string, error) {
 	if options.regoFilePath != "" {
-		if !options.enableOpa {
-			return "", fmt.Errorf("rego file path was provided without the --enable-opa flag, please provide the --enable-opa flag") // todo, can we default to setting this flag ourselves is this better UX?
+		if !options.enableMiddleware {
+			return "", fmt.Errorf("rego file path was provided without the --enable-middleware flag, please provide the --enable-middleware flag") // todo, can we default to setting this flag ourselves is this better UX?
 		}
 
 		if err := checkRegoFileValidity(options.regoFilePath); err != nil {
@@ -328,7 +328,7 @@ func sanitizeRegoFile(options *DaemonOptions) (string, error) {
 		}
 	}
 
-	if options.enableOpa && options.regoFilePath == "" {
+	if options.enableMiddleware && options.regoFilePath == "" {
 		return "", fmt.Errorf("rego file path not provided, please provide the policy file path using the --rego-file flag")
 	}
 

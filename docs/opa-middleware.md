@@ -34,9 +34,9 @@ Use the [Rego playground](https://play.openpolicyagent.org/) to fine tune your r
 
 ## Enable OPA Middleware
 
-Once you are ready with your policy document, use the `--enable-opa` flag to tell the finch-daemon to enable the OPA middleware. The daemon will then look for the policy document provided by the `--rego-file` flag.
+Once you are ready with your policy document, use the `--enable-middleware` flag to tell the finch-daemon to enable the OPA middleware. The daemon will then look for the policy document provided by the `--rego-file` flag.
 
-Note: The `--rego-file` flag is required when `--enable-opa` is set.
+Note: The `--rego-file` flag is required when `--enable-middleware` is set.
 
 Example: 
-`sudo bin/finch-daemon --debug --socket-owner $UID --socket-addr /run/finch-test.sock --pidfile /run/finch-test.pid --enable-opa --rego-file /<path-to>/finch-daemon/sample.rego &`
+`sudo bin/finch-daemon --debug --socket-owner $UID --socket-addr /run/finch-test.sock --pidfile /run/finch-test.pid --enable-middleware --rego-file /<path-to>/finch-daemon/sample.rego &`
