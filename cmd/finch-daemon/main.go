@@ -43,12 +43,15 @@ const (
 )
 
 type DaemonOptions struct {
-	debug        bool
-	socketAddr   string
-	socketOwner  int
-	debugAddress string
-	configPath   string
-	pidFile      string
+	debug            bool
+	socketAddr       string
+	socketOwner      int
+	debugAddress     string
+	configPath       string
+	pidFile          string
+	regoFilePath     string
+	enableMiddleware bool
+	regoFileLock     *flock.Flock
 }
 
 var options = new(DaemonOptions)
@@ -67,6 +70,8 @@ func main() {
 	rootCmd.Flags().StringVar(&options.debugAddress, "debug-addr", "", "")
 	rootCmd.Flags().StringVar(&options.configPath, "config-file", defaultConfigPath, "Daemon Config Path")
 	rootCmd.Flags().StringVar(&options.pidFile, "pidfile", defaultPidFile, "pid file location")
+	rootCmd.Flags().StringVar(&options.regoFilePath, "rego-file", "", "Rego Policy Path")
+	rootCmd.Flags().BoolVar(&options.enableMiddleware, "enable-middleware", false, "turn on middleware for allowlisting")
 	if err := rootCmd.Execute(); err != nil {
 		log.Printf("got error: %v", err)
 		log.Fatal(err)
@@ -193,6 +198,21 @@ func run(options *DaemonOptions) error {
 		}
 	}()
 
+	defer func() {
+		if options.regoFileLock != nil {
+			// unlock the rego file upon daemon exit
+			if err := options.regoFileLock.Unlock(); err != nil {
+				logrus.Errorf("failed to unlock Rego file: %v", err)
+			}
+			logger.Infof("rego file unlocked")
+
+			// make rego file editable upon daemon exit
+			if err := os.Chmod(options.regoFilePath, 0600); err != nil {
+				logrus.Errorf("failed to change file permissions of rego file: %v", err)
+			}
+		}
+	}()
+
 	sdNotify(daemon.SdNotifyReady, logger)
 	serverWg.Wait()
 	logger.Debugln("Server stopped. Exiting...")
@@ -215,8 +235,20 @@ func newRouter(options *DaemonOptions, logger *flog.Logrus) (http.Handler, error
 		return nil, err
 	}
 
-	opts := createRouterOptions(conf, clientWrapper, ncWrapper, logger)
-	return router.New(opts), nil
+	var regoFilePath string
+	if options.enableMiddleware {
+		regoFilePath, err = sanitizeRegoFile(options)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	opts := createRouterOptions(conf, clientWrapper, ncWrapper, logger, regoFilePath)
+	newRouter, err := router.New(opts)
+	if err != nil {
+		return nil, err
+	}
+	return newRouter, nil
 }
 
 func handleSignal(socket string, server *http.Server, logger *flog.Logrus) {
@@ -264,4 +296,59 @@ func defineDockerConfig(uid int) error {
 		}
 		return true
 	})
+}
+
+// checkRegoFileValidity verifies that the given rego file exists and has the right file extension.
+func checkRegoFileValidity(filePath string) error {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return fmt.Errorf("provided Rego file path does not exist: %s", filePath)
+	}
+
+	// Check if the file has a valid extension (.rego)
+	fileExt := strings.ToLower(filepath.Ext(options.regoFilePath))
+
+	if fileExt != ".rego" {
+		return fmt.Errorf("invalid file extension for Rego file. Only .rego files are supported")
+	}
+
+	return nil
+}
+
+// sanitizeRegoFile validates and prepares the Rego policy file for use.
+// It checks validates the file, acquires a file lock,
+// and sets rego file to be read-only.
+func sanitizeRegoFile(options *DaemonOptions) (string, error) {
+	if options.regoFilePath != "" {
+		if !options.enableMiddleware {
+			return "", fmt.Errorf("rego file path was provided without the --enable-middleware flag, please provide the --enable-middleware flag") // todo, can we default to setting this flag ourselves is this better UX?
+		}
+
+		if err := checkRegoFileValidity(options.regoFilePath); err != nil {
+			return "", err
+		}
+	}
+
+	if options.enableMiddleware && options.regoFilePath == "" {
+		return "", fmt.Errorf("rego file path not provided, please provide the policy file path using the --rego-file flag")
+	}
+
+	fileLock := flock.New(options.regoFilePath)
+
+	locked, err := fileLock.TryLock()
+	if err != nil {
+		return "", fmt.Errorf("error acquiring lock on rego file: %v", err)
+	}
+	if !locked {
+		return "", fmt.Errorf("unable to acquire lock on rego file, it may be in use by another process")
+	}
+
+	// Change file permissions to read-only
+	err = os.Chmod(options.regoFilePath, 0400)
+	if err != nil {
+		fileLock.Unlock()
+		return "", fmt.Errorf("error changing rego file permissions: %v", err)
+	}
+	options.regoFileLock = fileLock
+
+	return options.regoFilePath, nil
 }
