@@ -79,17 +79,17 @@ var _ = Describe("Container Inspect API ", func() {
 	})
 	Context("service", func() {
 		It("should return the inspect object upon success", func() {
+			sizeFlag := false
 			// search container method returns one container
 			cdClient.EXPECT().SearchContainer(gomock.Any(), cid).Return(
 				[]containerd.Container{con}, nil)
 
-			ncClient.EXPECT().InspectContainer(gomock.Any(), con).Return(
+			ncClient.EXPECT().InspectContainer(gomock.Any(), con, sizeFlag).Return(
 				&inspect, nil)
 
 			con.EXPECT().Labels(gomock.Any()).Return(nil, nil)
 
-			// service should return inspect object
-			result, err := service.Inspect(ctx, cid)
+			result, err := service.Inspect(ctx, cid, sizeFlag)
 			Expect(*result).Should(Equal(ret))
 			Expect(err).Should(BeNil())
 		})
@@ -100,7 +100,7 @@ var _ = Describe("Container Inspect API ", func() {
 			logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
 
 			// service should return a NotFound error
-			result, err := service.Inspect(ctx, cid)
+			result, err := service.Inspect(ctx, cid, false)
 			Expect(result).Should(BeNil())
 			Expect(errdefs.IsNotFound(err)).Should(BeTrue())
 		})
@@ -111,7 +111,7 @@ var _ = Describe("Container Inspect API ", func() {
 			logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
 
 			// service should return an error
-			result, err := service.Inspect(ctx, cid)
+			result, err := service.Inspect(ctx, cid, false)
 			Expect(result).Should(BeNil())
 			Expect(err).ShouldNot(BeNil())
 		})
@@ -122,7 +122,7 @@ var _ = Describe("Container Inspect API ", func() {
 			logger.EXPECT().Errorf(gomock.Any(), gomock.Any())
 
 			// service should return an error
-			result, err := service.Inspect(ctx, cid)
+			result, err := service.Inspect(ctx, cid, false)
 			Expect(result).Should(BeNil())
 			Expect(err).ShouldNot(BeNil())
 		})
@@ -131,13 +131,56 @@ var _ = Describe("Container Inspect API ", func() {
 			cdClient.EXPECT().SearchContainer(gomock.Any(), cid).Return(
 				[]containerd.Container{con}, nil)
 
-			ncClient.EXPECT().InspectContainer(gomock.Any(), con).Return(
+			ncClient.EXPECT().InspectContainer(gomock.Any(), con, false).Return(
 				nil, errors.New("error message"))
 
 			// service should return an error
-			result, err := service.Inspect(ctx, cid)
+			result, err := service.Inspect(ctx, cid, false)
 			Expect(result).Should(BeNil())
 			Expect(err).ShouldNot(BeNil())
 		})
 	})
+	Context("service with size flag", func() {
+		It("should return SizeRw and SizeRootFs when size flag is true", func() {
+			sizeFlag := true
+			expectedSizeRw := int64(1000)
+			expectedSizeRootFs := int64(5000)
+
+			inspectWithSize := inspect
+			inspectWithSize.SizeRw = &expectedSizeRw
+			inspectWithSize.SizeRootFs = &expectedSizeRootFs
+
+			cdClient.EXPECT().SearchContainer(gomock.Any(), cid).Return(
+				[]containerd.Container{con}, nil)
+
+			ncClient.EXPECT().InspectContainer(gomock.Any(), con, sizeFlag).Return(
+				&inspectWithSize, nil)
+
+			con.EXPECT().Labels(gomock.Any()).Return(nil, nil)
+
+			result, err := service.Inspect(ctx, cid, sizeFlag)
+			Expect(err).Should(BeNil())
+			Expect(result.SizeRw).ShouldNot(BeNil())
+			Expect(*result.SizeRw).Should(Equal(expectedSizeRw))
+			Expect(result.SizeRootFs).ShouldNot(BeNil())
+			Expect(*result.SizeRootFs).Should(Equal(expectedSizeRootFs))
+		})
+
+		It("should not return SizeRw and SizeRootFs when size flag is false", func() {
+			sizeFlag := false
+
+			cdClient.EXPECT().SearchContainer(gomock.Any(), cid).Return(
+				[]containerd.Container{con}, nil)
+
+			ncClient.EXPECT().InspectContainer(gomock.Any(), con, sizeFlag).Return(
+				&inspect, nil)
+
+			con.EXPECT().Labels(gomock.Any()).Return(nil, nil)
+			result, err := service.Inspect(ctx, cid, sizeFlag)
+			Expect(err).Should(BeNil())
+			Expect(result.SizeRw).Should(BeZero())
+			Expect(result.SizeRootFs).Should(BeZero())
+		})
+	})
+
 })

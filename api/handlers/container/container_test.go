@@ -104,7 +104,7 @@ var _ = Describe("Container API", func() {
 		})
 		It("should call container inspect method", func() {
 			// setup mocks
-			service.EXPECT().Inspect(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error from inspect api"))
+			service.EXPECT().Inspect(gomock.Any(), gomock.Any(), false).Return(nil, fmt.Errorf("error from inspect api"))
 			req, _ = http.NewRequest(http.MethodGet, "/containers/123/json", nil)
 			// call the API to check if it returns the error generated from inspect method
 			router.ServeHTTP(rr, req)
