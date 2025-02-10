@@ -6,7 +6,7 @@ package image
 import (
 	"context"
 
-	"github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
+	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 )
 
 func (s *service) Inspect(ctx context.Context, name string) (*dockercompat.Image, error) {

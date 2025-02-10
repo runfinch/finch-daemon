@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	ncTypes "github.com/containerd/nerdctl/pkg/api/types"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 
 	"github.com/runfinch/finch-daemon/api/types"
 )
@@ -37,7 +37,7 @@ func (s *service) List(ctx context.Context, listOpts ncTypes.ContainerListOption
 			Image:           ncc.Image,
 			CreatedAt:       ncc.CreatedAt.Unix(),
 			State:           ci.State.Status,
-			Labels:          ncc.Labels,
+			Labels:          ncc.LabelsMap,
 			NetworkSettings: ci.NetworkSettings,
 			Mounts:          ci.Mounts,
 		}

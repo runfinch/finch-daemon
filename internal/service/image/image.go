@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/containerd/containerd/images"
+	"github.com/containerd/containerd/v2/core/images"
 
 	"github.com/runfinch/finch-daemon/api/handlers/image"
 	"github.com/runfinch/finch-daemon/internal/backend"

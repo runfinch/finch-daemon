@@ -10,8 +10,9 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/containerd/nerdctl/pkg/lockutil"
-	"github.com/containerd/nerdctl/pkg/netutil"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
+	"github.com/containerd/nerdctl/v2/pkg/lockutil"
+	"github.com/containerd/nerdctl/v2/pkg/netutil"
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/internal/backend"
 	"github.com/runfinch/finch-daemon/pkg/flog"
@@ -44,7 +45,7 @@ var NewBridgeDriver = func(netClient backend.NerdctlNetworkSvc, logger flog.Logg
 }
 
 // HandleCreateOptions processes finch specific options for the bridge driver.
-func (bd *bridgeDriver) HandleCreateOptions(request types.NetworkCreateRequest, options netutil.CreateOptions) (netutil.CreateOptions, error) {
+func (bd *bridgeDriver) HandleCreateOptions(request types.NetworkCreateRequest, options ncTypes.NetworkCreateOptions) (ncTypes.NetworkCreateOptions, error) {
 	// enable_icc, host_binding_ipv4, and bridge name network options are not supported by nerdctl.
 	// So we process these options here and filter them out from the network create request to nerdctl.
 	processUnsupportedOptions := func(original map[string]string) map[string]string {
@@ -132,7 +133,8 @@ func (bd *bridgeDriver) HandleRemove(net *netutil.NetworkConfig) error {
 
 // setBridgeName will override the bridge name in an existing CNI config file for a network.
 func (bd *bridgeDriver) setBridgeName(net *netutil.NetworkConfig, bridgeName string) error {
-	return lockutil.WithDirLock(bd.netClient.NetconfPath(), func() error {
+	networkDir := bd.getDirForNetworkName("")
+	return lockutil.WithDirLock(networkDir, func() error {
 		// first, make sure that the bridge name is not used by any of the existing bridge networks
 		bridgeNet, err := bd.getNetworkByBridgeName(bridgeName)
 		if err != nil {
@@ -177,7 +179,7 @@ func (bd *bridgeDriver) setBridgeName(net *netutil.NetworkConfig, bridgeName str
 
 func (bd *bridgeDriver) getBridgeName(net *netutil.NetworkConfig) (string, error) {
 	var bridgeName string
-	err := lockutil.WithDirLock(bd.netClient.NetconfPath(), func() error {
+	err := lockutil.WithDirLock(bd.getDirForNetworkName(""), func() error {
 		configFilename := bd.getConfigPathForNetworkName(net.Name)
 		_, bridgePlugin, err := bd.parseBridgeConfig(configFilename)
 		if err != nil {
@@ -301,7 +303,14 @@ func (bd *bridgeDriver) removeICCDropRule(bridgeIface string) error {
 	return nil
 }
 
-// From https://github.com/containerd/nerdctl/blob/v1.5.0/pkg/netutil/netutil.go#L186-L188
+func (bd *bridgeDriver) getDirForNetworkName(netName string) string {
+	if netName == netutil.DefaultNetworkName || bd.netClient.Namespace() == "" {
+		return bd.netClient.NetconfPath()
+	}
+	return filepath.Join(bd.netClient.NetconfPath(), bd.netClient.Namespace())
+}
+
+// From https://github.com/containerd/nerdctl/blob/v2.0.0/pkg/netutil/netutil.go#L277C18-L283
 func (bd *bridgeDriver) getConfigPathForNetworkName(netName string) string {
-	return filepath.Join(bd.netClient.NetconfPath(), "nerdctl-"+netName+".conflist")
+	return filepath.Join(bd.getDirForNetworkName(netName), "nerdctl-"+netName+".conflist")
 }

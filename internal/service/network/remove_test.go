@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/containerd/nerdctl/pkg/netutil"
+	"github.com/containerd/nerdctl/v2/pkg/netutil"
 	"github.com/containernetworking/cni/libcni"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"

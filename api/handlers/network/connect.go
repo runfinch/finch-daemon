@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/containerd/containerd/namespaces"
+	"github.com/containerd/containerd/v2/pkg/namespaces"
 	"github.com/gorilla/mux"
 
 	"github.com/runfinch/finch-daemon/api/response"

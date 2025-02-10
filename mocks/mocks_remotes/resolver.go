@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	remotes "github.com/containerd/containerd/remotes"
+	remotes "github.com/containerd/containerd/v2/core/remotes"
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -33,7 +33,7 @@ func NewMockResolver(ctrl *gomock.Controller) *MockResolver {
 
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockResolver) EXPECT() *MockResolverMockRecorder {
-	return m.recorder
+	return m.recorder 
 }
 
 // Fetcher mocks base method.

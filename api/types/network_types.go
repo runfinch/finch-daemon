@@ -3,7 +3,7 @@
 
 package types
 
-import "github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
+import "github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 
 // NetworkCreateOption is a utility type for setting
 // create network configuration on requests via options.

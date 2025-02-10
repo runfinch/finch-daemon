@@ -10,9 +10,9 @@ import (
 	"os"
 	pathutil "path"
 
-	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/containers"
-	"github.com/containerd/containerd/mount"
+	containerd "github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/core/containers"
+	"github.com/containerd/containerd/v2/core/mount"
 	cerrdefs "github.com/containerd/errdefs"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"

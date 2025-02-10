@@ -14,7 +14,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/containerd/nerdctl/pkg/config"
+	"github.com/containerd/nerdctl/v2/pkg/config"
 	hj "github.com/getlantern/httptest"
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"

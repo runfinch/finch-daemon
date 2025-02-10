@@ -11,10 +11,10 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/cio"
+	containerd "github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/pkg/cio"
 	cerrdefs "github.com/containerd/errdefs"
-	"github.com/containerd/nerdctl/pkg/signalutil"
+	"github.com/containerd/nerdctl/v2/pkg/signalutil"
 
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"

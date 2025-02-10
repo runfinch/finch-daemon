@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/containerd/containerd/namespaces"
+	"github.com/containerd/containerd/v2/pkg/namespaces"
 
 	"github.com/runfinch/finch-daemon/api/auth"
 	"github.com/runfinch/finch-daemon/api/response"

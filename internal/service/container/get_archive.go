@@ -10,7 +10,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/containerd/containerd"
+	containerd "github.com/containerd/containerd/v2/client"
 	cerrdefs "github.com/containerd/errdefs"
 	"github.com/spf13/afero"
 

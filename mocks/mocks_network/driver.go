@@ -7,9 +7,10 @@ package mocks_network
 import (
 	reflect "reflect"
 
-	netutil "github.com/containerd/nerdctl/pkg/netutil"
+	types "github.com/containerd/nerdctl/v2/pkg/api/types"
+	netutil "github.com/containerd/nerdctl/v2/pkg/netutil"
 	gomock "github.com/golang/mock/gomock"
-	types "github.com/runfinch/finch-daemon/api/types"
+	types0 "github.com/runfinch/finch-daemon/api/types"
 )
 
 // DriverHandler is a mock of DriverHandler interface.
@@ -36,10 +37,10 @@ func (m *DriverHandler) EXPECT() *DriverHandlerMockRecorder {
 }
 
 // HandleCreateOptions mocks base method.
-func (m *DriverHandler) HandleCreateOptions(arg0 types.NetworkCreateRequest, arg1 netutil.CreateOptions) (netutil.CreateOptions, error) {
+func (m *DriverHandler) HandleCreateOptions(arg0 types0.NetworkCreateRequest, arg1 types.NetworkCreateOptions) (types.NetworkCreateOptions, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "HandleCreateOptions", arg0, arg1)
-	ret0, _ := ret[0].(netutil.CreateOptions)
+	ret0, _ := ret[0].(types.NetworkCreateOptions)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -6,7 +6,7 @@ package volume
 import (
 	"strings"
 
-	"github.com/containerd/nerdctl/pkg/inspecttypes/native"
+	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
 
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )

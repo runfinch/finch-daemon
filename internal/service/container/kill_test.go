@@ -12,9 +12,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/containerd/containerd"
+	containerd "github.com/containerd/containerd/v2/client"
 	cerrdefs "github.com/containerd/errdefs"
-	ncTypes "github.com/containerd/nerdctl/pkg/api/types"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/runfinch/finch-daemon/mocks/mocks_backend"
 	"github.com/runfinch/finch-daemon/mocks/mocks_container"
 	"github.com/runfinch/finch-daemon/mocks/mocks_logger"

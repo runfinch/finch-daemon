@@ -6,7 +6,7 @@ package image
 import (
 	"context"
 
-	"github.com/containerd/containerd/images"
+	"github.com/containerd/containerd/v2/core/images"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

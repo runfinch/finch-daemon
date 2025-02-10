@@ -29,6 +29,8 @@ func (h *handler) remove(w http.ResponseWriter, r *http.Request) {
 			code = http.StatusNotFound
 		case errdefs.IsConflict(err):
 			code = http.StatusConflict
+		case errdefs.IsInvalidFormat(err):
+			code = http.StatusBadRequest
 		default:
 			code = http.StatusInternalServerError
 		}

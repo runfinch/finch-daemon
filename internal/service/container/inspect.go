@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/containerd/nerdctl/pkg/inspecttypes/dockercompat"
-	"github.com/containerd/nerdctl/pkg/labels"
+	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
+	"github.com/containerd/nerdctl/v2/pkg/labels"
 
 	"github.com/runfinch/finch-daemon/api/types"
 )

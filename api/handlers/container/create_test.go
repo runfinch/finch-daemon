@@ -13,9 +13,9 @@ import (
 	"strings"
 
 	gocni "github.com/containerd/go-cni"
-	"github.com/containerd/nerdctl/pkg/api/types"
-	"github.com/containerd/nerdctl/pkg/config"
-	"github.com/containerd/nerdctl/pkg/defaults"
+	"github.com/containerd/nerdctl/v2/pkg/api/types"
+	"github.com/containerd/nerdctl/v2/pkg/config"
+	"github.com/containerd/nerdctl/v2/pkg/defaults"
 	"github.com/docker/go-connections/nat"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"

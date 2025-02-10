@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/containerd/nerdctl/pkg/inspecttypes/native"
+	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

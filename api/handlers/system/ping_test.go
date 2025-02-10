@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/containerd/nerdctl/pkg/config"
+	"github.com/containerd/nerdctl/v2/pkg/config"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
