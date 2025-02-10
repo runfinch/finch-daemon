@@ -153,6 +153,60 @@ var _ = Describe("Build API", func() {
 			Expect(err).Should(BeNil())
 			Expect(buildOption.Rm).Should(BeTrue())
 		})
+		It("should set the q query param", func() {
+			ncBuildSvc.EXPECT().GetBuildkitHost().Return("mocked-value", nil).AnyTimes()
+			req = httptest.NewRequest(http.MethodPost, "/build?q=false", nil)
+			buildOption, err := h.getBuildOptions(rr, req, stream)
+			Expect(err).Should(BeNil())
+			Expect(buildOption.Quiet).Should(BeFalse())
+		})
+		It("should set the nocache query param", func() {
+			ncBuildSvc.EXPECT().GetBuildkitHost().Return("mocked-value", nil).AnyTimes()
+			req = httptest.NewRequest(http.MethodPost, "/build?nocache=true", nil)
+			buildOption, err := h.getBuildOptions(rr, req, stream)
+			Expect(err).Should(BeNil())
+			Expect(buildOption.NoCache).Should(BeTrue())
+		})
+		It("should set the CacheFrom query param", func() {
+			ncBuildSvc.EXPECT().GetBuildkitHost().Return("mocked-value", nil).AnyTimes()
+			req = httptest.NewRequest(http.MethodPost, "/build?cachefrom={\"image1\":\"tag1\",\"image2\":\"tag2\"}", nil)
+			buildOption, err := h.getBuildOptions(rr, req, stream)
+			Expect(err).Should(BeNil())
+			Expect(buildOption.CacheFrom).Should(ContainElements("image1=tag1", "image2=tag2"))
+		})
+
+		It("should set the BuildArgs query param", func() {
+			ncBuildSvc.EXPECT().GetBuildkitHost().Return("mocked-value", nil).AnyTimes()
+			req = httptest.NewRequest(http.MethodPost, "/build?buildargs={\"ARG1\":\"value1\",\"ARG2\":\"value2\"}", nil)
+			buildOption, err := h.getBuildOptions(rr, req, stream)
+			Expect(err).Should(BeNil())
+			Expect(buildOption.BuildArgs).Should(ContainElements("ARG1=value1", "ARG2=value2"))
+		})
+
+		It("should set the Label query param", func() {
+			ncBuildSvc.EXPECT().GetBuildkitHost().Return("mocked-value", nil).AnyTimes()
+			req = httptest.NewRequest(http.MethodPost, "/build?labels={\"LABEL1\":\"value1\",\"LABEL2\":\"value2\"}", nil)
+			buildOption, err := h.getBuildOptions(rr, req, stream)
+			Expect(err).Should(BeNil())
+			Expect(buildOption.Label).Should(ContainElements("LABEL1=value1", "LABEL2=value2"))
+		})
+
+		It("should set the NetworkMode query param", func() {
+			ncBuildSvc.EXPECT().GetBuildkitHost().Return("mocked-value", nil).AnyTimes()
+			req = httptest.NewRequest(http.MethodPost, "/build?networkmode=host", nil)
+			buildOption, err := h.getBuildOptions(rr, req, stream)
+			Expect(err).Should(BeNil())
+			Expect(buildOption.NetworkMode).Should(Equal("host"))
+		})
+
+		It("should set the Output query param", func() {
+			ncBuildSvc.EXPECT().GetBuildkitHost().Return("mocked-value", nil).AnyTimes()
+			req = httptest.NewRequest(http.MethodPost, "/build?output=type=docker", nil)
+			buildOption, err := h.getBuildOptions(rr, req, stream)
+			Expect(err).Should(BeNil())
+			Expect(buildOption.Output).Should(Equal("type=docker"))
+		})
+
 		It("should set all the default value for the query param", func() {
 			ncBuildSvc.EXPECT().GetBuildkitHost().Return("mocked-value", nil).AnyTimes()
 			req = httptest.NewRequest(http.MethodPost, "/build", nil)
@@ -162,6 +216,13 @@ var _ = Describe("Build API", func() {
 			Expect(buildOption.Platform).Should(HaveLen(0))
 			Expect(buildOption.File).Should(Equal("Dockerfile"))
 			Expect(buildOption.Rm).Should(BeTrue())
+			Expect(buildOption.Quiet).Should(BeTrue())
+			Expect(buildOption.NoCache).Should(BeFalse())
+			Expect(buildOption.CacheFrom).Should(BeEmpty())
+			Expect(buildOption.BuildArgs).Should(BeEmpty())
+			Expect(buildOption.Label).Should(BeEmpty())
+			Expect(buildOption.NetworkMode).Should(BeEmpty())
+			Expect(buildOption.Output).Should(BeEmpty())
 		})
 	})
 })
