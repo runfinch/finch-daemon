@@ -56,7 +56,7 @@ var _ = Describe("Container Inspect API", func() {
 	})
 	Context("handler", func() {
 		It("should return inspect object and 200 status code upon success", func() {
-			service.EXPECT().Inspect(gomock.Any(), cid).Return(&resp, nil)
+			service.EXPECT().Inspect(gomock.Any(), cid, false).Return(&resp, nil)
 
 			// handler should return response object with 200 status code
 			h.inspect(rr, req)
@@ -64,7 +64,7 @@ var _ = Describe("Container Inspect API", func() {
 			Expect(rr).Should(HaveHTTPStatus(http.StatusOK))
 		})
 		It("should return 404 status code if container was not found", func() {
-			service.EXPECT().Inspect(gomock.Any(), cid).Return(nil, errdefs.NewNotFound(fmt.Errorf("no such container")))
+			service.EXPECT().Inspect(gomock.Any(), cid, false).Return(nil, errdefs.NewNotFound(fmt.Errorf("no such container")))
 			logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
 
 			// handler should return error message with 404 status code
@@ -73,7 +73,7 @@ var _ = Describe("Container Inspect API", func() {
 			Expect(rr).Should(HaveHTTPStatus(http.StatusNotFound))
 		})
 		It("should return 500 status code if service returns an error message", func() {
-			service.EXPECT().Inspect(gomock.Any(), cid).Return(nil, fmt.Errorf("error"))
+			service.EXPECT().Inspect(gomock.Any(), cid, false).Return(nil, fmt.Errorf("error"))
 			logger.EXPECT().Debugf(gomock.Any(), gomock.Any())
 
 			// handler should return error message

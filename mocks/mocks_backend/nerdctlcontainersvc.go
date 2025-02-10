@@ -91,18 +91,18 @@ func (mr *MockNerdctlContainerSvcMockRecorder) GetNerdctlExe() *gomock.Call {
 }
 
 // InspectContainer mocks base method.
-func (m *MockNerdctlContainerSvc) InspectContainer(arg0 context.Context, arg1 client.Container) (*dockercompat.Container, error) {
+func (m *MockNerdctlContainerSvc) InspectContainer(arg0 context.Context, arg1 client.Container, arg2 bool) (*dockercompat.Container, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InspectContainer", arg0, arg1)
+	ret := m.ctrl.Call(m, "InspectContainer", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*dockercompat.Container)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // InspectContainer indicates an expected call of InspectContainer.
-func (mr *MockNerdctlContainerSvcMockRecorder) InspectContainer(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockNerdctlContainerSvcMockRecorder) InspectContainer(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InspectContainer", reflect.TypeOf((*MockNerdctlContainerSvc)(nil).InspectContainer), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InspectContainer", reflect.TypeOf((*MockNerdctlContainerSvc)(nil).InspectContainer), arg0, arg1, arg2)
 }
 
 // InspectNetNS mocks base method.

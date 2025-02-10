@@ -113,18 +113,18 @@ func (mr *MockServiceMockRecorder) GetPathToFilesInContainer(arg0, arg1, arg2 in
 }
 
 // Inspect mocks base method.
-func (m *MockService) Inspect(arg0 context.Context, arg1 string) (*types0.Container, error) {
+func (m *MockService) Inspect(arg0 context.Context, arg1 string, arg2 bool) (*types0.Container, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Inspect", arg0, arg1)
+	ret := m.ctrl.Call(m, "Inspect", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*types0.Container)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Inspect indicates an expected call of Inspect.
-func (mr *MockServiceMockRecorder) Inspect(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockServiceMockRecorder) Inspect(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Inspect", reflect.TypeOf((*MockService)(nil).Inspect), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Inspect", reflect.TypeOf((*MockService)(nil).Inspect), arg0, arg1, arg2)
 }
 
 // Kill mocks base method.
