@@ -14,8 +14,10 @@ import (
 	"github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/containerd/nerdctl/v2/pkg/clientutil"
 	"github.com/containerd/nerdctl/v2/pkg/cmd/container"
+	"github.com/containerd/nerdctl/v2/pkg/containerdutil"
 	"github.com/containerd/nerdctl/v2/pkg/containerinspector"
 	"github.com/containerd/nerdctl/v2/pkg/containerutil"
+	"github.com/containerd/nerdctl/v2/pkg/imgutil"
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
 	"github.com/containerd/nerdctl/v2/pkg/logging"
@@ -27,7 +29,7 @@ type NerdctlContainerSvc interface {
 	StartContainer(ctx context.Context, container containerd.Container) error
 	StopContainer(ctx context.Context, container containerd.Container, timeout *time.Duration) error
 	CreateContainer(ctx context.Context, args []string, netManager containerutil.NetworkOptionsManager, options types.ContainerCreateOptions) (containerd.Container, func(), error)
-	InspectContainer(ctx context.Context, c containerd.Container) (*dockercompat.Container, error)
+	InspectContainer(ctx context.Context, c containerd.Container, size bool) (*dockercompat.Container, error)
 	InspectNetNS(ctx context.Context, pid int) (*native.NetNS, error)
 	NewNetworkingOptionsManager(types.NetworkOptions) (containerutil.NetworkOptionsManager, error)
 	ListContainers(ctx context.Context, options types.ContainerListOptions) ([]container.ListItem, error)
@@ -61,12 +63,28 @@ func (w *NerdctlWrapper) CreateContainer(ctx context.Context, args []string, net
 	return container.Create(ctx, w.clientWrapper.client, args, netManager, options)
 }
 
-func (w *NerdctlWrapper) InspectContainer(ctx context.Context, c containerd.Container) (*dockercompat.Container, error) {
+func (w *NerdctlWrapper) InspectContainer(ctx context.Context, c containerd.Container, sizeFlag bool) (*dockercompat.Container, error) {
 	n, err := containerinspector.Inspect(ctx, c)
 	if err != nil {
 		return nil, err
 	}
-	return dockercompat.ContainerFromNative(n)
+
+	d, err := dockercompat.ContainerFromNative(n)
+	if err != nil {
+		return nil, err
+	}
+
+	if sizeFlag {
+		snapshotter := containerdutil.SnapshotService(w.clientWrapper.client, w.globalOptions.Snapshotter)
+		resourceUsage, allResourceUsage, err := imgutil.ResourceUsage(ctx, snapshotter, d.ID)
+		if err != nil {
+			return nil, err
+		}
+		d.SizeRw = &resourceUsage.Size
+		d.SizeRootFs = &allResourceUsage.Size
+	}
+
+	return d, nil
 }
 
 func (w *NerdctlWrapper) InspectNetNS(ctx context.Context, pid int) (*native.NetNS, error) {
