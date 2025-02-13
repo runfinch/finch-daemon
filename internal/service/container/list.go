@@ -26,7 +26,7 @@ func (s *service) List(ctx context.Context, listOpts ncTypes.ContainerListOption
 			return nil, err
 		}
 
-		ci, err := s.nctlContainerSvc.InspectContainer(ctx, c)
+		ci, err := s.nctlContainerSvc.InspectContainer(ctx, c, false)
 		if err != nil {
 			return nil, err
 		}

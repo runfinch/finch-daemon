@@ -26,7 +26,7 @@ type Service interface {
 	Stop(ctx context.Context, cid string, timeout *time.Duration) error
 	Restart(ctx context.Context, cid string, timeout time.Duration) error
 	Create(ctx context.Context, image string, cmd []string, createOpt ncTypes.ContainerCreateOptions, netOpt ncTypes.NetworkOptions) (string, error)
-	Inspect(ctx context.Context, cid string) (*types.Container, error)
+	Inspect(ctx context.Context, cid string, size bool) (*types.Container, error)
 	WriteFilesAsTarArchive(filePath string, writer io.Writer, slashDot bool) error
 	Attach(ctx context.Context, cid string, opts *types.AttachOptions) error
 	List(ctx context.Context, listOpts ncTypes.ContainerListOptions) ([]types.ContainerListItem, error)
