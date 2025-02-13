@@ -4,7 +4,10 @@
 package backend
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -14,10 +17,8 @@ import (
 	"github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/containerd/nerdctl/v2/pkg/clientutil"
 	"github.com/containerd/nerdctl/v2/pkg/cmd/container"
-	"github.com/containerd/nerdctl/v2/pkg/containerdutil"
 	"github.com/containerd/nerdctl/v2/pkg/containerinspector"
 	"github.com/containerd/nerdctl/v2/pkg/containerutil"
-	"github.com/containerd/nerdctl/v2/pkg/imgutil"
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
 	"github.com/containerd/nerdctl/v2/pkg/logging"
@@ -64,27 +65,32 @@ func (w *NerdctlWrapper) CreateContainer(ctx context.Context, args []string, net
 }
 
 func (w *NerdctlWrapper) InspectContainer(ctx context.Context, c containerd.Container, sizeFlag bool) (*dockercompat.Container, error) {
-	n, err := containerinspector.Inspect(ctx, c)
+	var buf bytes.Buffer
+	options := types.ContainerInspectOptions{
+		Mode:   "dockercompat",
+		Stdout: &buf,
+		Size:   sizeFlag,
+		GOptions: types.GlobalCommandOptions{
+			Snapshotter: w.globalOptions.Snapshotter,
+		},
+	}
+
+	err := container.Inspect(ctx, w.clientWrapper.client, []string{c.ID()}, options)
 	if err != nil {
 		return nil, err
 	}
 
-	d, err := dockercompat.ContainerFromNative(n)
-	if err != nil {
+	// Parse the JSON response
+	var containers []*dockercompat.Container
+	if err := json.Unmarshal(buf.Bytes(), &containers); err != nil {
 		return nil, err
 	}
 
-	if sizeFlag {
-		snapshotter := containerdutil.SnapshotService(w.clientWrapper.client, w.globalOptions.Snapshotter)
-		resourceUsage, allResourceUsage, err := imgutil.ResourceUsage(ctx, snapshotter, d.ID)
-		if err != nil {
-			return nil, err
-		}
-		d.SizeRw = &resourceUsage.Size
-		d.SizeRootFs = &allResourceUsage.Size
+	if len(containers) != 1 {
+		return nil, fmt.Errorf("expected 1 container, got %d", len(containers))
 	}
 
-	return d, nil
+	return containers[0], nil
 }
 
 func (w *NerdctlWrapper) InspectNetNS(ctx context.Context, pid int) (*native.NetNS, error) {

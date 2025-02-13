@@ -32,6 +32,8 @@ var _ = Describe("Container Inspect API", func() {
 		req      *http.Request
 		resp     types.Container
 		respJSON []byte
+		req2     *http.Request
+		err      error
 	)
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
@@ -42,14 +44,30 @@ var _ = Describe("Container Inspect API", func() {
 		h = newHandler(service, &c, logger)
 		rr = httptest.NewRecorder()
 		cid = "123"
-		var err error
-		req, err = http.NewRequest(http.MethodGet, fmt.Sprintf("/containers/%s/json", cid), nil)
-		Expect(err).Should(BeNil())
-		req = mux.SetURLVars(req, map[string]string{"id": "123"})
+
+		// Create a helper function to create and set up requests
+		createRequest := func(sizeParam bool) *http.Request {
+			url := fmt.Sprintf("/containers/%s/json", cid)
+			if sizeParam {
+				url += "?size=true"
+			}
+			req, err := http.NewRequest(http.MethodGet, url, nil)
+			Expect(err).Should(BeNil())
+			return mux.SetURLVars(req, map[string]string{"id": cid})
+		}
+
+		// Create both requests using the helper function
+		req = createRequest(false)
+		req2 = createRequest(true)
+
+		sizeRw := int64(1000)
+		sizeRootFs := int64(5000)
 		resp = types.Container{
-			ID:    cid,
-			Image: "test-image",
-			Name:  "/test-container",
+			ID:         cid,
+			Image:      "test-image",
+			Name:       "/test-container",
+			SizeRw:     &sizeRw,
+			SizeRootFs: &sizeRootFs,
 		}
 		respJSON, err = json.Marshal(resp)
 		Expect(err).Should(BeNil())
@@ -62,6 +80,21 @@ var _ = Describe("Container Inspect API", func() {
 			h.inspect(rr, req)
 			Expect(rr.Body).Should(MatchJSON(respJSON))
 			Expect(rr).Should(HaveHTTPStatus(http.StatusOK))
+		})
+		It("should return inspect object with size information and 200 status code upon success", func() {
+			service.EXPECT().Inspect(gomock.Any(), cid, true).Return(&resp, nil)
+
+			h.inspect(rr, req2)
+			Expect(rr.Body).Should(MatchJSON(respJSON))
+			Expect(rr).Should(HaveHTTPStatus(http.StatusOK))
+
+			var returnedResp types.Container
+			err := json.Unmarshal(rr.Body.Bytes(), &returnedResp)
+			Expect(err).Should(BeNil())
+			Expect(returnedResp.SizeRw).ShouldNot(BeNil())
+			Expect(*returnedResp.SizeRw).Should(Equal(int64(1000)))
+			Expect(returnedResp.SizeRootFs).ShouldNot(BeNil())
+			Expect(*returnedResp.SizeRootFs).Should(Equal(int64(5000)))
 		})
 		It("should return 404 status code if container was not found", func() {
 			service.EXPECT().Inspect(gomock.Any(), cid, false).Return(nil, errdefs.NewNotFound(fmt.Errorf("no such container")))
