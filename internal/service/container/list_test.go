@@ -69,7 +69,7 @@ var _ = Describe("Container List API ", func() {
 				containers, nil)
 			cdClient.EXPECT().SearchContainer(gomock.Any(), gomock.Any()).AnyTimes().Return(
 				[]containerd.Container{con}, nil)
-			ncClient.EXPECT().InspectContainer(gomock.Any(), gomock.Any()).AnyTimes().Return(
+			ncClient.EXPECT().InspectContainer(gomock.Any(), gomock.Any(), false).AnyTimes().Return(
 				&dockercompat.Container{
 					NetworkSettings: expectedNS,
 					Mounts:          nil,

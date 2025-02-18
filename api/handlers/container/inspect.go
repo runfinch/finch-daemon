@@ -5,6 +5,7 @@ package container
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/containerd/containerd/v2/pkg/namespaces"
 	"github.com/gorilla/mux"
@@ -16,8 +17,12 @@ import (
 
 func (h *handler) inspect(w http.ResponseWriter, r *http.Request) {
 	cid := mux.Vars(r)["id"]
+	sizeflag, err := strconv.ParseBool(r.URL.Query().Get("size"))
+	if err != nil {
+		sizeflag = false
+	}
 	ctx := namespaces.WithNamespace(r.Context(), h.Config.Namespace)
-	c, err := h.service.Inspect(ctx, cid)
+	c, err := h.service.Inspect(ctx, cid, sizeflag)
 	// map the error into http status code and send response.
 	if err != nil {
 		var code int

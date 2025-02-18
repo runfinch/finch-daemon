@@ -48,6 +48,7 @@ func TestRun(t *testing.T) {
 		tests.ContainerAttach(opt)
 		tests.ContainerLogs(opt)
 		tests.ContainerKill(opt)
+		tests.ContainerInspect(opt)
 
 		// functional test for volume APIs
 		tests.VolumeList(opt)

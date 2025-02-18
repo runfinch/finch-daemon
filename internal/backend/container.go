@@ -4,7 +4,10 @@
 package backend
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -27,7 +30,7 @@ type NerdctlContainerSvc interface {
 	StartContainer(ctx context.Context, container containerd.Container) error
 	StopContainer(ctx context.Context, container containerd.Container, timeout *time.Duration) error
 	CreateContainer(ctx context.Context, args []string, netManager containerutil.NetworkOptionsManager, options types.ContainerCreateOptions) (containerd.Container, func(), error)
-	InspectContainer(ctx context.Context, c containerd.Container) (*dockercompat.Container, error)
+	InspectContainer(ctx context.Context, c containerd.Container, size bool) (*dockercompat.Container, error)
 	InspectNetNS(ctx context.Context, pid int) (*native.NetNS, error)
 	NewNetworkingOptionsManager(types.NetworkOptions) (containerutil.NetworkOptionsManager, error)
 	ListContainers(ctx context.Context, options types.ContainerListOptions) ([]container.ListItem, error)
@@ -61,12 +64,33 @@ func (w *NerdctlWrapper) CreateContainer(ctx context.Context, args []string, net
 	return container.Create(ctx, w.clientWrapper.client, args, netManager, options)
 }
 
-func (w *NerdctlWrapper) InspectContainer(ctx context.Context, c containerd.Container) (*dockercompat.Container, error) {
-	n, err := containerinspector.Inspect(ctx, c)
+func (w *NerdctlWrapper) InspectContainer(ctx context.Context, c containerd.Container, sizeFlag bool) (*dockercompat.Container, error) {
+	var buf bytes.Buffer
+	options := types.ContainerInspectOptions{
+		Mode:   "dockercompat",
+		Stdout: &buf,
+		Size:   sizeFlag,
+		GOptions: types.GlobalCommandOptions{
+			Snapshotter: w.globalOptions.Snapshotter,
+		},
+	}
+
+	err := container.Inspect(ctx, w.clientWrapper.client, []string{c.ID()}, options)
 	if err != nil {
 		return nil, err
 	}
-	return dockercompat.ContainerFromNative(n)
+
+	// Parse the JSON response
+	var containers []*dockercompat.Container
+	if err := json.Unmarshal(buf.Bytes(), &containers); err != nil {
+		return nil, err
+	}
+
+	if len(containers) != 1 {
+		return nil, fmt.Errorf("expected 1 container, got %d", len(containers))
+	}
+
+	return containers[0], nil
 }
 
 func (w *NerdctlWrapper) InspectNetNS(ctx context.Context, pid int) (*native.NetNS, error) {
