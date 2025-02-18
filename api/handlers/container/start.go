@@ -5,8 +5,10 @@ package container
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/containerd/containerd/v2/pkg/namespaces"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
@@ -17,7 +19,25 @@ import (
 func (h *handler) start(w http.ResponseWriter, r *http.Request) {
 	cid := mux.Vars(r)["id"]
 	ctx := namespaces.WithNamespace(r.Context(), h.Config.Namespace)
-	err := h.service.Start(ctx, cid)
+
+	detachKeys := r.URL.Query().Get("detachKeys")
+
+	devNull, err := os.OpenFile("/dev/null", os.O_WRONLY, 0600)
+	if err != nil {
+		response.JSON(w, http.StatusBadRequest, response.NewErrorFromMsg("failed to open /dev/null"))
+		return
+	}
+	defer devNull.Close()
+
+	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
+	options := ncTypes.ContainerStartOptions{
+		GOptions:   globalOpt,
+		Stdout:     devNull,
+		Attach:     false,
+		DetachKeys: detachKeys,
+	}
+
+	err = h.service.Start(ctx, cid, options)
 	// map the error into http status code and send response.
 	if err != nil {
 		var code int

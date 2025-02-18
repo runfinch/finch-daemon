@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	containerd "github.com/containerd/containerd/v2/client"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -32,6 +33,7 @@ var _ = Describe("Container Start API ", func() {
 		cid          string
 		tarExtractor *mocks_archive.MockTarExtractor
 		service      container.Service
+		options      ncTypes.ContainerStartOptions
 	)
 	BeforeEach(func() {
 		ctx = context.Background()
@@ -44,6 +46,7 @@ var _ = Describe("Container Start API ", func() {
 		con.EXPECT().ID().Return(cid).AnyTimes()
 		tarExtractor = mocks_archive.NewMockTarExtractor(mockCtrl)
 		service = NewService(cdClient, mockNerdctlService{ncClient, nil}, logger, nil, nil, tarExtractor)
+		options = ncTypes.ContainerStartOptions{}
 	})
 	Context("service", func() {
 		It("should not return any error", func() {
@@ -52,11 +55,11 @@ var _ = Describe("Container Start API ", func() {
 			cdClient.EXPECT().SearchContainer(gomock.Any(), cid).Return(
 				[]containerd.Container{con}, nil)
 
-			ncClient.EXPECT().StartContainer(ctx, con).Return(nil)
+			ncClient.EXPECT().StartContainer(ctx, gomock.Any(), gomock.Any()).Return(nil)
 			logger.EXPECT().Debugf("starting container: %s", cid)
 			logger.EXPECT().Debugf("successfully started: %s", cid)
 
-			err := service.Start(ctx, cid)
+			err := service.Start(ctx, cid, options)
 			Expect(err).Should(BeNil())
 		})
 		It("should return not found error", func() {
@@ -66,7 +69,7 @@ var _ = Describe("Container Start API ", func() {
 			logger.EXPECT().Debugf("no such container: %s", gomock.Any())
 
 			// service should return NotFound error
-			err := service.Start(ctx, cid)
+			err := service.Start(ctx, cid, options)
 			Expect(errdefs.IsNotFound(err)).Should(BeTrue())
 		})
 		It("should return multiple containers found error", func() {
@@ -76,7 +79,7 @@ var _ = Describe("Container Start API ", func() {
 			logger.EXPECT().Debugf("multiple IDs found with provided prefix: %s, total containers found: %d", cid, 2)
 
 			// service should return error
-			err := service.Start(ctx, cid)
+			err := service.Start(ctx, cid, options)
 			Expect(err).Should(Not(BeNil()))
 		})
 		It("should return not modified error as container is running already", func() {
@@ -86,7 +89,7 @@ var _ = Describe("Container Start API ", func() {
 				[]containerd.Container{con}, nil)
 
 			// service should return not modified error.
-			err := service.Start(ctx, cid)
+			err := service.Start(ctx, cid, options)
 			Expect(errdefs.IsNotModified(err)).Should(BeTrue())
 		})
 		It("should return not modified error as container is paused", func() {
@@ -96,7 +99,7 @@ var _ = Describe("Container Start API ", func() {
 				[]containerd.Container{con}, nil)
 
 			// service should return not modified error.
-			err := service.Start(ctx, cid)
+			err := service.Start(ctx, cid, options)
 			Expect(err).Should(Not(BeNil()))
 		})
 		It("should fail due to nerdctl client error", func() {
@@ -106,12 +109,12 @@ var _ = Describe("Container Start API ", func() {
 				[]containerd.Container{con}, nil)
 
 			expectedErr := fmt.Errorf("nerdctl error")
-			ncClient.EXPECT().StartContainer(ctx, con).Return(expectedErr)
+			ncClient.EXPECT().StartContainer(ctx, gomock.Any(), gomock.Any()).Return(expectedErr)
 			logger.EXPECT().Errorf("Failed to start container: %s. Error: %v", cid, expectedErr)
 			logger.EXPECT().Debugf("starting container: %s", cid)
 
 			// service should return not modified error.
-			err := service.Start(ctx, cid)
+			err := service.Start(ctx, cid, options)
 			Expect(err).Should(Equal(expectedErr))
 		})
 	})
