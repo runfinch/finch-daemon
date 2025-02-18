@@ -6,15 +6,15 @@ package container
 import (
 	"context"
 	"fmt"
-	"time"
 
 	containerd "github.com/containerd/containerd/v2/client"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
 
 // Stop function stops a running container. It returns nil when it successfully stops the container.
-func (s *service) Stop(ctx context.Context, cid string, timeout *time.Duration) error {
+func (s *service) Stop(ctx context.Context, cid string, options ncTypes.ContainerStopOptions) error {
 	con, err := s.getContainer(ctx, cid)
 	if err != nil {
 		return err
@@ -23,7 +23,7 @@ func (s *service) Stop(ctx context.Context, cid string, timeout *time.Duration) 
 	if s.isContainerStopped(ctx, con) {
 		return errdefs.NewNotModified(fmt.Errorf("container is already stopped: %s", cid))
 	}
-	if err = s.nctlContainerSvc.StopContainer(ctx, con, timeout); err != nil {
+	if err = s.nctlContainerSvc.StopContainer(ctx, con.ID(), options); err != nil {
 		s.logger.Errorf("Failed to stop container: %s. Error: %v", cid, err)
 		return err
 	}
