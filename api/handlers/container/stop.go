@@ -5,10 +5,12 @@ package container
 
 import (
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
 	"github.com/containerd/containerd/v2/pkg/namespaces"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
@@ -24,8 +26,30 @@ func (h *handler) stop(w http.ResponseWriter, r *http.Request) {
 	}
 	timeout := time.Second * time.Duration(t)
 
+	signal := getSignal(r)
+	if signal == "" {
+		signal = "SIGTERM" // Docker/nerdctl default
+		logrus.Infof("Setting default %s to stop container", signal)
+	}
+
+	// discard unwanted logs by writing to /dev/null
+	devNull, err := os.OpenFile("/dev/null", os.O_WRONLY, 0600)
+	if err != nil {
+		response.JSON(w, http.StatusBadRequest, response.NewErrorFromMsg("failed to open /dev/null"))
+		return
+	}
+	defer devNull.Close()
+
 	ctx := namespaces.WithNamespace(r.Context(), h.Config.Namespace)
-	err = h.service.Stop(ctx, cid, &timeout)
+	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
+	stopOpts := ncTypes.ContainerStopOptions{
+		Stdout:   devNull,
+		Stderr:   devNull,
+		Timeout:  &timeout,
+		Signal:   signal,
+		GOptions: globalOpt,
+	}
+	err = h.service.Stop(ctx, cid, stopOpts)
 	// map the error into http status code and send response.
 	if err != nil {
 		var code int
@@ -43,4 +67,13 @@ func (h *handler) stop(w http.ResponseWriter, r *http.Request) {
 	}
 	// successfully stopped. Send no content status.
 	response.Status(w, http.StatusNoContent)
+}
+
+func getSignal(r *http.Request) string {
+	signal := r.URL.Query().Get("signal")
+	if signal == "" {
+		// If "signal" is not present, check for "s"
+		signal = r.URL.Query().Get("s")
+	}
+	return signal
 }
