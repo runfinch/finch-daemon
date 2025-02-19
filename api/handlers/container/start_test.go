@@ -95,5 +95,13 @@ var _ = Describe("Container Start API ", func() {
 			h.start(rr, req)
 			Expect(rr).Should(HaveHTTPStatus(http.StatusNoContent))
 		})
+		It("should return 400 Bad Request for invalid ctrl- combination", func() {
+			req, _ = http.NewRequest(http.MethodPost, "/containers/123/start?detachKeys=ctrl-1", nil)
+			req = mux.SetURLVars(req, map[string]string{"id": "123"})
+			service.EXPECT().Start(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			h.start(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusBadRequest))
+			Expect(rr.Body).Should(MatchJSON(`{"message": "Invalid detach keys: invalid ctrl key: 1 - must be one of abcdefghijklmnopqrstuvwxyz@[\\]^_"}`))
+		})
 	})
 })
