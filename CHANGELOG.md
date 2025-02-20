@@ -17,6 +17,10 @@
 * Add container kill API ([#146](https://github.com/runfinch/finch-daemon/issues/146)) ([8a40617](https://github.com/runfinch/finch-daemon/commit/8a4061717384385c51910f9e8522a0268e6238ed))
 * Update container inspect with size option ([#157](https://github.com/runfinch/finch-daemon/issues/157)) ([b5df6ef](https://github.com/runfinch/finch-daemon/commit/b5df6ef819803699cc11fccda7c0598b5672af3e))
 
+### Others
+
+* Update containerd and nerdctl to v2 ([#148](https://github.com/runfinch/finch-daemon/pull/148)) ([d3db35e](https://github.com/runfinch/finch-daemon/commit/d3db35eae8b825732fc1b6c08960b63779f5e92a))
+
 ## [0.12.0](https://github.com/runfinch/finch-daemon/compare/v0.11.0...v0.12.0) (2024-12-27)
 
 
