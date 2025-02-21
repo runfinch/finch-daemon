@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/coderbirju/finch-daemon/compare/v0.14.0...v0.14.1) (2025-02-21)
+
+
+### Bug Fixes
+
+* add more echos ([f2864e8](https://github.com/coderbirju/finch-daemon/commit/f2864e868d4d5bfcdc042af2364198062858180b))
+
 ## [0.14.0](https://github.com/coderbirju/finch-daemon/compare/v0.13.0...v0.14.0) (2025-02-21)
 
 
