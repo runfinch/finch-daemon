@@ -65,6 +65,9 @@ jobs:
           STATIC_BINARY_VERSION=$(./output/static/finch-daemon --version | grep -oP '\d+\.\d+\.\d+')
           export release_tag=${{ env.RELEASE_TAG }}
           export release_version=${release_tag/v/}
+          echo $release_version
+          echo $STATIC_BINARY_VERSION
+          echo $DYNAMIC_BINARY_VERSION
           if ["$STATIC_BINARY_VERSION" != "$release_version"] || ["$DYNAMIC_BINARY_VERSION" != "$release_version"]; then
             echo "Version mismatch"
             exit 1
