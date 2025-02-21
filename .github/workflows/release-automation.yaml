@@ -65,6 +65,27 @@ jobs:
           echo "tar -xzf  sucessful dynamic"
           tar -xzf release/${{ env.STATIC_BINARY_NAME }} -C ./output/static
           echo "tar -xzf  sucessful static"
+          
+          if [ -f "./output/dynamic/finch-daemon" ]; then
+            echo "finch-daemon exists in output/dynamic"
+            ls -l ./output/dynamic/finch-daemon
+          else
+            echo "finch-daemon does not exist in output/dynamic"
+            ls -l ./output/dynamic
+          fi
+
+          echo "Output of finch-daemon --version:"
+          ./output/dynamic/finch-daemon --version
+
+          if command -v grep &> /dev/null; then
+            echo "grep is available"
+            VERSION_OUTPUT=$(./output/dynamic/finch-daemon --version)
+            echo "grep output:"
+            echo "$VERSION_OUTPUT" | grep -oP '\d+\.\d+\.\d+'
+          else
+            echo "grep is not available"
+          fi
+          
           DYNAMIC_BINARY_VERSION=$(./output/dynamic/finch-daemon --version | grep -oP '\d+\.\d+\.\d+')
           echo "Dynamic binary version: $DYNAMIC_BINARY_VERSION"
           STATIC_BINARY_VERSION=$(./output/static/finch-daemon --version | grep -oP '\d+\.\d+\.\d+')
