@@ -58,18 +58,21 @@ jobs:
         run: make RELEASE_TAG=${{ env.RELEASE_TAG }} release
       - name: Verify Release version
         run: |
-          echo "Calling "
+          echo "Callinglin 1"
           mkdir -p output/static output/dynamic
+          echo "mkdir succesful"
           tar -xzf release/${{ env.DYNAMIC_BINARY_NAME }} -C ./output/dynamic
+          echo "tar -xzf  sucessful dynamic"
           tar -xzf release/${{ env.STATIC_BINARY_NAME }} -C ./output/static
+          echo "tar -xzf  sucessful static"
           DYNAMIC_BINARY_VERSION=$(./output/dynamic/finch-daemon --version | grep -oP '\d+\.\d+\.\d+')
+          echo "Dynamic binary version: $DYNAMIC_BINARY_VERSION"
           STATIC_BINARY_VERSION=$(./output/static/finch-daemon --version | grep -oP '\d+\.\d+\.\d+')
+          echo "Static binary version: $STATIC_BINARY_VERSION"
           export release_tag=${{ env.RELEASE_TAG }}
           export release_version=${release_tag/v/}
           echo "Release version: $release_version"
-          echo "Static binary version: $STATIC_BINARY_VERSION"
-          echo "Dynamic binary version: $DYNAMIC_BINARY_VERSION"
-
+          
           echo "CUSTOM_RELEASE_VERSION=${release_version}" >> $GITHUB_ENV
           echo "CUSTOM_STATIC_BINARY_VERSION=${STATIC_BINARY_VERSION}" >> $GITHUB_ENV
           echo "CUSTOM_DYNAMIC_BINARY_VERSION=${DYNAMIC_BINARY_VERSION}" >> $GITHUB_ENV
@@ -77,7 +80,7 @@ jobs:
             echo "Version mismatch"
             exit 1
           fi
-        shell: bash
+        shell: bash -x
       - uses: actions/upload-artifact@v4
         with:
           name: artifacts
