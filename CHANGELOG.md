@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.4](https://github.com/coderbirju/finch-daemon/compare/v0.14.3...v0.14.4) (2025-02-21)
+
+
+### Bug Fixes
+
+* new test 3 ([e68a138](https://github.com/coderbirju/finch-daemon/commit/e68a138671a76766ce62f09315253ef2ea120417))
+
 ## [0.14.3](https://github.com/coderbirju/finch-daemon/compare/v0.14.2...v0.14.3) (2025-02-21)
 
 
