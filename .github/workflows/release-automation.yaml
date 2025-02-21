@@ -60,39 +60,42 @@ jobs:
         run: |
           echo "Callinglin 1"
           mkdir -p output/static output/dynamic
-          echo "mkdir succesful"
-          tar -xzf release/${{ env.DYNAMIC_BINARY_NAME }} -C ./output/dynamic
-          echo "tar -xzf  sucessful dynamic"
-          tar -xzf release/${{ env.STATIC_BINARY_NAME }} -C ./output/static
-          echo "tar -xzf  sucessful static"
-          if [ -f "./output/dynamic/finch-daemon" ]; then
-            echo "finch-daemon exists in output/dynamic"
-            ls -l ./output/dynamic/finch-daemon
-          else
-            echo "finch-daemon does not exist in output/dynamic"
-            ls -l ./output/dynamic
-          fi
-          echo "Output of finch-daemon --version:"
-          ./output/dynamic/finch-daemon --version
-          if command -v grep &> /dev/null; then
-            echo "grep is available"
-            VERSION_OUTPUT=$(./output/dynamic/finch-daemon --version)
-            echo "grep output:"
-            echo "$VERSION_OUTPUT" | grep -oP '\d+\.\d+\.\d+'
-          else
-            echo "grep is not available"
-          fi
-          DYNAMIC_BINARY_VERSION=$(./output/dynamic/finch-daemon --version | grep -oP '\d+\.\d+\.\d+')
-          echo "Dynamic binary version: $DYNAMIC_BINARY_VERSION"
-          STATIC_BINARY_VERSION=$(./output/static/finch-daemon --version | grep -oP '\d+\.\d+\.\d+')
-          echo "Static binary version: $STATIC_BINARY_VERSION"
-          export release_tag=${{ env.RELEASE_TAG }}
-          export release_version=${release_tag/v/}
-          echo "Release version: $release_version"
+          echo "mkdir successful"
           
-          echo "CUSTOM_RELEASE_VERSION=${release_version}" >> $GITHUB_ENV
-          echo "CUSTOM_STATIC_BINARY_VERSION=${STATIC_BINARY_VERSION}" >> $GITHUB_ENV
-          echo "CUSTOM_DYNAMIC_BINARY_VERSION=${DYNAMIC_BINARY_VERSION}" >> $GITHUB_ENV
+          # List contents of release directory
+          echo "Contents of release directory:"
+          ls -l release/
+          
+          tar -xzf release/${{ env.DYNAMIC_BINARY_NAME }} -C ./output/dynamic
+          echo "tar -xzf successful dynamic"
+          tar -xzf release/${{ env.STATIC_BINARY_NAME }} -C ./output/static
+          echo "tar -xzf successful static"
+          
+          # List contents of output directories
+          echo "Contents of output/dynamic:"
+          ls -l output/dynamic/
+          echo "Contents of output/static:"
+          ls -l output/static/
+          
+          # Check file type and permissions
+          echo "File info for dynamic binary:"
+          file output/dynamic/finch-daemon
+          echo "File info for static binary:"
+          file output/static/finch-daemon
+          
+          echo "Output of dynamic finch-daemon --version:"
+          output/dynamic/finch-daemon --version
+          
+          echo "Output of static finch-daemon --version:"
+          output/static/finch-daemon --version
+          
+          echo "Attempting to grep version from dynamic binary:"
+          output/dynamic/finch-daemon --version | grep -oP '\d+\.\d+\.\d+'
+          
+          echo "Attempting to grep version from static binary:"
+          output/static/finch-daemon --version | grep -oP '\d+\.\d+\.\d+'
+          DYNAMIC_BINARY_VERSION=$(./output/dynamic/finch-daemon --version | grep -oP '\d+\.\d+\.\d+')
+          STATIC_BINARY_VERSION=$(./output/static/finch-daemon --version | grep -oP '\d+\.\d+\.\d+')
           if ["$STATIC_BINARY_VERSION" != "$release_version"] || ["$DYNAMIC_BINARY_VERSION" != "$release_version"]; then
             echo "Version mismatch"
             exit 1
