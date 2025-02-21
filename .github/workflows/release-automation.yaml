@@ -58,6 +58,7 @@ jobs:
         run: make RELEASE_TAG=${{ env.RELEASE_TAG }} release
       - name: Verify Release version
         run: |
+          echo "Calling "
           mkdir -p output/static output/dynamic
           tar -xzf release/${{ env.DYNAMIC_BINARY_NAME }} -C ./output/dynamic
           tar -xzf release/${{ env.STATIC_BINARY_NAME }} -C ./output/static
@@ -65,9 +66,13 @@ jobs:
           STATIC_BINARY_VERSION=$(./output/static/finch-daemon --version | grep -oP '\d+\.\d+\.\d+')
           export release_tag=${{ env.RELEASE_TAG }}
           export release_version=${release_tag/v/}
-          echo $release_version
-          echo $STATIC_BINARY_VERSION
-          echo $DYNAMIC_BINARY_VERSION
+          echo "Release version: $release_version"
+          echo "Static binary version: $STATIC_BINARY_VERSION"
+          echo "Dynamic binary version: $DYNAMIC_BINARY_VERSION"
+
+          echo "CUSTOM_RELEASE_VERSION=${release_version}" >> $GITHUB_ENV
+          echo "CUSTOM_STATIC_BINARY_VERSION=${STATIC_BINARY_VERSION}" >> $GITHUB_ENV
+          echo "CUSTOM_DYNAMIC_BINARY_VERSION=${DYNAMIC_BINARY_VERSION}" >> $GITHUB_ENV
           if ["$STATIC_BINARY_VERSION" != "$release_version"] || ["$DYNAMIC_BINARY_VERSION" != "$release_version"]; then
             echo "Version mismatch"
             exit 1
