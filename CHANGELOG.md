@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1](https://github.com/runfinch/finch-daemon/compare/v0.13.0...v0.13.1) (2025-02-21)
+
+
+### Bug Fixes
+
+* update create-releases.sh ([#165](https://github.com/runfinch/finch-daemon/issues/165)) ([1edf2d4](https://github.com/runfinch/finch-daemon/commit/1edf2d430e1f9e7c682ae8bd85347b7b97a52e75))
+
 ## [0.13.0](https://github.com/runfinch/finch-daemon/compare/v0.12.0...v0.13.0) (2025-02-18)
 
 
