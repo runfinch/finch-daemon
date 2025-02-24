@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.2](https://github.com/runfinch/finch-daemon/compare/v0.13.1...v0.13.2) (2025-02-24)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/go-jose/go-jose/v4 from 4.0.4 to 4.0.5 ([#167](https://github.com/runfinch/finch-daemon/issues/167)) ([71a062a](https://github.com/runfinch/finch-daemon/commit/71a062adc537fa935e88e2da4c2b7addf4365c88))
+
 ## [0.13.1](https://github.com/runfinch/finch-daemon/compare/v0.13.0...v0.13.1) (2025-02-21)
 
 
