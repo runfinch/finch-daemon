@@ -60,7 +60,7 @@ var _ = Describe("Container API", func() {
 		})
 		It("should call container start method", func() {
 			// setup mocks
-			service.EXPECT().Start(gomock.Any(), gomock.Any()).Return(fmt.Errorf("error from start api"))
+			service.EXPECT().Start(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("error from start api"))
 			req, _ = http.NewRequest(http.MethodPost, "/containers/123/start", nil)
 			// call the API to check if it returns the error generated from start method
 			router.ServeHTTP(rr, req)

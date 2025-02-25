@@ -22,9 +22,9 @@ type Service interface {
 	GetPathToFilesInContainer(ctx context.Context, cid string, path string) (string, func(), error)
 	Remove(ctx context.Context, cid string, force, removeVolumes bool) error
 	Wait(ctx context.Context, cid string, condition string) (code int64, err error)
-	Start(ctx context.Context, cid string) error
+	Start(ctx context.Context, cid string, options ncTypes.ContainerStartOptions) error
 	Stop(ctx context.Context, cid string, timeout *time.Duration) error
-	Restart(ctx context.Context, cid string, timeout time.Duration) error
+	Restart(ctx context.Context, cid string, options ncTypes.ContainerRestartOptions) error
 	Create(ctx context.Context, image string, cmd []string, createOpt ncTypes.ContainerCreateOptions, netOpt ncTypes.NetworkOptions) (string, error)
 	Inspect(ctx context.Context, cid string, size bool) (*types.Container, error)
 	WriteFilesAsTarArchive(filePath string, writer io.Writer, slashDot bool) error

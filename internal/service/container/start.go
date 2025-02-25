@@ -8,11 +8,12 @@ import (
 	"fmt"
 
 	containerd "github.com/containerd/containerd/v2/client"
+	"github.com/containerd/nerdctl/v2/pkg/api/types"
 
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
 
-func (s *service) Start(ctx context.Context, cid string) error {
+func (s *service) Start(ctx context.Context, cid string, options types.ContainerStartOptions) error {
 	cont, err := s.getContainer(ctx, cid)
 	if err != nil {
 		return err
@@ -22,7 +23,7 @@ func (s *service) Start(ctx context.Context, cid string) error {
 	}
 	// start the containers and if error occurs then return error otherwise return nil
 	s.logger.Debugf("starting container: %s", cid)
-	if err := s.nctlContainerSvc.StartContainer(ctx, cont); err != nil {
+	if err := s.nctlContainerSvc.StartContainer(ctx, cid, options); err != nil {
 		s.logger.Errorf("Failed to start container: %s. Error: %v", cid, err)
 		return err
 	}
