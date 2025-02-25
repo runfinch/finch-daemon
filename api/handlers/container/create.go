@@ -123,6 +123,50 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 			ulimits = append(ulimits, ulimit.String())
 		}
 	}
+	// Tmpfs:
+	// Tmpfs are passed in as a map of strings,
+	// but nerdctl expects an array of strings with format [TMPFS1:VALUE1, TMPFS2:VALUE2, ...].
+	tmpfs := []string{}
+	if req.HostConfig.Tmpfs != nil {
+		for key, val := range req.HostConfig.Tmpfs {
+			tmpfs = append(tmpfs, fmt.Sprintf("%s:%s", key, val))
+		}
+	}
+
+	// Sysctls:
+	// Sysctls are passed in as a map of strings,
+	// but nerdctl expects an array of strings with format [Sysctls1=VALUE1, Sysctls2=VALUE2, ...].
+	sysctls := []string{}
+	if req.HostConfig.Sysctls != nil {
+		for key, val := range req.HostConfig.Sysctls {
+			sysctls = append(sysctls, fmt.Sprintf("%s=%s", key, val))
+		}
+	}
+
+	// devices:
+	// devices are passed in as a map of DeviceMapping,
+	// but nerdctl expects an array of strings with format [PathOnHost1:PathInContainer1:CgroupPermissions1, PathOnHost2:PathInContainer2:CgroupPermissions2, ...].
+	devices := []string{}
+	if req.HostConfig.Devices != nil {
+		for _, deviceMap := range req.HostConfig.Devices {
+			deviceString := ""
+			if deviceMap.PathOnHost != "" {
+				deviceString += deviceMap.PathOnHost
+			}
+
+			if deviceMap.PathInContainer != "" {
+				deviceString += ":"
+				deviceString += deviceMap.PathInContainer
+			}
+
+			if deviceMap.CgroupPermissions != "" {
+				deviceString += ":"
+				deviceString += deviceMap.CgroupPermissions
+			}
+			devices = append(devices, deviceString)
+		}
+	}
+
 	// Environment vars:
 	env := []string{}
 	if req.Env != nil {
@@ -164,6 +208,40 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	if req.HostConfig.CPUQuota != 0 {
 		CpuQuota = req.HostConfig.CPUQuota
 	}
+	shmSize := ""
+	if req.HostConfig.ShmSize > 0 {
+		shmSize = fmt.Sprint(req.HostConfig.ShmSize)
+	}
+
+	runtime := defaults.Runtime
+	if req.HostConfig.Runtime != "" {
+		runtime = req.HostConfig.Runtime
+	}
+
+	volumesFrom := []string{}
+	if req.HostConfig.VolumesFrom != nil {
+		volumesFrom = req.HostConfig.VolumesFrom
+	}
+
+	groupAdd := []string{}
+	if req.HostConfig.GroupAdd != nil {
+		groupAdd = req.HostConfig.GroupAdd
+	}
+
+	securityOpt := []string{}
+	if req.HostConfig.SecurityOpt != nil {
+		securityOpt = req.HostConfig.SecurityOpt
+	}
+
+	cgroupnsMode := defaults.CgroupnsMode()
+	if req.HostConfig.CgroupnsMode.Valid() {
+		cgroupnsMode = string(req.HostConfig.CgroupnsMode)
+	}
+
+	var oomScoreAdjChanged bool
+	if req.HostConfig.OomScoreAdj != 0 || req.HostConfig.OomScoreAdjChanged {
+		oomScoreAdjChanged = req.HostConfig.OomScoreAdjChanged
+	}
 
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
@@ -172,15 +250,19 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		GOptions: globalOpt,
 
 		// #region for basic flags
-		Interactive: false,                     // TODO: update this after attach supports STDIN
-		TTY:         false,                     // TODO: update this after attach supports STDIN
-		Detach:      true,                      // TODO: current implementation of create does not support AttachStdin, AttachStdout, and AttachStderr flags
-		Restart:     restart,                   // Restart policy to apply when a container exits.
-		Rm:          req.HostConfig.AutoRemove, // Automatically remove container upon exit.
-		Pull:        "missing",                 // nerdctl default.
-		StopSignal:  stopSignal,
-		StopTimeout: stopTimeout,
-		CidFile:     req.HostConfig.ContainerIDFile, // CidFile write the container ID to the file
+		Interactive:        false,                     // TODO: update this after attach supports STDIN
+		TTY:                false,                     // TODO: update this after attach supports STDIN
+		Detach:             true,                      // TODO: current implementation of create does not support AttachStdin, AttachStdout, and AttachStderr flags
+		Restart:            restart,                   // Restart policy to apply when a container exits.
+		Rm:                 req.HostConfig.AutoRemove, // Automatically remove container upon exit.
+		Pull:               "missing",                 // nerdctl default.
+		StopSignal:         stopSignal,
+		StopTimeout:        stopTimeout,
+		CidFile:            req.HostConfig.ContainerIDFile, // CidFile write the container ID to the file
+		OomKillDisable:     req.HostConfig.OomKillDisable,
+		OomScoreAdj:        req.HostConfig.OomScoreAdj,
+		OomScoreAdjChanged: oomScoreAdjChanged,
+		Pid:                req.HostConfig.PidMode, // Pid namespace to use
 		// #endregion
 
 		// #region for platform flags
@@ -197,29 +279,39 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CPUQuota:           CpuQuota,                         // CPUQuota limits the CPU CFS (Completely Fair Scheduler) quota
 		MemorySwappiness64: memorySwappiness,                 // Tuning container memory swappiness behaviour
 		PidsLimit:          pidLimit,                         // PidsLimit specifies the tune container pids limit
-		Cgroupns:           defaults.CgroupnsMode(),          // nerdctl default.
+		Cgroupns:           cgroupnsMode,                     // Cgroupns specifies the cgroup namespace to use
 		MemoryReservation:  memoryReservation,                // Memory soft limit (in bytes)
 		MemorySwap:         memorySwap,                       // Total memory usage (memory + swap); set `-1` to enable unlimited swap
 		Ulimit:             ulimits,                          // List of ulimits to be set in the container
-		CPUPeriod:          uint64(req.HostConfig.CPUPeriod),
+		BlkioWeight:        req.HostConfig.BlkioWeight,       // block IO weight (relative)
+		CPUPeriod:          uint64(req.HostConfig.CPUPeriod), // CPU CFS (Completely Fair Scheduler) period
+		CPUSetCPUs:         req.HostConfig.CPUSetCPUs,        // CpusetCpus 0-2, 0,1
+		CPUSetMems:         req.HostConfig.CPUSetMems,        // CpusetMems 0-2, 0,1
+		IPC:                req.HostConfig.IpcMode,           // IPC namespace to use
+		ShmSize:            shmSize,                          // ShmSize set the size of /dev/shm
+		Device:             devices,                          // Device specifies add a host device to the container
 		// #endregion
 
 		// #region for user flags
-		User: req.User,
+		User:     req.User,
+		GroupAdd: groupAdd,
 		// #endregion
 
 		// #region for security flags
-		SecurityOpt: []string{}, // nerdctl default.
+		SecurityOpt: securityOpt, // nerdctl default.
 		CapAdd:      capAdd,
 		CapDrop:     capDrop,
 		Privileged:  req.HostConfig.Privileged,
 		// #endregion
 		// #region for runtime flags
-		Runtime: defaults.Runtime, // nerdctl default.
+		Runtime: runtime, // Runtime to use for this container, e.g. "crun", or "io.containerd.runc.v2".
+		Sysctl:  sysctls, // Sysctl set sysctl options, e.g "net.ipv4.ip_forward=1"
 		// #endregion
 
 		// #region for volume flags
-		Volume: volumes,
+		Volume:      volumes,
+		VolumesFrom: volumesFrom,
+		Tmpfs:       tmpfs,
 		// #endregion
 
 		// #region for env flags
@@ -248,6 +340,10 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 			Stderr:        nil,
 		},
 		// #endregion
+
+		// #region for rootfs flags
+		ReadOnly: req.HostConfig.ReadonlyRootfs, // Is the container root filesystem in read-only
+		// #endregion
 	}
 
 	portMappings, err := translatePortMappings(req.HostConfig.PortBindings)
@@ -260,18 +356,23 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	if networkMode == "" || networkMode == "default" {
 		networkMode = "bridge"
 	}
+	if req.NetworkDisabled {
+		networkMode = "none"
+	}
 	dnsOpt := []string{}
 	if req.HostConfig.DNSOptions != nil {
 		dnsOpt = req.HostConfig.DNSOptions
 	}
 	netOpt := ncTypes.NetworkOptions{
 		Hostname:             req.Hostname,
-		NetworkSlice:         []string{networkMode},    // TODO: Set to none if "NetworkDisabled" is true in request
+		NetworkSlice:         []string{networkMode},
 		DNSServers:           req.HostConfig.DNS,       // Custom DNS lookup servers.
 		DNSResolvConfOptions: dnsOpt,                   // DNS options.
 		DNSSearchDomains:     req.HostConfig.DNSSearch, // Custom DNS search domains.
 		PortMappings:         portMappings,
 		AddHost:              req.HostConfig.ExtraHosts, // Extra hosts.
+		MACAddress:           req.MacAddress,
+		UTSNamespace:         req.HostConfig.UTSMode,
 	}
 
 	ctx := namespaces.WithNamespace(r.Context(), h.Config.Namespace)
