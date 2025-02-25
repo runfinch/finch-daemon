@@ -107,15 +107,14 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Annotations: TODO - available in nerdctl 2.0
 	// Annotations are passed in as a map of strings,
 	// but nerdctl expects an array of strings with format [annotations1=VALUE1, annotations2=VALUE2, ...].
-	// annotations := []string{}
-	// if req.HostConfig.Annotations != nil {
-	// 	for key, val := range req.HostConfig.Annotations {
-	// 		annotations = append(annotations, fmt.Sprintf("%s=%s", key, val))
-	// 	}
-	// }
+	annotations := []string{}
+	if req.HostConfig.Annotations != nil {
+		for key, val := range req.HostConfig.Annotations {
+			annotations = append(annotations, fmt.Sprintf("%s=%s", key, val))
+		}
+	}
 
 	ulimits := []string{}
 	if req.HostConfig.Ulimits != nil {
@@ -322,8 +321,9 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #endregion
 
 		// #region for metadata flags
-		Name:  name,   // container name
-		Label: labels, // container labels
+		Name:        name,   // container name
+		Label:       labels, // container labels
+		Annotations: annotations,
 		// #endregion
 
 		// #region for logging flags
@@ -365,6 +365,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	}
 	netOpt := ncTypes.NetworkOptions{
 		Hostname:             req.Hostname,
+		Domainname:           req.Domainname,
 		NetworkSlice:         []string{networkMode},
 		DNSServers:           req.HostConfig.DNS,       // Custom DNS lookup servers.
 		DNSResolvConfOptions: dnsOpt,                   // DNS options.

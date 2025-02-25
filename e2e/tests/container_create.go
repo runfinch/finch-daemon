@@ -654,6 +654,41 @@ func ContainerCreate(opt *option.Option) {
 				}
 			}
 		})
+
+		It("should create container with specified domainname options", func() {
+			// define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.Hostname = "test-host"
+			options.Domainname = "test.local"
+
+			// create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// start container
+			command.Run(opt, "start", testContainerName)
+
+			// inspect container
+			resp := command.Stdout(opt, "inspect", testContainerName)
+			var inspect []*dockercompat.Container
+			err := json.Unmarshal(resp, &inspect)
+			Expect(err).Should(BeNil())
+			Expect(inspect).Should(HaveLen(1))
+
+			// verify hostname and domain name
+			Expect(inspect[0].Config.Hostname).Should(Equal("test-host"))
+			Expect(inspect[0].Config.Domainname).Should(Equal("test.local"))
+
+			// verify FQDN inside container
+			out := command.StdoutStr(opt, "exec", testContainerName, "hostname", "-f")
+			Expect(out).Should(Equal("test-host.test.local"))
+
+			// verify /etc/hosts file contains the correct entry
+			out = command.StdoutStr(opt, "exec", testContainerName, "cat", "/etc/hosts")
+			Expect(out).Should(ContainSubstring("test-host.test.local"))
+		})
+
 	})
 }
 

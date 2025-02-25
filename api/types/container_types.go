@@ -28,8 +28,8 @@ type AttachOptions struct {
 
 // ContainerConfig is from https://github.com/moby/moby/blob/v24.0.2/api/types/container/config.go#L64-L96
 type ContainerConfig struct {
-	Hostname string `json:",omitempty"` // Hostname
-	// TODO: Domainname   string      // Domainname
+	Hostname    string `json:",omitempty"` // Hostname
+	Domainname  string `json:",omitempty"` // Domainname
 	User        string `json:",omitempty"` // User that will run the command(s) inside the container, also support user:group
 	AttachStdin bool   // Attach the standard input, makes possible user interaction
 	// TODO: AttachStdout bool        // Attach the standard output
@@ -68,7 +68,7 @@ type ContainerHostConfig struct {
 	VolumesFrom     []string      // List of volumes to take from other container
 	// TODO: VolumeDriver    string            // Name of the volume driver used to mount volumes
 	// TODO: ConsoleSize     [2]uint           // Initial console size (height,width)
-	// TODO: Annotations     map[string]string `json:",omitempty"` // Arbitrary non-identifying metadata attached to container and provided to the runtime
+	Annotations map[string]string `json:",omitempty"` // Arbitrary non-identifying metadata attached to container and provided to the runtime
 
 	// Applicable to UNIX platforms
 	CapAdd       []string     // List of kernel capabilities to add to the container
