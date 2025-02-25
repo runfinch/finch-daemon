@@ -27,7 +27,7 @@ import (
 //go:generate mockgen --destination=../../mocks/mocks_backend/nerdctlcontainersvc.go -package=mocks_backend github.com/runfinch/finch-daemon/internal/backend NerdctlContainerSvc
 type NerdctlContainerSvc interface {
 	RemoveContainer(ctx context.Context, c containerd.Container, force bool, removeAnonVolumes bool) error
-	StartContainer(ctx context.Context, container containerd.Container) error
+	StartContainer(ctx context.Context, cid string, options types.ContainerStartOptions) error
 	StopContainer(ctx context.Context, container containerd.Container, timeout *time.Duration) error
 	CreateContainer(ctx context.Context, args []string, netManager containerutil.NetworkOptionsManager, options types.ContainerCreateOptions) (containerd.Container, func(), error)
 	InspectContainer(ctx context.Context, c containerd.Container, size bool) (*dockercompat.Container, error)
@@ -51,8 +51,8 @@ func (w *NerdctlWrapper) RemoveContainer(ctx context.Context, c containerd.Conta
 }
 
 // StartContainer wrapper function to call nerdctl function to start a container.
-func (w *NerdctlWrapper) StartContainer(ctx context.Context, container containerd.Container) error {
-	return containerutil.Start(ctx, container, false, w.clientWrapper.client, "")
+func (w *NerdctlWrapper) StartContainer(ctx context.Context, cid string, options types.ContainerStartOptions) error {
+	return container.Start(ctx, w.clientWrapper.client, []string{cid}, options)
 }
 
 // StopContainer wrapper function to call nerdctl function to stop a container.

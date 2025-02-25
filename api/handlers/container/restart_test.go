@@ -42,7 +42,7 @@ var _ = Describe("Container Restart API ", func() {
 	Context("handler", func() {
 		It("should return 204 as success response", func() {
 			// service mock returns nil to mimic handler started the container successfully.
-			service.EXPECT().Restart(gomock.Any(), "123", gomock.Any()).Return(nil)
+			service.EXPECT().Restart(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 			//handler should return success message with 204 status code.
 			h.restart(rr, req)
@@ -51,7 +51,7 @@ var _ = Describe("Container Restart API ", func() {
 
 		It("should return 404 not found response", func() {
 			// service mock returns not found error to mimic user trying to start container that does not exist
-			service.EXPECT().Restart(gomock.Any(), "123", gomock.Any()).Return(
+			service.EXPECT().Restart(gomock.Any(), gomock.Any(), gomock.Any()).Return(
 				errdefs.NewNotFound(fmt.Errorf("container not found")))
 			logger.EXPECT().Debugf("Restart container API responding with error code. Status code %d, Message: %s", 404, "container not found")
 
@@ -63,7 +63,7 @@ var _ = Describe("Container Restart API ", func() {
 		It("should return 500 internal error response", func() {
 			// service mock return error to mimic a user trying to start a container with an id that has
 			// multiple containers with same prefix.
-			service.EXPECT().Restart(gomock.Any(), "123", gomock.Any()).Return(
+			service.EXPECT().Restart(gomock.Any(), gomock.Any(), gomock.Any()).Return(
 				fmt.Errorf("multiple IDs found with provided prefix"))
 			logger.EXPECT().Debugf("Restart container API responding with error code. Status code %d, Message: %s", 500, "multiple IDs found with provided prefix")
 

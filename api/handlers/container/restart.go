@@ -5,10 +5,12 @@ package container
 
 import (
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
 	"github.com/containerd/containerd/v2/pkg/namespaces"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/gorilla/mux"
 	"github.com/runfinch/finch-daemon/api/response"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
@@ -22,8 +24,21 @@ func (h *handler) restart(w http.ResponseWriter, r *http.Request) {
 	}
 	timeout := time.Second * time.Duration(t)
 
+	devNull, err := os.OpenFile("/dev/null", os.O_WRONLY, 0600)
+	if err != nil {
+		response.JSON(w, http.StatusBadRequest, response.NewErrorFromMsg("failed to open /dev/null"))
+		return
+	}
+	defer devNull.Close()
+
 	ctx := namespaces.WithNamespace(r.Context(), h.Config.Namespace)
-	err = h.service.Restart(ctx, cid, timeout)
+	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
+	options := ncTypes.ContainerRestartOptions{
+		GOption: globalOpt,
+		Stdout:  devNull,
+		Timeout: &timeout,
+	}
+	err = h.service.Restart(ctx, cid, options)
 	// map the error into http status code and send response.
 	if err != nil {
 		var code int

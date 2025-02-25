@@ -9,6 +9,7 @@ import (
 	"time"
 
 	containerd "github.com/containerd/containerd/v2/client"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -33,6 +34,7 @@ var _ = Describe("Container Restart API ", func() {
 		tarExtractor *mocks_archive.MockTarExtractor
 		service      container.Service
 		timeout      time.Duration
+		options      ncTypes.ContainerRestartOptions
 	)
 	BeforeEach(func() {
 		ctx = context.Background()
@@ -46,6 +48,9 @@ var _ = Describe("Container Restart API ", func() {
 		tarExtractor = mocks_archive.NewMockTarExtractor(mockCtrl)
 		service = NewService(cdClient, mockNerdctlService{ncClient, nil}, logger, nil, nil, tarExtractor)
 		timeout = time.Duration(10)
+		options = ncTypes.ContainerRestartOptions{
+			Timeout: &timeout,
+		}
 	})
 	Context("service", func() {
 		It("should not return any error when Running", func() {
@@ -53,14 +58,14 @@ var _ = Describe("Container Restart API ", func() {
 			cdClient.EXPECT().SearchContainer(gomock.Any(), cid).Return(
 				[]containerd.Container{con}, nil).AnyTimes()
 			//mock the nerdctl client to mock the restart container was successful without any error.
-			ncClient.EXPECT().StartContainer(ctx, con).Return(nil)
+			ncClient.EXPECT().StartContainer(ctx, gomock.Any(), gomock.Any()).Return(nil)
 			ncClient.EXPECT().StopContainer(ctx, con, &timeout).Return(nil)
 			gomock.InOrder(
 				logger.EXPECT().Debugf("restarting container: %s", cid),
 				logger.EXPECT().Debugf("successfully restarted: %s", cid),
 			)
 			//service should not return any error
-			err := service.Restart(ctx, cid, timeout)
+			err := service.Restart(ctx, cid, options)
 			Expect(err).Should(BeNil())
 		})
 		It("should not return any error when Stopped", func() {
@@ -69,13 +74,13 @@ var _ = Describe("Container Restart API ", func() {
 				[]containerd.Container{con}, nil).AnyTimes()
 			//mock the nerdctl client to mock the restart container was successful without any error.
 			ncClient.EXPECT().StopContainer(ctx, con, &timeout).Return(errdefs.NewNotModified(fmt.Errorf("err")))
-			ncClient.EXPECT().StartContainer(ctx, con).Return(nil)
+			ncClient.EXPECT().StartContainer(ctx, gomock.Any(), gomock.Any()).Return(nil)
 			gomock.InOrder(
 				logger.EXPECT().Debugf("restarting container: %s", cid),
 				logger.EXPECT().Debugf("successfully restarted: %s", cid),
 			)
 			//service should not return any error
-			err := service.Restart(ctx, cid, timeout)
+			err := service.Restart(ctx, cid, options)
 			Expect(err).Should(BeNil())
 		})
 		It("should return not found error", func() {
@@ -85,7 +90,7 @@ var _ = Describe("Container Restart API ", func() {
 			logger.EXPECT().Debugf("no such container: %s", gomock.Any())
 
 			// service should return NotFound error
-			err := service.Restart(ctx, cid, timeout)
+			err := service.Restart(ctx, cid, options)
 			Expect(errdefs.IsNotFound(err)).Should(BeTrue())
 		})
 		It("should return multiple containers found error", func() {
@@ -95,7 +100,7 @@ var _ = Describe("Container Restart API ", func() {
 			logger.EXPECT().Debugf("multiple IDs found with provided prefix: %s, total containers found: %d", cid, 2)
 
 			// service should return error
-			err := service.Restart(ctx, cid, timeout)
+			err := service.Restart(ctx, cid, options)
 			Expect(err).Should(Not(BeNil()))
 		})
 		It("should fail due to nerdctl client error", func() {
@@ -105,14 +110,14 @@ var _ = Describe("Container Restart API ", func() {
 
 			expectedErr := fmt.Errorf("nerdctl error")
 			ncClient.EXPECT().StopContainer(ctx, con, &timeout).Return(nil)
-			ncClient.EXPECT().StartContainer(ctx, con).Return(expectedErr)
+			ncClient.EXPECT().StartContainer(ctx, gomock.Any(), gomock.Any()).Return(expectedErr)
 			gomock.InOrder(
 				logger.EXPECT().Debugf("restarting container: %s", cid),
 			)
 			logger.EXPECT().Errorf("Failed to start container: %s. Error: %v", cid, expectedErr)
 
 			// service should return not modified error.
-			err := service.Restart(ctx, cid, timeout)
+			err := service.Restart(ctx, cid, options)
 			Expect(err).Should(Equal(expectedErr))
 		})
 	})
