@@ -4,9 +4,13 @@
 package container
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/containerd/containerd/v2/pkg/namespaces"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
@@ -19,8 +23,17 @@ type waitError struct {
 }
 
 type waitResp struct {
-	StatusCode int64
+	StatusCode int
 	Error      *waitError `json:",omitempty"`
+}
+
+type codeCapturingWriter struct {
+	code int
+}
+
+func (w *codeCapturingWriter) Write(p []byte) (n int, err error) {
+	w.code, _ = strconv.Atoi(strings.TrimSpace(string(p)))
+	return len(p), nil
 }
 
 func (h *handler) wait(w http.ResponseWriter, r *http.Request) {
@@ -28,10 +41,27 @@ func (h *handler) wait(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: condition is not used because nerdctl doesn't support it
 	condition := r.URL.Query().Get("condition")
+	if condition != "" {
+		logrus.Debugf("Wait container API called with condition options - not supported.")
+		response.SendErrorResponse(w, http.StatusBadRequest, fmt.Errorf("wait condition is not supported"))
+		return
+	}
 	ctx := namespaces.WithNamespace(r.Context(), h.Config.Namespace)
-	code, err := h.service.Wait(ctx, cid, condition)
 
-	if code == -1 {
+	// Create the custom writer
+	codeWriter := &codeCapturingWriter{}
+
+	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
+	options := ncTypes.ContainerWaitOptions{
+		GOptions: globalOpt,
+		Stdout:   codeWriter,
+	}
+
+	err := h.service.Wait(ctx, cid, options)
+
+	code := codeWriter.code
+
+	if err != nil {
 		var errorCode int
 		switch {
 		case errdefs.IsNotFound(err):
@@ -47,13 +77,10 @@ func (h *handler) wait(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	waitResponse := waitResp{
-		StatusCode: code,
-	}
 	// if there is no err then don't need to set the error msg. e.g. when container is stopped the wait should return
 	// {"Error":null,"StatusCode":0}
-	if err != nil {
-		waitResponse.Error = &waitError{Message: err.Error()}
+	waitResponse := waitResp{
+		StatusCode: code,
 	}
 
 	response.JSON(w, http.StatusOK, waitResponse)

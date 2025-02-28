@@ -36,6 +36,7 @@ type NerdctlContainerSvc interface {
 	ListContainers(ctx context.Context, options types.ContainerListOptions) ([]container.ListItem, error)
 	RenameContainer(ctx context.Context, container containerd.Container, newName string, options types.ContainerRenameOptions) error
 	KillContainer(ctx context.Context, cid string, options types.ContainerKillOptions) error
+	ContainerWait(ctx context.Context, cid string, options types.ContainerWaitOptions) error
 
 	// Mocked functions for container attach
 	GetDataStore() (string, error)
@@ -123,6 +124,10 @@ func (*NerdctlWrapper) LoggingPrintLogsTo(stdout, stderr io.Writer, clv *logging
 
 func (w *NerdctlWrapper) KillContainer(ctx context.Context, cid string, options types.ContainerKillOptions) error {
 	return container.Kill(ctx, w.clientWrapper.client, []string{cid}, options)
+}
+
+func (w *NerdctlWrapper) ContainerWait(ctx context.Context, cid string, options types.ContainerWaitOptions) error {
+	return container.Wait(ctx, w.clientWrapper.client, []string{cid}, options)
 }
 
 func (w *NerdctlWrapper) GetNerdctlExe() (string, error) {
