@@ -3,7 +3,7 @@
 RUNC_VERSION=1.1.14
 NERDCTL_VERSION=2.0.0
 BUILDKIT_VERSION=0.15.2
-CNI_VERSION=1.5.1
+CNI_VERSION=1.6.2
 
 apt update && apt install -y make gcc linux-libc-dev libseccomp-dev pkg-config git
 
