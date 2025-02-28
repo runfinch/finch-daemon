@@ -8,7 +8,7 @@ require (
 	github.com/containerd/containerd/v2 v2.0.2
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/fifo v1.1.0
-	github.com/containerd/go-cni v1.1.11
+	github.com/containerd/go-cni v1.1.12
 	github.com/containerd/nerdctl/v2 v2.0.0
 	github.com/containerd/platforms v1.0.0-rc.1
 	github.com/containerd/typeurl/v2 v2.2.3
@@ -117,11 +117,13 @@ require (
 	github.com/multiformats/go-varint v0.0.7 // indirect
 	github.com/opencontainers/runtime-tools v0.9.1-0.20221107090550-2e043c6bd626 // indirect
 	github.com/opencontainers/selinux v1.11.1 // indirect
+	github.com/petermattis/goid v0.0.0-20250211185408-f2b9d978cd7a // indirect
 	github.com/philhofer/fwd v1.1.3-0.20240612014219-fbbf4953d986 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/rootless-containers/bypass4netns v0.4.1 // indirect
 	github.com/rootless-containers/rootlesskit/v2 v2.3.2 // indirect
+	github.com/sasha-s/go-deadlock v0.3.5 // indirect
 	github.com/smallstep/pkcs7 v0.1.1 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
