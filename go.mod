@@ -9,7 +9,7 @@ require (
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/fifo v1.1.0
 	github.com/containerd/go-cni v1.1.12
-	github.com/containerd/nerdctl/v2 v2.0.0
+	github.com/containerd/nerdctl/v2 v2.0.3
 	github.com/containerd/platforms v1.0.0-rc.1
 	github.com/containerd/typeurl/v2 v2.2.3
 	github.com/containernetworking/cni v1.2.3
