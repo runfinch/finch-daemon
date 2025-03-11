@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"sync"
 	"time"
 
@@ -56,6 +57,7 @@ var _ = Describe("Events API", func() {
 		}
 		mockEventJson, _ = json.Marshal(mockEvent)
 	})
+
 	It("should return 200 and stream events on success", func() {
 		// in order to add events to the channels while the events handler is running, we need to either run the handler
 		// or the channel publisher in a separate goroutine as the events handler will block until it returns. because all
@@ -104,14 +106,15 @@ var _ = Describe("Events API", func() {
 		Expect(err).Should(BeNil())
 		Expect(line).Should(MatchJSON(mockEventJson))
 	})
+
 	It("should return 400 if filters are not in the correct format", func() {
 		req, _ := http.NewRequest(http.MethodGet, "/events?filters=bad", nil)
-		req = mux.SetURLVars(req, map[string]string{"filters": "bad"})
 
 		h.events(rr, req)
 		Expect(rr).Should(HaveHTTPStatus(http.StatusBadRequest))
-		Expect(rr.Body).Should(MatchJSON(`{"message": "invalid filter: invalid character 'b' looking for beginning of value"}`))
+		Expect(rr.Body).Should(MatchJSON(`{"message": "invalid filter: error parsing filters: invalid character 'b' looking for beginning of value"}`))
 	})
+
 	It("should forward filters to the service", func() {
 		var waitGroup sync.WaitGroup
 
@@ -138,6 +141,7 @@ var _ = Describe("Events API", func() {
 
 		Expect(rr).Should(HaveHTTPStatus(http.StatusOK))
 	})
+
 	It("should stop streaming if an error is received", func() {
 		var waitGroup sync.WaitGroup
 
@@ -164,5 +168,41 @@ var _ = Describe("Events API", func() {
 
 		close(mockEventCh)
 		close(mockErrCh)
+	})
+
+	It("should handle multiple filters", func() {
+		var waitGroup sync.WaitGroup
+		mockEventCh = make(chan *events.Event)
+		mockErrCh = make(chan error)
+
+		filters := map[string]map[string]bool{
+			"type":   {"container": true},
+			"status": {"start": true, "stop": true},
+		}
+		filtersJSON, err := json.Marshal(filters)
+		Expect(err).Should(BeNil())
+
+		url := fmt.Sprintf("/events?filters=%s", url.QueryEscape(string(filtersJSON)))
+		req, err := http.NewRequest(http.MethodGet, url, nil)
+		Expect(err).Should(BeNil())
+
+		s.EXPECT().SubscribeEvents(req.Context(), map[string][]string{
+			"type":   {"container"},
+			"status": {"start", "stop"},
+		}).Return(mockEventCh, mockErrCh)
+		logger.EXPECT().Debugf("received error, exiting: %s", gomock.Any())
+
+		waitGroup.Add(1)
+		go func() {
+			defer waitGroup.Done()
+			h.events(rr, req)
+		}()
+
+		close(mockEventCh)
+		close(mockErrCh)
+
+		waitGroup.Wait()
+
+		Expect(rr).Should(HaveHTTPStatus(http.StatusOK))
 	})
 })

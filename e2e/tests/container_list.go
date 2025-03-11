@@ -226,8 +226,31 @@ func ContainerList(opt *option.Option) {
 			body, err := io.ReadAll(res.Body)
 			Expect(err).Should(BeNil())
 			defer res.Body.Close()
-			errorMsg := fmt.Sprintf("invalid query parameter \\\"filters\\\": %s", fmt.Errorf("invalid character 'i' looking for beginning of value"))
+			errorMsg := fmt.Sprintf("invalid query parameter \\\"filters\\\": %s", fmt.Errorf("error parsing filters: invalid character 'i' looking for beginning of value"))
 			Expect(body).Should(MatchJSON(`{"message": "` + errorMsg + `"}`))
+		})
+		It("should list the running containers with new filter format", func() {
+			id := command.StdoutStr(opt, "run", "-d", "--name", testContainerName, "--label", "com.example.foo=bar", defaultImage, "sleep", "infinity")
+			want := []types.ContainerListItem{
+				{
+					Id:    id[:12],
+					Names: []string{wantContainerName},
+				},
+			}
+
+			// Using the new filter format
+			newFormatFilter := `{"label":{"com.example.foo=bar":true}}`
+			res, err := uClient.Get(client.ConvertToFinchUrl(version, "/containers/json?all=true&filters="+newFormatFilter))
+			Expect(err).Should(BeNil())
+			Expect(res.StatusCode).Should(Equal(http.StatusOK))
+
+			var got []types.ContainerListItem
+			err = json.NewDecoder(res.Body).Decode(&got)
+			Expect(err).Should(BeNil())
+			Expect(len(got)).Should(Equal(1))
+
+			got = filterContainerList(got)
+			Expect(got).Should(ContainElements(want))
 		})
 	})
 }

@@ -10,20 +10,17 @@ import (
 
 	eventtype "github.com/runfinch/finch-daemon/api/events"
 	"github.com/runfinch/finch-daemon/api/response"
+	"github.com/runfinch/finch-daemon/api/types"
 )
 
 func (h *handler) events(w http.ResponseWriter, r *http.Request) {
-	filters := make(map[string][]string)
-	filterQuery := r.URL.Query().Get("filters")
-	if filterQuery != "" {
-		err := json.Unmarshal([]byte(filterQuery), &filters)
-		if err != nil {
-			response.JSON(w, http.StatusBadRequest, response.NewErrorFromMsg(fmt.Sprintf("invalid filter: %s", err)))
-			return
-		}
+	filters, err := types.ParseFilterArgs(r.URL.Query())
+	if err != nil {
+		response.JSON(w, http.StatusBadRequest, response.NewErrorFromMsg(fmt.Sprintf("invalid filter: %s", err)))
+		return
 	}
 
-	eventCh, errCh := h.service.SubscribeEvents(r.Context(), filters)
+	eventCh, errCh := h.service.SubscribeEvents(r.Context(), filters.ToLegacyFormat())
 
 	encoder := json.NewEncoder(w)
 
