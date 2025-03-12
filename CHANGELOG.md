@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.13.1](https://github.com/runfinch/finch-daemon/compare/v0.13.0...v0.13.1) (2025-02-21)
+
+
+### Bug Fixes
+
+* update create-releases.sh ([#165](https://github.com/runfinch/finch-daemon/issues/165)) ([1edf2d4](https://github.com/runfinch/finch-daemon/commit/1edf2d430e1f9e7c682ae8bd85347b7b97a52e75))
+
+## [0.13.0](https://github.com/runfinch/finch-daemon/compare/v0.12.0...v0.13.0) (2025-02-18)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/onsi/ginkgo/v2 from 2.22.1 to 2.22.2 ([#138](https://github.com/runfinch/finch-daemon/issues/138)) ([776946b](https://github.com/runfinch/finch-daemon/commit/776946b2de620d679980083596486446d41a8b73))
+* **deps:** Bump github.com/runfinch/common-tests from 0.8.0 to 0.9.1 ([#140](https://github.com/runfinch/finch-daemon/issues/140)) ([96b109e](https://github.com/runfinch/finch-daemon/commit/96b109e29c592a36dbe39f81134669f6f9525249))
+* **deps:** Bump github.com/spf13/afero from 1.11.0 to 1.12.0 ([#150](https://github.com/runfinch/finch-daemon/issues/150)) ([db169fb](https://github.com/runfinch/finch-daemon/commit/db169fb2fc86abf10b6af856b94238bd7729b573))
+* **deps:** Bump golang.org/x/net from 0.33.0 to 0.34.0 ([#141](https://github.com/runfinch/finch-daemon/issues/141)) ([5b1fe1c](https://github.com/runfinch/finch-daemon/commit/5b1fe1ca1f7a00356bd24f5f85367f24f242e6b7))
+* **deps:** Bump google.golang.org/protobuf from 1.36.1 to 1.36.4 ([#151](https://github.com/runfinch/finch-daemon/issues/151)) ([f7c7b30](https://github.com/runfinch/finch-daemon/commit/f7c7b3070d141c7d90405a230d4a48062fde56ac))
+
+
+### Features
+
+* Add container kill API ([#146](https://github.com/runfinch/finch-daemon/issues/146)) ([8a40617](https://github.com/runfinch/finch-daemon/commit/8a4061717384385c51910f9e8522a0268e6238ed))
+* Update container inspect with size option ([#157](https://github.com/runfinch/finch-daemon/issues/157)) ([b5df6ef](https://github.com/runfinch/finch-daemon/commit/b5df6ef819803699cc11fccda7c0598b5672af3e))
+
+### Others
+
+* Update containerd and nerdctl to v2 ([#148](https://github.com/runfinch/finch-daemon/pull/148)) ([d3db35e](https://github.com/runfinch/finch-daemon/commit/d3db35eae8b825732fc1b6c08960b63779f5e92a))
+
 ## [0.12.0](https://github.com/runfinch/finch-daemon/compare/v0.11.0...v0.12.0) (2024-12-27)
 
 

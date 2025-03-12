@@ -5,12 +5,12 @@ package container
 
 import (
 	"context"
-	"time"
 
+	"github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
 
-func (s *service) Restart(ctx context.Context, cid string, timeout time.Duration) error {
+func (s *service) Restart(ctx context.Context, cid string, options types.ContainerRestartOptions) error {
 	con, err := s.getContainer(ctx, cid)
 	if err != nil {
 		return err
@@ -19,11 +19,19 @@ func (s *service) Restart(ctx context.Context, cid string, timeout time.Duration
 	// restart the container and if error occurs then return error otherwise return nil
 	// swallow IsNotModified error on StopContainer for already stopped container, simply call StartContainer
 	s.logger.Debugf("restarting container: %s", cid)
-	if err := s.nctlContainerSvc.StopContainer(ctx, con, &timeout); err != nil && !errdefs.IsNotModified(err) {
+	if err := s.nctlContainerSvc.StopContainer(ctx, con, options.Timeout); err != nil && !errdefs.IsNotModified(err) {
 		s.logger.Errorf("Failed to stop container: %s. Error: %v", cid, err)
 		return err
 	}
-	if err = s.nctlContainerSvc.StartContainer(ctx, con); err != nil {
+
+	startContainerOptions := types.ContainerStartOptions{
+		Stdout:     options.Stdout,
+		GOptions:   options.GOption,
+		DetachKeys: "",
+		Attach:     false,
+	}
+
+	if err = s.nctlContainerSvc.StartContainer(ctx, cid, startContainerOptions); err != nil {
 		s.logger.Errorf("Failed to start container: %s. Error: %v", cid, err)
 		return err
 	}
