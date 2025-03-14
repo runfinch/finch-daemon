@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.14.0](https://github.com/runfinch/finch-daemon/compare/v0.13.1...v0.14.0) (2025-03-14)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/go-jose/go-jose/v4 from 4.0.4 to 4.0.5 ([#167](https://github.com/runfinch/finch-daemon/issues/167)) ([71a062a](https://github.com/runfinch/finch-daemon/commit/71a062adc537fa935e88e2da4c2b7addf4365c88))
+* **deps:** Bump golang.org/x/net from 0.34.0 to 0.36.0 ([#182](https://github.com/runfinch/finch-daemon/issues/182)) ([006c68d](https://github.com/runfinch/finch-daemon/commit/006c68d3d55b6f2cd2e43f9f177c4ad503132f1b))
+* **deps:** Bump golang.org/x/net from 0.34.0 to 0.37.0 ([#183](https://github.com/runfinch/finch-daemon/issues/183)) ([159c5f3](https://github.com/runfinch/finch-daemon/commit/159c5f3b860746f7b3e157664c10a0f6e238df0e))
+
+
+### Features
+
+* add detachKeys option to container start ([b03f126](https://github.com/runfinch/finch-daemon/commit/b03f12688a0bbbbbcad4f6a6ec300a39846775d1))
+* add detachKeys option to container start ([#159](https://github.com/runfinch/finch-daemon/issues/159)) ([b03f126](https://github.com/runfinch/finch-daemon/commit/b03f12688a0bbbbbcad4f6a6ec300a39846775d1))
+
 ## [0.13.1](https://github.com/runfinch/finch-daemon/compare/v0.13.0...v0.13.1) (2025-02-21)
 
 
