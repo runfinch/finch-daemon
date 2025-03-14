@@ -47,7 +47,7 @@ func (h *handler) build(w http.ResponseWriter, r *http.Request) {
 }
 
 // getBuildOptions creates the build option parameter from http request which is requires by nerdctl build function.
-func (h *handler) getBuildOptions(w http.ResponseWriter, r *http.Request, stream io.Writer) (*types.BuilderBuildOptions, error) {
+func (h *handler) getBuildOptions(_ http.ResponseWriter, r *http.Request, stream io.Writer) (*types.BuilderBuildOptions, error) {
 	bkHost, err := h.ncBuildSvc.GetBuildkitHost()
 	if err != nil {
 		h.logger.Warnf("Failed to get buildkit host: %v", err.Error())
@@ -73,6 +73,7 @@ func (h *handler) getBuildOptions(w http.ResponseWriter, r *http.Request, stream
 		Platform:     getQueryParamList(r, "platform", []string{}),
 		Rm:           getQueryParamBool(r, "rm", true),
 		Progress:     "auto",
+		ExtraHosts:   getQueryParamList(r, "extrahosts", []string{}),
 	}
 
 	argsQuery := r.URL.Query().Get("buildargs")

@@ -62,6 +62,7 @@ func TestRun(t *testing.T) {
 		tests.NetworkInspect(opt)
 
 		// functional test for image APIs
+		tests.ImageBuild(opt)
 		tests.ImageRemove(opt)
 		tests.ImagePush(opt)
 		tests.ImagePull(opt)
