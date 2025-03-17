@@ -21,7 +21,7 @@ import (
 type Service interface {
 	GetPathToFilesInContainer(ctx context.Context, cid string, path string) (string, func(), error)
 	Remove(ctx context.Context, cid string, force, removeVolumes bool) error
-	Wait(ctx context.Context, cid string, condition string) (code int64, err error)
+	Wait(ctx context.Context, cid string, options ncTypes.ContainerWaitOptions) error
 	Start(ctx context.Context, cid string, options ncTypes.ContainerStartOptions) error
 	Stop(ctx context.Context, cid string, timeout *time.Duration) error
 	Restart(ctx context.Context, cid string, options ncTypes.ContainerRestartOptions) error

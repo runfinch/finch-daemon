@@ -44,6 +44,20 @@ func (m *MockNerdctlContainerSvc) EXPECT() *MockNerdctlContainerSvcMockRecorder 
 	return m.recorder
 }
 
+// ContainerWait mocks base method.
+func (m *MockNerdctlContainerSvc) ContainerWait(arg0 context.Context, arg1 string, arg2 types.ContainerWaitOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ContainerWait", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ContainerWait indicates an expected call of ContainerWait.
+func (mr *MockNerdctlContainerSvcMockRecorder) ContainerWait(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerWait", reflect.TypeOf((*MockNerdctlContainerSvc)(nil).ContainerWait), arg0, arg1, arg2)
+}
+
 // CreateContainer mocks base method.
 func (m *MockNerdctlContainerSvc) CreateContainer(arg0 context.Context, arg1 []string, arg2 containerutil.NetworkOptionsManager, arg3 types.ContainerCreateOptions) (client.Container, func(), error) {
 	m.ctrl.T.Helper()
