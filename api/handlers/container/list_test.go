@@ -58,6 +58,7 @@ var _ = Describe("Container List API", func() {
 		It("should return containers and 200 status code upon success with all query parameters", func() {
 			req, err := http.NewRequest(http.MethodGet, "/containers/json?all=true&limit=1&size=true&filters={\"status\": [\"paused\"]}", nil)
 			Expect(err).Should(BeNil())
+
 			listOpts := ncTypes.ContainerListOptions{
 				GOptions: globalOpts,
 				All:      true,
@@ -119,7 +120,7 @@ var _ = Describe("Container List API", func() {
 		It("should return 400 status code when there is error parsing filters", func() {
 			req, err := http.NewRequest(http.MethodGet, "/containers/json?filters=invalid", nil)
 			Expect(err).Should(BeNil())
-			errorMsg := fmt.Sprintf("invalid query parameter \\\"filters\\\": %s", fmt.Errorf("invalid character 'i' looking for beginning of value"))
+			errorMsg := fmt.Sprintf("invalid query parameter \\\"filters\\\": %s", fmt.Errorf("error parsing filters: invalid character 'i' looking for beginning of value"))
 
 			h.list(rr, req)
 			Expect(rr.Body).Should(MatchJSON(`{"message": "` + errorMsg + `"}`))
