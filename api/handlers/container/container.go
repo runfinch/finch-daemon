@@ -36,6 +36,7 @@ type Service interface {
 	Stats(ctx context.Context, cid string) (<-chan *types.StatsJSON, error)
 	ExecCreate(ctx context.Context, cid string, config types.ExecConfig) (string, error)
 	Kill(ctx context.Context, cid string, options ncTypes.ContainerKillOptions) error
+	Pause(ctx context.Context, cid string, options ncTypes.ContainerPauseOptions) error
 }
 
 // RegisterHandlers register all the supported endpoints related to the container APIs.
@@ -60,6 +61,7 @@ func RegisterHandlers(r types.VersionedRouter, service Service, conf *config.Con
 	r.HandleFunc("/{id:.*}/stats", h.stats, http.MethodGet)
 	r.HandleFunc("/{id:.*}/exec", h.exec, http.MethodPost)
 	r.HandleFunc("/{id:.*}/kill", h.kill, http.MethodPost)
+	r.HandleFunc("/{id:.*}/pause", h.pause, http.MethodPost)
 }
 
 // newHandler creates the handler that serves all the container related APIs.
