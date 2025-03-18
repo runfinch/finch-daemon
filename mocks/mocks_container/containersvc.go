@@ -269,6 +269,20 @@ func (mr *MockServiceMockRecorder) Stop(arg0, arg1, arg2 interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockService)(nil).Stop), arg0, arg1, arg2)
 }
 
+// Unpause mocks base method.
+func (m *MockService) Unpause(arg0 context.Context, arg1 string, arg2 types.ContainerUnpauseOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Unpause", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Unpause indicates an expected call of Unpause.
+func (mr *MockServiceMockRecorder) Unpause(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unpause", reflect.TypeOf((*MockService)(nil).Unpause), arg0, arg1, arg2)
+}
+
 // Wait mocks base method.
 func (m *MockService) Wait(arg0 context.Context, arg1 string, arg2 types.ContainerWaitOptions) error {
 	m.ctrl.T.Helper()
