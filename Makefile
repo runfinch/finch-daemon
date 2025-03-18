@@ -77,8 +77,8 @@ endif
 .PHONY:  gen-code
  gen-code: linux
 	rm -rf ./pkg/mocks
-	GOBIN=$(BIN) go install github.com/golang/mock/mockgen
-	GOBIN=$(BIN) go install golang.org/x/tools/cmd/stringer
+	GOBIN=$(BIN) go install github.com/golang/mock/mockgen@v1.6.0
+	GOBIN=$(BIN) go install golang.org/x/tools/cmd/stringer@v0.31.0
 	PATH=$(BIN):$(PATH) go generate ./...
 	PATH=$(BIN):$(PATH) mockgen --destination=./mocks/mocks_container/container.go -package=mocks_container github.com/containerd/containerd/v2/client Container
 	PATH=$(BIN):$(PATH) mockgen --destination=./mocks/mocks_container/process.go -package=mocks_container github.com/containerd/containerd/v2/client Process
