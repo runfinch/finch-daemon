@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.14.0](https://github.com/runfinch/finch-daemon/compare/v0.13.1...v0.14.0) (2025-03-18)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/containerd/containerd/v2 from 2.0.2 to 2.0.4 ([#186](https://github.com/runfinch/finch-daemon/issues/186)) ([8d92e1f](https://github.com/runfinch/finch-daemon/commit/8d92e1f2a1d8555f4db1ed41025f7f9cac0916d0))
+* **deps:** Bump github.com/containerd/go-cni from 1.1.11 to 1.1.12 ([#154](https://github.com/runfinch/finch-daemon/issues/154)) ([d9be44f](https://github.com/runfinch/finch-daemon/commit/d9be44f30aa0ae63aa1dd2b8224ff43eb8b11e0f))
+* **deps:** bump github.com/containerd/nerdctl/v2 from 2.0.0 to 2.0.3 ([#173](https://github.com/runfinch/finch-daemon/issues/173)) ([1bcfebd](https://github.com/runfinch/finch-daemon/commit/1bcfebd4acc8c14c91eeda3c1e73b0e66a14b66e))
+* **deps:** Bump github.com/docker/docker from 27.5.0+incompatible to 28.0.1+incompatible ([#170](https://github.com/runfinch/finch-daemon/issues/170)) ([e474488](https://github.com/runfinch/finch-daemon/commit/e474488f13615308af0e12f4a45720cfd947ba31))
+* **deps:** Bump github.com/go-jose/go-jose/v4 from 4.0.4 to 4.0.5 ([#167](https://github.com/runfinch/finch-daemon/issues/167)) ([71a062a](https://github.com/runfinch/finch-daemon/commit/71a062adc537fa935e88e2da4c2b7addf4365c88))
+* **deps:** Bump github.com/moby/moby from 27.4.1+incompatible to 28.0.1+incompatible ([#169](https://github.com/runfinch/finch-daemon/issues/169)) ([be4b61a](https://github.com/runfinch/finch-daemon/commit/be4b61a21cf68e0e67c29b830f6a09a5a11b4435))
+* **deps:** Bump golang.org/x/net from 0.34.0 to 0.36.0 ([#182](https://github.com/runfinch/finch-daemon/issues/182)) ([006c68d](https://github.com/runfinch/finch-daemon/commit/006c68d3d55b6f2cd2e43f9f177c4ad503132f1b))
+* **deps:** Bump golang.org/x/net from 0.34.0 to 0.37.0 ([#183](https://github.com/runfinch/finch-daemon/issues/183)) ([159c5f3](https://github.com/runfinch/finch-daemon/commit/159c5f3b860746f7b3e157664c10a0f6e238df0e))
+* **deps:** Bump google.golang.org/protobuf from 1.36.4 to 1.36.5 ([#184](https://github.com/runfinch/finch-daemon/issues/184)) ([46b1402](https://github.com/runfinch/finch-daemon/commit/46b1402e070c3e662ca26fbf9710c04799d21fc2))
+
+
+### Features
+
+* add detachKeys option to container start ([#159](https://github.com/runfinch/finch-daemon/issues/159)) ([b03f126](https://github.com/runfinch/finch-daemon/commit/b03f12688a0bbbbbcad4f6a6ec300a39846775d1))
+
+
+### Bug Fixes
+
+* Refactor filters parsing ([#181](https://github.com/runfinch/finch-daemon/issues/181)) ([6d36c03](https://github.com/runfinch/finch-daemon/commit/6d36c03b37e5f1a7eb225093aff71e16728a5247))
+* refactor wait API ([#177](https://github.com/runfinch/finch-daemon/issues/177)) ([08878dc](https://github.com/runfinch/finch-daemon/commit/08878dc134e24310c293849950e854c83ff30cb5))
+
 ## [0.13.1](https://github.com/runfinch/finch-daemon/compare/v0.13.0...v0.13.1) (2025-02-21)
 
 
