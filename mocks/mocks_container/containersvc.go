@@ -170,6 +170,20 @@ func (mr *MockServiceMockRecorder) Logs(arg0, arg1, arg2 interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logs", reflect.TypeOf((*MockService)(nil).Logs), arg0, arg1, arg2)
 }
 
+// Pause mocks base method.
+func (m *MockService) Pause(arg0 context.Context, arg1 string, arg2 types.ContainerPauseOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Pause", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Pause indicates an expected call of Pause.
+func (mr *MockServiceMockRecorder) Pause(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pause", reflect.TypeOf((*MockService)(nil).Pause), arg0, arg1, arg2)
+}
+
 // Remove mocks base method.
 func (m *MockService) Remove(arg0 context.Context, arg1 string, arg2, arg3 bool) error {
 	m.ctrl.T.Helper()
