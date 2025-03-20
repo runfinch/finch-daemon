@@ -50,6 +50,7 @@ func TestRun(t *testing.T) {
 		tests.ContainerKill(opt)
 		tests.ContainerInspect(opt)
 		tests.ContainerWait(opt)
+		tests.ContainerUnpause(opt)
 
 		// functional test for volume APIs
 		tests.VolumeList(opt)
