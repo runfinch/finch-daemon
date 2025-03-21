@@ -9,7 +9,7 @@ In the current implementation, users can use OPA Rego policies to filter API req
 
 ## Setting up a policy 
 
-Use the [sample rego](../sample.rego) policy template to build your policy rules. 
+Use the [sample rego](../docs/sample-rego-policies/default.rego) policy template to build your policy rules. 
 
 The package name must be `finch.authz`, the daemon middleware will look for the result of the `allow` key on each API call to determine wether to allow/deny the request. 
 An approved request will go through without any events, a rejected request will fail with status code 403
@@ -39,4 +39,75 @@ Once you are ready with your policy document, use the `--enable-middleware` flag
 Note: The `--rego-file` flag is required when `--enable-middleware` is set.
 
 Example: 
-`sudo bin/finch-daemon --debug --socket-owner $UID --socket-addr /run/finch-test.sock --pidfile /run/finch-test.pid --enable-middleware --rego-file /<path-to>/finch-daemon/sample.rego &`
+`sudo bin/finch-daemon --debug --socket-owner $UID --socket-addr /run/finch-test.sock --pidfile /run/finch-test.pid --enable-middleware --rego-file /<path-to>/finch-daemon/docs/sample-rego-policies/default.rego &`
+
+
+# Best practices for secure rego policies
+
+## Comprehensive API Path Protection
+
+When writing Rego policies, it's crucial to implement thorough path matching to prevent unintended access to APIs. The daemon processes API paths without strict prefix validation, which could lead to security bypasses.
+
+## Path Matching Best Practices
+
+```
+package finch.authz
+
+import future.keywords.if
+import rego.v1
+
+# Use pattern matching for comprehensive path protection
+is_container_api if {
+    glob.match("/*/containers/*", [], input.Path)
+}
+
+is_container_create if {
+    input.Method == "POST"
+    glob.match("/*/containers/create", [], input.Path)
+}
+
+# Protect against path variations
+allow if {
+    not is_container_api  # Blocks all container-related paths
+    not is_container_create  # Specifically blocks container creation
+}
+```
+Use these [example policies](https://github.com/open-policy-agent/opa-docker-authz/blob/2c7eb5c729fca70a3e5cda6f15c2d9cc121b9481/example.rego) to build your opa policy
+
+Remember that only `Method` and `Path` is the only values that 
+gets passed to the opa middleware.
+
+
+### Common Security Pitfalls
+
+- **Incomplete Path Matching**: Always use pattern matching functions like glob.match() instead of exact string matching to catch path variations.
+- **Missing HTTP Methods**: Consider all HTTP methods that could access a resource (GET, POST, PUT, DELETE).
+- **Alternative API Endpoints**: Be aware that some operations can be performed through multiple endpoints.
+
+### Monitoring and Alerting
+The finch-daemon's inability to start due to policy issues could impact system operations. Implement System Service Monitoring in order to be on top of any such failures.
+
+### Security Recommendations
+- Policy Testing
+  - Test policies in a non-production environment
+  - Use the [rego playground](https://play.openpolicyagent.org/) to test policies
+- Logging and Audit
+  - Enable comprehensive logging of policy decisions
+  - Monitor for unexpected denials
+
+
+### Critical Security Considerations : Rego Policy File Protection
+The Rego policy file is a critical security control. 
+Any user with sudo privileges can:
+
+- Modify the policy file to weaken security controls
+- Replace the policy with a more permissive version
+- Disable policy enforcement entirely
+
+#### Recomended Security Controls
+
+- Access Controls
+  - Restrict sudo access to specific commands 
+- Monitoring
+  - Monitor policy file changes
+  - Monitor daemon service status
