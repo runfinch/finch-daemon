@@ -135,6 +135,7 @@ func CreateRegoMiddleware(regoFilePath string) (func(next http.Handler) http.Han
 				Path:   r.URL.Path,
 			}
 
+			fmt.Printf("Evaluating policy rules for API request with Method = %s and Path = %s \n", input.Method, input.Path)
 			rs, err := preppedQuery.Eval(r.Context(), rego.EvalInput(input))
 			if err != nil {
 				response.SendErrorResponse(w, http.StatusInternalServerError, errInput)
@@ -142,6 +143,8 @@ func CreateRegoMiddleware(regoFilePath string) (func(next http.Handler) http.Han
 			}
 
 			if !rs.Allowed() {
+				// need to log evaluation result in order to mitigate Repudiation threat
+				fmt.Printf("Evaluation result: failed, method %s not allowed for path %s \n", r.Method, r.URL.Path)
 				response.SendErrorResponse(w, http.StatusForbidden,
 					fmt.Errorf("method %s not allowed for path %s", r.Method, r.URL.Path))
 				return
