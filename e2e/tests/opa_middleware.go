@@ -23,11 +23,13 @@ import (
 func OpaMiddlewareTest(opt *option.Option) {
 	Describe("test opa middleware functionality", func() {
 		var (
-			uClient           *http.Client
-			version           string
-			wantContainerName string
-			options           types.ContainerCreateRequest
-			createUrl         string
+			uClient                     *http.Client
+			version                     string
+			wantContainerName           string
+			containerCreateOptions      types.ContainerCreateRequest
+			createUrl                   string
+			unimplementedUnspecifiedUrl string
+			unimplementedSpecifiedUrl   string
 		)
 		BeforeEach(func() {
 			// create a custom client to use http over unix sockets
@@ -35,10 +37,12 @@ func OpaMiddlewareTest(opt *option.Option) {
 			// get the docker api version that will be tested
 			version = GetDockerApiVersion()
 			wantContainerName = fmt.Sprintf("/%s", testContainerName)
-			// set default container options
-			options = types.ContainerCreateRequest{}
-			options.Image = defaultImage
+			// set default container containerCreateOptions
+			containerCreateOptions = types.ContainerCreateRequest{}
+			containerCreateOptions.Image = defaultImage
 			createUrl = client.ConvertToFinchUrl(version, "/containers/create")
+			unimplementedUnspecifiedUrl = client.ConvertToFinchUrl(version, "/secrets")
+			unimplementedSpecifiedUrl = client.ConvertToFinchUrl(version, "/swarm")
 		})
 		AfterEach(func() {
 			command.RemoveAll(opt)
@@ -76,9 +80,9 @@ func OpaMiddlewareTest(opt *option.Option) {
 		})
 
 		It("shold disallow POST containers/create API request", func() {
-			options.Cmd = []string{"echo", "hello world"}
+			containerCreateOptions.Cmd = []string{"echo", "hello world"}
 
-			reqBody, err := json.Marshal(options)
+			reqBody, err := json.Marshal(containerCreateOptions)
 			Expect(err).Should(BeNil())
 
 			fmt.Println("createUrl = ", createUrl)
@@ -97,6 +101,20 @@ func OpaMiddlewareTest(opt *option.Option) {
 			// Check file permissions
 			mode := fileInfo.Mode()
 			Expect(mode.Perm()).To(Equal(os.FileMode(0400)), "Rego file should be read-only (0400)")
+		})
+
+		It("should fail unimplemented API calls, fail via daemon", func() {
+			fmt.Println("incompatibleUrl = ", unimplementedUnspecifiedUrl)
+			res, _ := uClient.Get(unimplementedUnspecifiedUrl)
+
+			Expect(res.StatusCode).Should(Equal(http.StatusNotFound))
+		})
+
+		It("should fail non implemented API calls,even if specified in the rego file", func() {
+			fmt.Println("incompatibleUrl = ", unimplementedSpecifiedUrl)
+			res, _ := uClient.Get(unimplementedSpecifiedUrl)
+
+			Expect(res.StatusCode).Should(Equal(http.StatusNotFound))
 		})
 	})
 }

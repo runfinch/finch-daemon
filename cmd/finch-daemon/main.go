@@ -149,6 +149,10 @@ func run(options *DaemonOptions) error {
 	logger := flog.NewLogrus()
 	r, err := newRouter(options, logger)
 	if err != nil {
+		// call regoFile cleanup function here to unlock previously locked file
+		if options.regoFilePath != "" {
+			cleanupRegoFile(options, logger)
+		}
 		return fmt.Errorf("failed to create a router: %w", err)
 	}
 
@@ -198,20 +202,7 @@ func run(options *DaemonOptions) error {
 		}
 	}()
 
-	defer func() {
-		if options.regoFileLock != nil {
-			// unlock the rego file upon daemon exit
-			if err := options.regoFileLock.Unlock(); err != nil {
-				logrus.Errorf("failed to unlock Rego file: %v", err)
-			}
-			logger.Infof("rego file unlocked")
-
-			// make rego file editable upon daemon exit
-			if err := os.Chmod(options.regoFilePath, 0600); err != nil {
-				logrus.Errorf("failed to change file permissions of rego file: %v", err)
-			}
-		}
-	}()
+	defer cleanupRegoFile(options, logger)
 
 	sdNotify(daemon.SdNotifyReady, logger)
 	serverWg.Wait()
@@ -296,59 +287,4 @@ func defineDockerConfig(uid int) error {
 		}
 		return true
 	})
-}
-
-// checkRegoFileValidity verifies that the given rego file exists and has the right file extension.
-func checkRegoFileValidity(filePath string) error {
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return fmt.Errorf("provided Rego file path does not exist: %s", filePath)
-	}
-
-	// Check if the file has a valid extension (.rego)
-	fileExt := strings.ToLower(filepath.Ext(options.regoFilePath))
-
-	if fileExt != ".rego" {
-		return fmt.Errorf("invalid file extension for Rego file. Only .rego files are supported")
-	}
-
-	return nil
-}
-
-// sanitizeRegoFile validates and prepares the Rego policy file for use.
-// It checks validates the file, acquires a file lock,
-// and sets rego file to be read-only.
-func sanitizeRegoFile(options *DaemonOptions) (string, error) {
-	if options.regoFilePath != "" {
-		if !options.enableMiddleware {
-			return "", fmt.Errorf("rego file path was provided without the --enable-middleware flag, please provide the --enable-middleware flag") // todo, can we default to setting this flag ourselves is this better UX?
-		}
-
-		if err := checkRegoFileValidity(options.regoFilePath); err != nil {
-			return "", err
-		}
-	}
-
-	if options.enableMiddleware && options.regoFilePath == "" {
-		return "", fmt.Errorf("rego file path not provided, please provide the policy file path using the --rego-file flag")
-	}
-
-	fileLock := flock.New(options.regoFilePath)
-
-	locked, err := fileLock.TryLock()
-	if err != nil {
-		return "", fmt.Errorf("error acquiring lock on rego file: %v", err)
-	}
-	if !locked {
-		return "", fmt.Errorf("unable to acquire lock on rego file, it may be in use by another process")
-	}
-
-	// Change file permissions to read-only
-	err = os.Chmod(options.regoFilePath, 0400)
-	if err != nil {
-		fileLock.Unlock()
-		return "", fmt.Errorf("error changing rego file permissions: %v", err)
-	}
-	options.regoFileLock = fileLock
-
-	return options.regoFilePath, nil
 }
