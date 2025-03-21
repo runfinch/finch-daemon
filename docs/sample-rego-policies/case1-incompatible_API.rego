@@ -11,5 +11,10 @@ allow if {
 
 is_container_create if {
     input.Method == "POST"
-    input.Path == "/v1.43/containers/create"
+    glob.match("/**/containers/create", ["/"], input.Path)
+}
+
+is_swarm_api if {
+    input.Method == "GET"
+    glob.match("/**/swarm", ["/"], input.Path)
 }
