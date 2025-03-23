@@ -3,7 +3,7 @@
 
 GINKGO = go run github.com/onsi/ginkgo/v2/ginkgo
 # Common ginkgo options: -v for verbose mode, --focus="test name" for running single tests
-GFLAGS ?= --race --randomize-all --randomize-suites --vv
+GFLAGS ?= --race --randomize-all --randomize-suites
 BIN = $(PWD)/bin
 FINCH_DAEMON_PROJECT_ROOT ?= $(shell pwd)
 
@@ -111,6 +111,14 @@ test-unit-debug: linux $(DLV)
 test-e2e: linux
 	DOCKER_HOST="unix:///run/finch.sock" \
 	DOCKER_API_VERSION="v1.41" \
+	TEST_E2E=1 \
+	$(GINKGO) $(GFLAGS) ./e2e/...
+
+.PHONY: test-e2e-opa
+test-e2e-opa: linux
+	DOCKER_HOST="unix:///run/finch.sock" \
+	DOCKER_API_VERSION="v1.43" \
+	MIDDLEWARE_E2E=1 \
 	TEST_E2E=1 \
 	$(GINKGO) $(GFLAGS) ./e2e/...
 
