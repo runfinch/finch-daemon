@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.14.1](https://github.com/runfinch/finch-daemon/compare/v0.14.0...v0.14.1) (2025-03-24)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/opencontainers/runtime-spec ([9d4de73](https://github.com/runfinch/finch-daemon/commit/9d4de739318280715e4d697fd4d95e7fe576593b))
+* **deps:** Bump github.com/opencontainers/runtime-spec from 1.2.0 to 1.2.1 ([#188](https://github.com/runfinch/finch-daemon/issues/188)) ([9d4de73](https://github.com/runfinch/finch-daemon/commit/9d4de739318280715e4d697fd4d95e7fe576593b))
+* **deps:** Bump github.com/spf13/afero from 1.12.0 to 1.14.0 ([#191](https://github.com/runfinch/finch-daemon/issues/191)) ([3dffcbb](https://github.com/runfinch/finch-daemon/commit/3dffcbbc8006bf12a65aa7ca6b87c5a3ed2dca6b))
+
+
+### Bug Fixes
+
+* Tag mockgen and stringer packages for gen-code make target ([#193](https://github.com/runfinch/finch-daemon/issues/193)) ([3db64f9](https://github.com/runfinch/finch-daemon/commit/3db64f91cf23de2f1066cc1088c14fb7a1acb2ff))
+
 ## [0.14.0](https://github.com/runfinch/finch-daemon/compare/v0.13.1...v0.14.0) (2025-03-18)
 
 
