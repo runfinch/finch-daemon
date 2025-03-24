@@ -36,7 +36,7 @@ require (
 	github.com/runfinch/common-tests v0.9.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/afero v1.14.0
-	github.com/spf13/cobra v1.8.1
+	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	github.com/vishvananda/netlink v1.3.0
 	github.com/vishvananda/netns v0.0.5
@@ -125,7 +125,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.3.5 // indirect
 	github.com/smallstep/pkcs7 v0.1.1 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6 // indirect
 	github.com/tinylib/msgp v1.2.0 // indirect
 	github.com/vbatts/tar-split v0.11.6 // indirect
