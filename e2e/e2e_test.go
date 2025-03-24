@@ -4,6 +4,7 @@
 package e2e
 
 import (
+	"flag"
 	"os"
 	"testing"
 
@@ -15,13 +16,14 @@ import (
 	"github.com/runfinch/finch-daemon/e2e/tests"
 )
 
+// Subject defines which CLI the tests are run against, defaults to \"nerdctl\" in the user's PATH.
+var Subject = flag.String("subject", "nerdctl", `which CLI the tests are run against, defaults to "nerdctl" in the user's PATH.`)
+
 func TestRun(t *testing.T) {
 	if os.Getenv("TEST_E2E") != "1" {
 		t.Skip("E2E tests skipped. Set TEST_E2E=1 to run these tests")
 	}
-	// TODO : Make this configurable
-	runtimeExe := "nerdctl"
-	opt, _ := option.New([]string{runtimeExe, "-n", "finch"})
+	opt, _ := option.New([]string{*Subject, "--namespace", "finch"})
 
 	ginkgo.SynchronizedBeforeSuite(func() []byte {
 		tests.SetupLocalRegistry(opt)
