@@ -5,7 +5,9 @@ package e2e
 
 import (
 	"flag"
+	"log"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/onsi/ginkgo/v2"
@@ -14,15 +16,24 @@ import (
 	"github.com/runfinch/common-tests/option"
 
 	"github.com/runfinch/finch-daemon/e2e/tests"
+	"github.com/runfinch/finch-daemon/e2e/util"
 )
 
 // Subject defines which CLI the tests are run against, defaults to \"nerdctl\" in the user's PATH.
 var Subject = flag.String("subject", "nerdctl", `which CLI the tests are run against, defaults to "nerdctl" in the user's PATH.`)
+var SubjectPrefix = flag.String("daemon-context-subject-prefix", "", `A string which prefixes the command the tests are run against, defaults to "". This string will be split by spaces.`)
+var PrefixedSubjectEnv = flag.String("daemon-context-subject-env", "", `Environment to add when running a prefixed subject, in the form of a string like "EXAMPLE=foo EXAMPLE2=bar"`)
 
 func TestRun(t *testing.T) {
 	if os.Getenv("TEST_E2E") != "1" {
 		t.Skip("E2E tests skipped. Set TEST_E2E=1 to run these tests")
 	}
+
+	if err := parseTestFlags(); err != nil {
+		log.Println("failed to parse go test flags", err)
+		os.Exit(1)
+	}
+
 	opt, _ := option.New([]string{*Subject, "--namespace", "finch"})
 
 	ginkgo.SynchronizedBeforeSuite(func() []byte {
@@ -35,6 +46,15 @@ func TestRun(t *testing.T) {
 		// clean up everything after the local registry is cleaned up
 		command.RemoveAll(opt)
 	}, func() {})
+
+	var pOpt = option.New
+	if *SubjectPrefix != "" {
+		var modifiers []option.Modifier
+		if *PrefixedSubjectEnv != "" {
+			modifiers = append(modifiers, option.Env(strings.Split(*PrefixedSubjectEnv, " ")))
+		}
+		pOpt = util.WrappedOption(strings.Split(*SubjectPrefix, " "), modifiers...)
+	}
 
 	const description = "Finch Daemon Functional test"
 	ginkgo.Describe(description, func() {
@@ -59,7 +79,7 @@ func TestRun(t *testing.T) {
 		tests.VolumeRemove(opt)
 
 		// functional test for network APIs
-		tests.NetworkCreate(opt)
+		tests.NetworkCreate(opt, pOpt)
 		tests.NetworkRemove(opt)
 		tests.NetworkList(opt)
 		tests.NetworkInspect(opt)
@@ -79,4 +99,18 @@ func TestRun(t *testing.T) {
 
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	ginkgo.RunSpecs(t, description)
+}
+
+// parseTestFlags parses go test flags because pflag package ignores flags with '-test.' prefix
+// Related issues:
+// https://github.com/spf13/pflag/issues/63
+// https://github.com/spf13/pflag/issues/238
+func parseTestFlags() error {
+	var testFlags []string
+	for _, f := range os.Args[1:] {
+		if strings.HasPrefix(f, "-test.") {
+			testFlags = append(testFlags, f)
+		}
+	}
+	return flag.CommandLine.Parse(testFlags)
 }
