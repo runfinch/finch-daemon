@@ -39,7 +39,7 @@ func ContainerRestart(opt *option.Option) {
 			command.RemoveAll(opt)
 		})
 
-		It("should start and restart the container", func() {
+		FIt("should start and restart the container", func() {
 			containerShouldBeRunning(opt, testContainerName)
 
 			// use location to ensure all times are UTC since
@@ -67,6 +67,9 @@ func ContainerRestart(opt *option.Option) {
 			dateStr := strings.TrimFunc(strings.Split(string(body), "\n")[1], func(r rune) bool {
 				return !unicode.IsGraphic(r) || unicode.IsSpace(r)
 			})
+
+			fmt.Printf("\nbody: %s\ndateStr: %s\n", string(body), dateStr)
+
 			date, err := time.ParseInLocation(time.UnixDate, dateStr, lo)
 			Expect(err).Should(BeNil())
 			Expect(before.Before(date)).Should(BeTrue())
