@@ -46,7 +46,20 @@ Example:
 
 ## Comprehensive API Path Protection
 
-When writing Rego policies, it's crucial to implement thorough path matching to prevent unintended access to APIs. The daemon processes API paths without strict prefix validation, which could lead to security bypasses.
+When writing Rego policies, use pattern matching for API paths to prevent unauthorized access. Simple string matching can be bypassed by adding prefixes to API paths.
+
+Consider this potentially vulnerable policy that tries to restrict access to a specific container:
+```
+# INCORRECT: Can be bypassed
+allow if {
+    not (input.Path == "/v1.43/containers/sensitive-container/json")
+}
+```
+This policy can be bypassed in multiple ways:
+1. Using container ID instead of name: `/v1.43/containers/abc123.../json`
+2. Adding path prefixes: `/custom/v1.43/containers/sensitive-container/json`
+
+Follow the path matching best practices below to properly secure your resources.
 
 ## Path Matching Best Practices
 

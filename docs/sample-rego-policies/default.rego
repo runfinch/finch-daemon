@@ -33,6 +33,6 @@ is_plugins if {
 }
 
 is_forbidden_container if {
-    intpu.Method == "GET"
+    input.Method == "GET"
     glob.match("/**/container/1f576a797a486438548377124f6cb7770a5cb7c8ff6a11c069cb4128d3f59462/json", ["/"], input.Path)
 }

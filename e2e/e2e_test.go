@@ -33,16 +33,14 @@ func TestRun(t *testing.T) {
 	} else {
 		t.Skip("E2E tests skipped. Set TEST_E2E=1 to run regular E2E tests or MIDDLEWARE_E2E=1 to run OPA middleware tests")
 	}
+}
 
+func runOPATests(t *testing.T) {
 	if err := parseTestFlags(); err != nil {
 		log.Println("failed to parse go test flags", err)
 		os.Exit(1)
 	}
 
-	opt, _ := option.New([]string{*Subject, "--namespace", "finch"})
-}
-
-func runOPATests(t *testing.T) {
 	opt, _ := option.New([]string{*Subject, "--namespace", "finch"})
 
 	ginkgo.SynchronizedBeforeSuite(func() []byte {
@@ -67,6 +65,11 @@ func runOPATests(t *testing.T) {
 }
 
 func runE2ETests(t *testing.T) {
+	if err := parseTestFlags(); err != nil {
+		log.Println("failed to parse go test flags", err)
+		os.Exit(1)
+	}
+
 	opt, _ := option.New([]string{*Subject, "--namespace", "finch"})
 
 	ginkgo.SynchronizedBeforeSuite(func() []byte {
