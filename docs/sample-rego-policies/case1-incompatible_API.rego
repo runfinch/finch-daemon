@@ -18,3 +18,13 @@ is_swarm_api if {
     input.Method == "GET"
     glob.match("/**/swarm", ["/"], input.Path)
 }
+
+is_forbidden_container if {
+    input.Method == "GET"
+    glob.match("/**/containers/1f576a797a486438548377124f6cb7770a5cb7c8ff6a11c069cb4128d3f59462/top", ["/"], input.Path)
+}
+
+is_missing_container if {
+    input.Method == "GET"
+    glob.match("/**/containers/1f576a797a486438548377124f6cb7770a5cb7c8ff6a11c069cb4128d3f59462/json", ["/"], input.Path)
+}
