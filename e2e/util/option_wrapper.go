@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 // Package testutil holds code that may be useful for any of the e2e subpackages (including e2e itself).
 // It is useful to avoid import loops between the various e2e test pacakges.
 package util
