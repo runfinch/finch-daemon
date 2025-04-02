@@ -58,7 +58,7 @@ func (w *NerdctlWrapper) StartContainer(ctx context.Context, cid string, options
 
 // StopContainer wrapper function to call nerdctl function to stop a container.
 func (*NerdctlWrapper) StopContainer(ctx context.Context, container containerd.Container, timeout *time.Duration) error {
-	return containerutil.Stop(ctx, container, timeout)
+	return containerutil.Stop(ctx, container, timeout, "")
 }
 
 func (w *NerdctlWrapper) CreateContainer(ctx context.Context, args []string, netManager containerutil.NetworkOptionsManager, options types.ContainerCreateOptions) (containerd.Container, func(), error) {
