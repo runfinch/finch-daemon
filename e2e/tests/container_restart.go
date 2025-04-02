@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
+	"unicode"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -40,7 +42,10 @@ func ContainerRestart(opt *option.Option) {
 		It("should start and restart the container", func() {
 			containerShouldBeRunning(opt, testContainerName)
 
-			before := time.Now().Round(0)
+			// use location to ensure all times are UTC since
+			// the default location is different on different platforms
+			lo, _ := time.LoadLocation("UTC")
+			before := time.Now().In(lo).Round(0)
 
 			restartRelativeUrl := fmt.Sprintf("/containers/%s/restart", testContainerName)
 			res, err := uClient.Post(client.ConvertToFinchUrl(version, restartRelativeUrl), "application/json", nil)
@@ -57,8 +62,13 @@ func ContainerRestart(opt *option.Option) {
 			body, err := io.ReadAll(res.Body)
 			Expect(err).Should(BeNil())
 
-			dateStr := string(body[8 : len(body)-1])
-			date, _ := time.Parse(time.UnixDate, dateStr)
+			// get the second date from the container logs, which are newline delimited
+			// and strip newlines, spaces, and non-printable characters
+			dateStr := strings.TrimFunc(strings.Split(string(body), "\n")[1], func(r rune) bool {
+				return !unicode.IsGraphic(r) || unicode.IsSpace(r)
+			})
+			date, err := time.ParseInLocation(time.UnixDate, dateStr, lo)
+			Expect(err).Should(BeNil())
 			Expect(before.Before(date)).Should(BeTrue())
 		})
 		It("should fail to restart container that does not exist", func() {
