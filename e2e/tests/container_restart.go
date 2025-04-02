@@ -39,7 +39,7 @@ func ContainerRestart(opt *option.Option) {
 			command.RemoveAll(opt)
 		})
 
-		FIt("should start and restart the container", func() {
+		It("should start and restart the container", func() {
 			containerShouldBeRunning(opt, testContainerName)
 
 			// use location to ensure all times are UTC since
