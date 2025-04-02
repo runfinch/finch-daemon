@@ -112,7 +112,7 @@ test-e2e: linux
 	DOCKER_HOST="unix:///run/finch.sock" \
 	DOCKER_API_VERSION="v1.41" \
 	TEST_E2E=1 \
-	go test ./e2e -test.v -ginkgo.v -ginkgo.randomize-all
+	$(GINKGO) $(GFLAGS) ./e2e/...
 
 .PHONY: licenses
 licenses:
