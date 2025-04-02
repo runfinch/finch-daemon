@@ -1,6 +1,7 @@
 module github.com/runfinch/finch-daemon
 
 go 1.23.7
+toolchain go1.24.1
 
 require (
 	github.com/containerd/cgroups/v3 v3.0.5
@@ -16,7 +17,7 @@ require (
 	github.com/coreos/go-iptables v0.8.0
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/distribution/reference v0.6.0
-	github.com/docker/cli v28.0.2+incompatible
+	github.com/docker/cli v28.0.4+incompatible
 	github.com/docker/docker v28.0.2+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/docker/go-units v0.5.0
