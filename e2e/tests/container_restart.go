@@ -56,7 +56,9 @@ func ContainerRestart(opt *option.Option) {
 			opts := "?stdout=1" +
 				"&stderr=0" +
 				"&follow=0" +
-				"&tail=0"
+				"&tail=0" +
+				"&since=0" +
+				"&tail=all"
 			res, err = uClient.Get(client.ConvertToFinchUrl(version, logsRelativeUrl+opts))
 			Expect(err).Should(BeNil())
 			body, err := io.ReadAll(res.Body)
@@ -68,7 +70,7 @@ func ContainerRestart(opt *option.Option) {
 				return !unicode.IsGraphic(r) || unicode.IsSpace(r)
 			})
 
-			fmt.Printf("\nbody: %s\ndateStr: %s\n", string(body), dateStr)
+			fmt.Printf("\nbefore: %s\nbody: %s\ndateStr: %s\n", before, string(body), dateStr)
 
 			date, err := time.ParseInLocation(time.UnixDate, dateStr, lo)
 			Expect(err).Should(BeNil())
