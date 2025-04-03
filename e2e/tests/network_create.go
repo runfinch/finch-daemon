@@ -17,9 +17,10 @@ import (
 
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/e2e/client"
+	"github.com/runfinch/finch-daemon/e2e/util"
 )
 
-func NetworkCreate(opt *option.Option) {
+func NetworkCreate(opt *option.Option, pOpt util.NewOpt) {
 	Describe("create a network", func() {
 		const (
 			path        = "/networks/create"
@@ -202,7 +203,7 @@ func NetworkCreate(opt *option.Option) {
 				Expect(stdout).To(ContainSubstring(`"finch.network.bridge.enable_icc.ipv4": "false"`))
 
 				// check iptables rules exists
-				iptOpt, _ := option.New([]string{"iptables"})
+				iptOpt, _ := pOpt([]string{"iptables"})
 				command.Run(iptOpt, "-C", "FINCH-ISOLATE-CHAIN",
 					"-i", testBridge, "-o", testBridge, "-j", "DROP")
 			})
@@ -226,7 +227,7 @@ func NetworkCreate(opt *option.Option) {
 				Expect(stdout).ShouldNot(ContainSubstring(`"finch.network.bridge.enable_icc.ipv4"`))
 
 				// check iptables rules does not exist
-				iptOpt, _ := option.New([]string{"iptables"})
+				iptOpt, _ := pOpt([]string{"iptables"})
 				command.RunWithoutSuccessfulExit(iptOpt, "-C", "FINCH-ISOLATE-CHAIN",
 					"-i", testBridge, "-o", testBridge, "-j", "DROP")
 			})
