@@ -1,0 +1,33 @@
+package finch.authz
+
+import future.keywords.if
+import rego.v1
+
+default allow = false
+
+allow if {
+    not is_networs_api
+    not is_swarm_api
+    not is_inspect_by_name
+}
+
+is_container_create if {
+    input.Method == "POST"
+    glob.match("/**/containers/create", ["/"], input.Path)
+}
+
+is_networs_api if {
+    input.Method == "GET"
+    glob.match("/**/networks", ["/"], input.Path)
+}
+
+is_swarm_api if {
+    input.Method == "GET"
+    glob.match("/**/swarm", ["/"], input.Path)
+}
+
+
+is_inspect_by_name if {
+    input.Method == "GET"
+    glob.match("/**/containers/test-container/json", ["/"], input.Path)
+}
