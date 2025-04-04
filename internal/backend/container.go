@@ -37,6 +37,7 @@ type NerdctlContainerSvc interface {
 	RenameContainer(ctx context.Context, container containerd.Container, newName string, options types.ContainerRenameOptions) error
 	KillContainer(ctx context.Context, cid string, options types.ContainerKillOptions) error
 	ContainerWait(ctx context.Context, cid string, options types.ContainerWaitOptions) error
+	PauseContainer(ctx context.Context, cid string, options types.ContainerPauseOptions) error
 
 	// Mocked functions for container attach
 	GetDataStore() (string, error)
@@ -58,7 +59,7 @@ func (w *NerdctlWrapper) StartContainer(ctx context.Context, cid string, options
 
 // StopContainer wrapper function to call nerdctl function to stop a container.
 func (*NerdctlWrapper) StopContainer(ctx context.Context, container containerd.Container, timeout *time.Duration) error {
-	return containerutil.Stop(ctx, container, timeout)
+	return containerutil.Stop(ctx, container, timeout, "")
 }
 
 func (w *NerdctlWrapper) CreateContainer(ctx context.Context, args []string, netManager containerutil.NetworkOptionsManager, options types.ContainerCreateOptions) (containerd.Container, func(), error) {
@@ -128,6 +129,10 @@ func (w *NerdctlWrapper) KillContainer(ctx context.Context, cid string, options 
 
 func (w *NerdctlWrapper) ContainerWait(ctx context.Context, cid string, options types.ContainerWaitOptions) error {
 	return container.Wait(ctx, w.clientWrapper.client, []string{cid}, options)
+}
+
+func (w *NerdctlWrapper) PauseContainer(ctx context.Context, cid string, options types.ContainerPauseOptions) error {
+	return container.Pause(ctx, w.clientWrapper.client, []string{cid}, options)
 }
 
 func (w *NerdctlWrapper) GetNerdctlExe() (string, error) {
