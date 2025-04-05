@@ -8,7 +8,6 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"time"
 
 	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/containerd/nerdctl/v2/pkg/config"
@@ -23,7 +22,7 @@ type Service interface {
 	Remove(ctx context.Context, cid string, force, removeVolumes bool) error
 	Wait(ctx context.Context, cid string, options ncTypes.ContainerWaitOptions) error
 	Start(ctx context.Context, cid string, options ncTypes.ContainerStartOptions) error
-	Stop(ctx context.Context, cid string, timeout *time.Duration) error
+	Stop(ctx context.Context, cid string, option ncTypes.ContainerStopOptions) error
 	Restart(ctx context.Context, cid string, options ncTypes.ContainerRestartOptions) error
 	Create(ctx context.Context, image string, cmd []string, createOpt ncTypes.ContainerCreateOptions, netOpt ncTypes.NetworkOptions) (string, error)
 	Inspect(ctx context.Context, cid string, size bool) (*types.Container, error)

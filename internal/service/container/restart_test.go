@@ -38,7 +38,7 @@ var _ = Describe("Container Restart API ", func() {
 	)
 	BeforeEach(func() {
 		ctx = context.Background()
-		// initialize the mocks
+
 		mockCtrl = gomock.NewController(GinkgoT())
 		logger = mocks_logger.NewLogger(mockCtrl)
 		cdClient = mocks_backend.NewMockContainerdClient(mockCtrl)
@@ -51,45 +51,45 @@ var _ = Describe("Container Restart API ", func() {
 		options = ncTypes.ContainerRestartOptions{
 			Timeout: &timeout,
 		}
+
 	})
 	Context("service", func() {
 		It("should not return any error when Running", func() {
-			// set up the mock to return a container that is in running state
+
 			cdClient.EXPECT().SearchContainer(gomock.Any(), cid).Return(
 				[]containerd.Container{con}, nil).AnyTimes()
-			//mock the nerdctl client to mock the restart container was successful without any error.
+
 			ncClient.EXPECT().StartContainer(ctx, gomock.Any(), gomock.Any()).Return(nil)
-			ncClient.EXPECT().StopContainer(ctx, con, &timeout).Return(nil)
+			ncClient.EXPECT().StopContainer(ctx, con.ID(), gomock.Any()).Return(nil)
 			gomock.InOrder(
 				logger.EXPECT().Debugf("restarting container: %s", cid),
 				logger.EXPECT().Debugf("successfully restarted: %s", cid),
 			)
-			//service should not return any error
+
 			err := service.Restart(ctx, cid, options)
 			Expect(err).Should(BeNil())
 		})
 		It("should not return any error when Stopped", func() {
-			// set up the mock to return a container that is in running state
+
 			cdClient.EXPECT().SearchContainer(gomock.Any(), cid).Return(
 				[]containerd.Container{con}, nil).AnyTimes()
-			//mock the nerdctl client to mock the restart container was successful without any error.
-			ncClient.EXPECT().StopContainer(ctx, con, &timeout).Return(errdefs.NewNotModified(fmt.Errorf("err")))
+
+			ncClient.EXPECT().StopContainer(ctx, con.ID(), gomock.Any()).Return(errdefs.NewNotModified(fmt.Errorf("err")))
 			ncClient.EXPECT().StartContainer(ctx, gomock.Any(), gomock.Any()).Return(nil)
 			gomock.InOrder(
 				logger.EXPECT().Debugf("restarting container: %s", cid),
 				logger.EXPECT().Debugf("successfully restarted: %s", cid),
 			)
-			//service should not return any error
+
 			err := service.Restart(ctx, cid, options)
 			Expect(err).Should(BeNil())
 		})
 		It("should return not found error", func() {
-			// set up the mock to mimic no container found for the provided container id
+
 			cdClient.EXPECT().SearchContainer(gomock.Any(), gomock.Any()).Return(
 				[]containerd.Container{}, nil)
 			logger.EXPECT().Debugf("no such container: %s", gomock.Any())
 
-			// service should return NotFound error
 			err := service.Restart(ctx, cid, options)
 			Expect(errdefs.IsNotFound(err)).Should(BeTrue())
 		})
@@ -109,7 +109,7 @@ var _ = Describe("Container Restart API ", func() {
 				[]containerd.Container{con}, nil).AnyTimes()
 
 			expectedErr := fmt.Errorf("nerdctl error")
-			ncClient.EXPECT().StopContainer(ctx, con, &timeout).Return(nil)
+			ncClient.EXPECT().StopContainer(ctx, con.ID(), gomock.Any()).Return(nil)
 			ncClient.EXPECT().StartContainer(ctx, gomock.Any(), gomock.Any()).Return(expectedErr)
 			gomock.InOrder(
 				logger.EXPECT().Debugf("restarting container: %s", cid),

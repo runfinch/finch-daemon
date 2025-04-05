@@ -52,6 +52,9 @@ func ContainerRestart(opt *option.Option) {
 			Expect(err).Should(BeNil())
 			Expect(res.StatusCode).Should(Equal(http.StatusNoContent))
 
+			// Add sleep to ensure container has time to restart and execute the date command
+			time.Sleep(2 * time.Second)
+
 			logsRelativeUrl := fmt.Sprintf("/containers/%s/logs", testContainerName)
 			opts := "?stdout=1" +
 				"&stderr=0" +
