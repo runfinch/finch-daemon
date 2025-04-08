@@ -207,6 +207,20 @@ func (mr *MockNerdctlContainerSvcMockRecorder) NewNetworkingOptionsManager(arg0 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewNetworkingOptionsManager", reflect.TypeOf((*MockNerdctlContainerSvc)(nil).NewNetworkingOptionsManager), arg0)
 }
 
+// PauseContainer mocks base method.
+func (m *MockNerdctlContainerSvc) PauseContainer(arg0 context.Context, arg1 string, arg2 types.ContainerPauseOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PauseContainer", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PauseContainer indicates an expected call of PauseContainer.
+func (mr *MockNerdctlContainerSvcMockRecorder) PauseContainer(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PauseContainer", reflect.TypeOf((*MockNerdctlContainerSvc)(nil).PauseContainer), arg0, arg1, arg2)
+}
+
 // RemoveContainer mocks base method.
 func (m *MockNerdctlContainerSvc) RemoveContainer(arg0 context.Context, arg1 client.Container, arg2, arg3 bool) error {
 	m.ctrl.T.Helper()
