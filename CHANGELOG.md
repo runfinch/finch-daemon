@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.15.0](https://github.com/runfinch/finch-daemon/compare/v0.14.0...v0.15.0) (2025-04-10)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/containerd/nerdctl/v2 from 2.0.3 to 2.0.4 ([#207](https://github.com/runfinch/finch-daemon/issues/207)) ([f285fcd](https://github.com/runfinch/finch-daemon/commit/f285fcdc20cabdd2eda0089360e9be31d9e4ee36))
+* **deps:** Bump github.com/docker/cli ([a00d384](https://github.com/runfinch/finch-daemon/commit/a00d384bc60cfe6aeeb5f2476febd24c6154db16))
+* **deps:** Bump github.com/docker/cli from 27.5.0+incompatible to 28.0.4+incompatible ([#202](https://github.com/runfinch/finch-daemon/issues/202)) ([a00d384](https://github.com/runfinch/finch-daemon/commit/a00d384bc60cfe6aeeb5f2476febd24c6154db16))
+* **deps:** Bump github.com/onsi/ginkgo/v2 from 2.22.2 to 2.23.4 ([#209](https://github.com/runfinch/finch-daemon/issues/209)) ([9ef5131](https://github.com/runfinch/finch-daemon/commit/9ef513179c764717aadc75a43c5312ac85241c11))
+* **deps:** Bump github.com/opencontainers/runtime-spec ([9d4de73](https://github.com/runfinch/finch-daemon/commit/9d4de739318280715e4d697fd4d95e7fe576593b))
+* **deps:** Bump github.com/opencontainers/runtime-spec from 1.2.0 to 1.2.1 ([#188](https://github.com/runfinch/finch-daemon/issues/188)) ([9d4de73](https://github.com/runfinch/finch-daemon/commit/9d4de739318280715e4d697fd4d95e7fe576593b))
+* **deps:** Bump github.com/runfinch/common-tests from 0.9.1 to 0.9.2 ([#205](https://github.com/runfinch/finch-daemon/issues/205)) ([e5cef2a](https://github.com/runfinch/finch-daemon/commit/e5cef2a45900a141b3cdd0583709bde714af6642))
+* **deps:** Bump github.com/spf13/afero from 1.12.0 to 1.14.0 ([#191](https://github.com/runfinch/finch-daemon/issues/191)) ([3dffcbb](https://github.com/runfinch/finch-daemon/commit/3dffcbbc8006bf12a65aa7ca6b87c5a3ed2dca6b))
+* **deps:** Bump github.com/spf13/cobra from 1.8.1 to 1.9.1 ([#189](https://github.com/runfinch/finch-daemon/issues/189)) ([06b6922](https://github.com/runfinch/finch-daemon/commit/06b6922e8690142515ca5f3765ec03d0caba9d4c))
+* **deps:** Bump golang.org/x/net from 0.37.0 to 0.39.0 ([#210](https://github.com/runfinch/finch-daemon/issues/210)) ([e22380f](https://github.com/runfinch/finch-daemon/commit/e22380f102921fe9ff143c4d91b6bf84fda80ef6))
+
+
+### Features
+
+* add additional options to image build ([#152](https://github.com/runfinch/finch-daemon/issues/152)) ([49cdd07](https://github.com/runfinch/finch-daemon/commit/49cdd075edcc342875b6fc6f3cb7b8fef4564c1f))
+* Add pause container support ([#185](https://github.com/runfinch/finch-daemon/issues/185)) ([9aa41bf](https://github.com/runfinch/finch-daemon/commit/9aa41bfc0a82b869b2001c1e9c8aaf27b9a51959))
+
+
+### Bug Fixes
+
+* Tag mockgen and stringer packages for gen-code make target ([#193](https://github.com/runfinch/finch-daemon/issues/193)) ([3db64f9](https://github.com/runfinch/finch-daemon/commit/3db64f91cf23de2f1066cc1088c14fb7a1acb2ff))
+
 ## [0.14.0](https://github.com/runfinch/finch-daemon/compare/v0.13.1...v0.14.0) (2025-03-18)
 
 
