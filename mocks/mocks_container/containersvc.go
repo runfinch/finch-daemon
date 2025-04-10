@@ -8,7 +8,6 @@ import (
 	context "context"
 	io "io"
 	reflect "reflect"
-	time "time"
 
 	types "github.com/containerd/nerdctl/v2/pkg/api/types"
 	gomock "github.com/golang/mock/gomock"
@@ -256,7 +255,7 @@ func (mr *MockServiceMockRecorder) Stats(arg0, arg1 interface{}) *gomock.Call {
 }
 
 // Stop mocks base method.
-func (m *MockService) Stop(arg0 context.Context, arg1 string, arg2 *time.Duration) error {
+func (m *MockService) Stop(arg0 context.Context, arg1 string, arg2 types.ContainerStopOptions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Stop", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
