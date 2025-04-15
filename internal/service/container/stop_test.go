@@ -116,5 +116,20 @@ var _ = Describe("Container Stop API ", func() {
 			err := service.Stop(ctx, cid, stopOptions)
 			Expect(err).Should(Equal(expectedErr))
 		})
+		It("should stop container with custom signal", func() {
+			stopOptions.Signal = "SIGKILL"
+
+			// set up the mock to return a container that is in running state
+			cdClient.EXPECT().GetContainerStatus(gomock.Any(), gomock.Any()).Return(containerd.Running)
+			cdClient.EXPECT().SearchContainer(gomock.Any(), gomock.Any()).Return(
+				[]containerd.Container{con}, nil)
+
+			// Expect StopContainer to be called with the custom options containing SIGKILL
+			ncClient.EXPECT().StopContainer(ctx, con.ID(), stopOptions)
+			logger.EXPECT().Debugf("successfully stopped: %s", cid)
+
+			err := service.Stop(ctx, cid, stopOptions)
+			Expect(err).Should(BeNil())
+		})
 	})
 })

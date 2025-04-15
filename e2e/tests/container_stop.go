@@ -83,5 +83,25 @@ func ContainerStop(opt *option.Option) {
 			elapsed := later.Sub(now)
 			Expect(elapsed.Seconds()).Should(BeNumerically(">", 9.0))
 		})
+		It("should stop the container with SIGINT signal", func() {
+			// Start a container that only logs the signal it receives
+			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage,
+				"sh", "-c", `trap 'echo "Received signal: SIGINT"' SIGINT; while true; do sleep 1; done`)
+			containerShouldBeRunning(opt, testContainerName)
+
+			// Stop the container with SIGINT signal
+			relativeUrl := fmt.Sprintf("/containers/%s/stop?signal=SIGINT", testContainerName)
+			apiUrl = client.ConvertToFinchUrl(version, relativeUrl)
+
+			res, err := uClient.Post(apiUrl, "application/json", nil)
+			Expect(err).Should(BeNil())
+			Expect(res.StatusCode).Should(Equal(http.StatusNoContent))
+
+			// Verify container is stopped by the API
+			containerShouldNotBeRunning(opt, testContainerName)
+
+			logs := command.Run(opt, "logs", testContainerName)
+			Expect(string(logs.Out.Contents())).Should(ContainSubstring("Received signal: SIGINT"))
+		})
 	})
 }
