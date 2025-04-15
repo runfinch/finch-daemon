@@ -21,7 +21,6 @@ func (s *service) Restart(ctx context.Context, cid string, options types.Contain
 		Stdout:   io.Discard,
 		Stderr:   io.Discard,
 		Timeout:  options.Timeout,
-		Signal:   "SIGTERM",
 		GOptions: options.GOption,
 	}
 
