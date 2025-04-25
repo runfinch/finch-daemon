@@ -276,3 +276,17 @@ func (mr *MockNerdctlContainerSvcMockRecorder) StopContainer(arg0, arg1, arg2 in
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopContainer", reflect.TypeOf((*MockNerdctlContainerSvc)(nil).StopContainer), arg0, arg1, arg2)
 }
+
+// UnpauseContainer mocks base method.
+func (m *MockNerdctlContainerSvc) UnpauseContainer(arg0 context.Context, arg1 string, arg2 types.ContainerUnpauseOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnpauseContainer", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UnpauseContainer indicates an expected call of UnpauseContainer.
+func (mr *MockNerdctlContainerSvcMockRecorder) UnpauseContainer(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnpauseContainer", reflect.TypeOf((*MockNerdctlContainerSvc)(nil).UnpauseContainer), arg0, arg1, arg2)
+}
