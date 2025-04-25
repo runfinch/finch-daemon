@@ -17,7 +17,6 @@ type NewOpt func(subject []string, modifiers ...option.Modifier) (*option.Option
 // not the same as the system running the tests, like inside a SSH shell.
 func WrappedOption(prefix []string, wModifiers ...option.Modifier) NewOpt {
 	return func(subject []string, modifiers ...option.Modifier) (*option.Option, error) {
-		prefix = append(prefix, subject...)
-		return option.New(prefix, append(wModifiers, modifiers...)...)
+		return option.New(append(prefix, subject...), append(wModifiers, modifiers...)...)
 	}
 }
