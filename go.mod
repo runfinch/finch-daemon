@@ -25,7 +25,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
-	github.com/moby/moby v28.0.1+incompatible
+	github.com/moby/moby v28.1.1+incompatible
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
 	github.com/opencontainers/go-digest v1.0.0
