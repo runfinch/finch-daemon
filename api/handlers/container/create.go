@@ -15,6 +15,7 @@ import (
 	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/containerd/nerdctl/v2/pkg/defaults"
 	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/blkiodev"
 	"github.com/sirupsen/logrus"
 
 	"github.com/runfinch/finch-daemon/api/response"
@@ -273,22 +274,27 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #endregion
 
 		// #region for resource flags
-		CPUShares:          uint64(req.HostConfig.CPUShares), // CPU shares (relative weight)
-		Memory:             memory,                           // memory limit (in bytes)
-		CPUQuota:           CpuQuota,                         // CPUQuota limits the CPU CFS (Completely Fair Scheduler) quota
-		MemorySwappiness64: memorySwappiness,                 // Tuning container memory swappiness behaviour
-		PidsLimit:          pidLimit,                         // PidsLimit specifies the tune container pids limit
-		Cgroupns:           cgroupnsMode,                     // Cgroupns specifies the cgroup namespace to use
-		MemoryReservation:  memoryReservation,                // Memory soft limit (in bytes)
-		MemorySwap:         memorySwap,                       // Total memory usage (memory + swap); set `-1` to enable unlimited swap
-		Ulimit:             ulimits,                          // List of ulimits to be set in the container
-		BlkioWeight:        req.HostConfig.BlkioWeight,       // block IO weight (relative)
-		CPUPeriod:          uint64(req.HostConfig.CPUPeriod), // CPU CFS (Completely Fair Scheduler) period
-		CPUSetCPUs:         req.HostConfig.CPUSetCPUs,        // CpusetCpus 0-2, 0,1
-		CPUSetMems:         req.HostConfig.CPUSetMems,        // CpusetMems 0-2, 0,1
-		IPC:                req.HostConfig.IpcMode,           // IPC namespace to use
-		ShmSize:            shmSize,                          // ShmSize set the size of /dev/shm
-		Device:             devices,                          // Device specifies add a host device to the container
+		CPUShares:            uint64(req.HostConfig.CPUShares), // CPU shares (relative weight)
+		Memory:               memory,                           // memory limit (in bytes)
+		CPUQuota:             CpuQuota,                         // CPUQuota limits the CPU CFS (Completely Fair Scheduler) quota
+		MemorySwappiness64:   memorySwappiness,                 // Tuning container memory swappiness behaviour
+		PidsLimit:            pidLimit,                         // PidsLimit specifies the tune container pids limit
+		Cgroupns:             cgroupnsMode,                     // Cgroupns specifies the cgroup namespace to use
+		MemoryReservation:    memoryReservation,                // Memory soft limit (in bytes)
+		MemorySwap:           memorySwap,                       // Total memory usage (memory + swap); set `-1` to enable unlimited swap
+		Ulimit:               ulimits,                          // List of ulimits to be set in the container
+		BlkioWeight:          req.HostConfig.BlkioWeight,       // block IO weight (relative)
+		BlkioWeightDevice:    weightDevicesToStrings(req.HostConfig.BlkioWeightDevice),
+		BlkioDeviceReadBps:   throttleDevicesToStrings(req.HostConfig.BlkioDeviceReadBps),
+		BlkioDeviceWriteBps:  throttleDevicesToStrings(req.HostConfig.BlkioDeviceWriteBps),
+		BlkioDeviceReadIOps:  throttleDevicesToStrings(req.HostConfig.BlkioDeviceReadIOps),
+		BlkioDeviceWriteIOps: throttleDevicesToStrings(req.HostConfig.BlkioDeviceWriteIOps),
+		CPUPeriod:            uint64(req.HostConfig.CPUPeriod), // CPU CFS (Completely Fair Scheduler) period
+		CPUSetCPUs:           req.HostConfig.CPUSetCPUs,        // CpusetCpus 0-2, 0,1
+		CPUSetMems:           req.HostConfig.CPUSetMems,        // CpusetMems 0-2, 0,1
+		IPC:                  req.HostConfig.IpcMode,           // IPC namespace to use
+		ShmSize:              shmSize,                          // ShmSize set the size of /dev/shm
+		Device:               devices,                          // Device specifies add a host device to the container
 		// #endregion
 
 		// #region for user flags
@@ -425,4 +431,22 @@ func translatePortMappings(portMappings nat.PortMap) ([]gocni.PortMapping, error
 		}
 	}
 	return ports, nil
+}
+
+// Helper function to convert WeightDevice array to string array.
+func weightDevicesToStrings(devices []*blkiodev.WeightDevice) []string {
+	strings := make([]string, len(devices))
+	for i, d := range devices {
+		strings[i] = d.String()
+	}
+	return strings
+}
+
+// Helper function to convert ThrottleDevice array to string array.
+func throttleDevicesToStrings(devices []*blkiodev.ThrottleDevice) []string {
+	strings := make([]string, len(devices))
+	for i, d := range devices {
+		strings[i] = d.String()
+	}
+	return strings
 }

@@ -15,8 +15,10 @@ import (
 
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/blkiodev"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/ffs"
 	"github.com/runfinch/common-tests/option"
@@ -689,6 +691,157 @@ func ContainerCreate(opt *option.Option) {
 			Expect(out).Should(ContainSubstring("test-host.test.local"))
 		})
 
+		It("should create container with specified blkio settings options", func() {
+			// define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.BlkioWeight = 500 // valid values: 0-1000
+
+			// Create WeightDevice objects for input
+			weightDevices := []*blkiodev.WeightDevice{
+				{
+					Path:   "/dev/sda",
+					Weight: 400,
+				},
+				{
+					Path:   "/dev/sdb",
+					Weight: 300,
+				},
+			}
+
+			// Create ThrottleDevice objects for input
+			readBpsDevices := []*blkiodev.ThrottleDevice{
+				{
+					Path: "/dev/sda",
+					Rate: 1048576, // 1MB/s
+				},
+			}
+
+			writeBpsDevices := []*blkiodev.ThrottleDevice{
+				{
+					Path: "/dev/sda",
+					Rate: 2097152, // 2MB/s
+				},
+			}
+
+			readIopsDevices := []*blkiodev.ThrottleDevice{
+				{
+					Path: "/dev/sda",
+					Rate: 1000,
+				},
+			}
+
+			writeIopsDevices := []*blkiodev.ThrottleDevice{
+				{
+					Path: "/dev/sda",
+					Rate: 2000,
+				},
+			}
+
+			// Set the original device objects in the options
+			options.HostConfig.BlkioWeightDevice = weightDevices
+			options.HostConfig.BlkioDeviceReadBps = readBpsDevices
+			options.HostConfig.BlkioDeviceWriteBps = writeBpsDevices
+			options.HostConfig.BlkioDeviceReadIOps = readIopsDevices
+			options.HostConfig.BlkioDeviceWriteIOps = writeIopsDevices
+
+			// create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// start container
+			command.Run(opt, "start", testContainerName)
+
+			// inspect container
+			resp := command.Stdout(opt, "inspect", testContainerName)
+			var inspect []*dockercompat.Container
+			err := json.Unmarshal(resp, &inspect)
+			Expect(err).Should(BeNil())
+			Expect(inspect).Should(HaveLen(1))
+
+			// Verify blkio settings in LinuxBlkioSettings
+			blkioSettings := inspect[0].HostConfig.LinuxBlkioSettings
+			// Verify BlkioWeight
+			Expect(blkioSettings.BlkioWeight).Should(Equal(options.HostConfig.BlkioWeight))
+
+			devicePathFromMajorMinor := func(major, minor int64) string {
+				if major == 8 && minor == 0 {
+					return "/dev/sda"
+				}
+				if major == 8 && minor == 16 {
+					return "/dev/sdb"
+				}
+				return fmt.Sprintf("/dev/unknown-%d-%d", major, minor)
+			}
+
+			// Helper function to convert specs.LinuxWeightDevice to blkiodev.WeightDevice
+			convertWeightDevice := func(wd *specs.LinuxWeightDevice) *blkiodev.WeightDevice {
+				if wd == nil || wd.Weight == nil {
+					return nil
+				}
+				return &blkiodev.WeightDevice{
+					Path:   devicePathFromMajorMinor(wd.Major, wd.Minor),
+					Weight: *wd.Weight,
+				}
+			}
+
+			// Helper function to convert specs.LinuxThrottleDevice to blkiodev.ThrottleDevice
+			convertThrottleDevice := func(td *specs.LinuxThrottleDevice) *blkiodev.ThrottleDevice {
+				if td == nil {
+					return nil
+				}
+				return &blkiodev.ThrottleDevice{
+					Path: devicePathFromMajorMinor(td.Major, td.Minor),
+					Rate: td.Rate, // Rate is not a pointer
+				}
+			}
+
+			// Convert response devices to blkiodev types
+			responseWeightDevices := make([]*blkiodev.WeightDevice, 0, len(blkioSettings.BlkioWeightDevice))
+			for _, d := range blkioSettings.BlkioWeightDevice {
+				if converted := convertWeightDevice(d); converted != nil {
+					responseWeightDevices = append(responseWeightDevices, converted)
+				}
+			}
+
+			responseReadBpsDevices := make([]*blkiodev.ThrottleDevice, 0, len(blkioSettings.BlkioDeviceReadBps))
+			for _, d := range blkioSettings.BlkioDeviceReadBps {
+				if converted := convertThrottleDevice(d); converted != nil {
+					responseReadBpsDevices = append(responseReadBpsDevices, converted)
+				}
+			}
+
+			responseWriteBpsDevices := make([]*blkiodev.ThrottleDevice, 0, len(blkioSettings.BlkioDeviceWriteBps))
+			for _, d := range blkioSettings.BlkioDeviceWriteBps {
+				if converted := convertThrottleDevice(d); converted != nil {
+					responseWriteBpsDevices = append(responseWriteBpsDevices, converted)
+				}
+			}
+
+			responseReadIopsDevices := make([]*blkiodev.ThrottleDevice, 0, len(blkioSettings.BlkioDeviceReadIOps))
+			for _, d := range blkioSettings.BlkioDeviceReadIOps {
+				if converted := convertThrottleDevice(d); converted != nil {
+					responseReadIopsDevices = append(responseReadIopsDevices, converted)
+				}
+			}
+
+			responseWriteIopsDevices := make([]*blkiodev.ThrottleDevice, 0, len(blkioSettings.BlkioDeviceWriteIOps))
+			for _, d := range blkioSettings.BlkioDeviceWriteIOps {
+				if converted := convertThrottleDevice(d); converted != nil {
+					responseWriteIopsDevices = append(responseWriteIopsDevices, converted)
+				}
+			}
+
+			// Compare string representations
+			for i, wd := range weightDevices {
+				Expect(responseWeightDevices[i].String()).Should(Equal(wd.String()))
+			}
+
+			Expect(responseReadBpsDevices[0].String()).Should(Equal(readBpsDevices[0].String()))
+			Expect(responseWriteBpsDevices[0].String()).Should(Equal(writeBpsDevices[0].String()))
+			Expect(responseReadIopsDevices[0].String()).Should(Equal(readIopsDevices[0].String()))
+			Expect(responseWriteIopsDevices[0].String()).Should(Equal(writeIopsDevices[0].String()))
+		})
 	})
 }
 
