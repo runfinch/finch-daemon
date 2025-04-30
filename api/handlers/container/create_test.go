@@ -676,12 +676,96 @@ var _ = Describe("Container Create API ", func() {
 				"Image": "test-image",
 				"HostConfig": {
 					"OomKillDisable": true
-				}
+					}
 			}`)
 			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
 
 			// expected network options
 			createOpt.OomKillDisable = true
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+		It("should set the BlkioWeight to a user specified value", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"BlkioWeight": 300
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected network options
+			createOpt.BlkioWeight = 300
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set blkio device settings", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"BlkioWeightDevice": [
+						{
+							"Path": "/dev/sda",
+							"Weight": 400
+						}
+					],
+					"BlkioDeviceReadBps": [
+						{
+							"Path": "/dev/sda",
+							"Rate": 1048576
+						}
+					],
+					"BlkioDeviceWriteBps": [
+						{
+							"Path": "/dev/sda",
+							"Rate": 2097152
+						}
+					],
+					"BlkioDeviceReadIOps": [
+						{
+							"Path": "/dev/sda",
+							"Rate": 1000
+						}
+					],
+					"BlkioDeviceWriteIOps": [
+						{
+							"Path": "/dev/sda",
+							"Rate": 2000
+						}
+					]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options with blkio settings as strings
+			createOpt.BlkioWeightDevice = []string{
+				"/dev/sda:400",
+			}
+			createOpt.BlkioDeviceReadBps = []string{
+				"/dev/sda:1048576",
+			}
+			createOpt.BlkioDeviceWriteBps = []string{
+				"/dev/sda:2097152",
+			}
+			createOpt.BlkioDeviceReadIOps = []string{
+				"/dev/sda:1000",
+			}
+			createOpt.BlkioDeviceWriteIOps = []string{
+				"/dev/sda:2000",
+			}
+
 			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
 				cid, nil)
 
@@ -809,6 +893,12 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 		PidsLimit:          -1,                      // nerdctl default.
 		Cgroupns:           defaults.CgroupnsMode(), // nerdctl default.
 		Ulimit:             []string{},
+
+		BlkioWeightDevice:    []string{},
+		BlkioDeviceReadBps:   []string{},
+		BlkioDeviceWriteBps:  []string{},
+		BlkioDeviceReadIOps:  []string{},
+		BlkioDeviceWriteIOps: []string{},
 		// #endregion
 
 		// #region for user flags
