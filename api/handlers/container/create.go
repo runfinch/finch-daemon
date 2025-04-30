@@ -202,7 +202,9 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		MemoryReservation:  memoryReservation,                // Memory soft limit (in bytes)
 		MemorySwap:         memorySwap,                       // Total memory usage (memory + swap); set `-1` to enable unlimited swap
 		Ulimit:             ulimits,                          // List of ulimits to be set in the container
-		CPUPeriod:          uint64(req.HostConfig.CPUPeriod),
+		CPUPeriod:          uint64(req.HostConfig.CPUPeriod), // CPU CFS (Completely Fair Scheduler) period
+		CPUSetCPUs:         req.HostConfig.CPUSetCPUs,        // CpusetCpus 0-2, 0,1
+		CPUSetMems:         req.HostConfig.CPUSetMems,        // CpusetMems 0-2, 0,1
 		// #endregion
 
 		// #region for user flags

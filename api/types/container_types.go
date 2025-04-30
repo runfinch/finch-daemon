@@ -101,15 +101,15 @@ type ContainerHostConfig struct {
 	// TODO: Isolation Isolation // Isolation technology of the container (e.g. default, hyperv)
 
 	// Contains container's resources (cgroups, ulimits)
-	CPUShares int64 `json:"CpuShares"` // CPU shares (relative weight vs. other containers)
-	Memory    int64 // Memory limit (in bytes)
-	CPUPeriod int64 `json:"CpuPeriod"` // CPU CFS (Completely Fair Scheduler) period
-	CPUQuota  int64 `json:"CpuQuota"`  // CPU CFS (Completely Fair Scheduler) quota
-	// TODO: CPUSetCPUs        string `json:"CpusetCpus"` // CPUSetCPUs specifies the CPUs in which to allow execution (0-3, 0,1)
-	// TODO: CPUSetMems        string `json:"CpusetMems"` // CPUSetMems specifies the memory nodes (MEMs) in which to allow execution (0-3, 0,1). Only effective on NUMA systems.
-	MemoryReservation int64 // MemoryReservation specifies the memory soft limit (in bytes)
-	MemorySwap        int64 // Total memory usage (memory + swap); set `-1` to enable unlimited swap
-	MemorySwappiness  int64 // MemorySwappiness64 specifies the tune container memory swappiness (0 to 100) (default -1)
+	CPUShares         int64  `json:"CpuShares"`  // CPU shares (relative weight vs. other containers)
+	CPUPeriod         int64  `json:"CpuPeriod"`  // CPU CFS (Completely Fair Scheduler) period
+	CPUQuota          int64  `json:"CpuQuota"`   // CPU CFS (Completely Fair Scheduler) quota
+	CPUSetCPUs        string `json:"CpusetCpus"` // CPUSetCPUs specifies the CPUs in which to allow execution (0-3, 0,1)
+	CPUSetMems        string `json:"CpusetMems"` // CPUSetMems specifies the memory nodes (MEMs) in which to allow execution (0-3, 0,1). Only effective on NUMA systems.
+	Memory            int64  // Memory limit (in bytes)
+	MemoryReservation int64  // MemoryReservation specifies the memory soft limit (in bytes)
+	MemorySwap        int64  // Total memory usage (memory + swap); set `-1` to enable unlimited swap
+	MemorySwappiness  int64  // MemorySwappiness64 specifies the tune container memory swappiness (0 to 100) (default -1)
 	// TODO: Resources
 
 	Ulimits []*Ulimit // List of ulimits to be set in the container
