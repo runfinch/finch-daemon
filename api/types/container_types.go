@@ -66,8 +66,8 @@ type ContainerHostConfig struct {
 	PortBindings    nat.PortMap   // Port mapping between the exposed port (container) and the host
 	RestartPolicy   RestartPolicy // Restart policy to be used for the container
 	AutoRemove      bool          // Automatically remove container when it exits
+	VolumesFrom     []string      // List of volumes to take from other container
 	// TODO: VolumeDriver    string            // Name of the volume driver used to mount volumes
-	// TODO: VolumesFrom     []string      // List of volumes to take from other container
 	// TODO: ConsoleSize     [2]uint           // Initial console size (height,width)
 	// TODO: Annotations     map[string]string `json:",omitempty"` // Arbitrary non-identifying metadata attached to container and provided to the runtime
 
@@ -89,8 +89,8 @@ type ContainerHostConfig struct {
 	Privileged bool // Is the container in privileged mode
 	// TODO: ReadonlyRootfs bool              // Is the container root filesystem in read-only
 	// TODO: SecurityOpt []string          // List of string values to customize labels for MLS systems, such as SELinux. (["key=value"])
-	// TODO: Tmpfs   map[string]string `json:",omitempty"` // List of tmpfs (mounts) used for the container
-	// TODO: UTSMode string            // UTS namespace to use for the container
+	Tmpfs   map[string]string `json:",omitempty"` // List of tmpfs (mounts) used for the container
+	UTSMode string            // UTS namespace to use for the container
 	// TODO: ShmSize int64             // Size of /dev/shm in bytes. The size must be greater than 0.
 	// TODO: Sysctls map[string]string `json:",omitempty"` // List of Namespaced sysctls used for the container
 	// TODO: Runtime string            `json:",omitempty"` // Runtime to use with this container
