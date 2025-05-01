@@ -172,15 +172,16 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		GOptions: globalOpt,
 
 		// #region for basic flags
-		Interactive: false,                     // TODO: update this after attach supports STDIN
-		TTY:         false,                     // TODO: update this after attach supports STDIN
-		Detach:      true,                      // TODO: current implementation of create does not support AttachStdin, AttachStdout, and AttachStderr flags
-		Restart:     restart,                   // Restart policy to apply when a container exits.
-		Rm:          req.HostConfig.AutoRemove, // Automatically remove container upon exit.
-		Pull:        "missing",                 // nerdctl default.
-		StopSignal:  stopSignal,
-		StopTimeout: stopTimeout,
-		CidFile:     req.HostConfig.ContainerIDFile, // CidFile write the container ID to the file
+		Interactive:    false,                     // TODO: update this after attach supports STDIN
+		TTY:            false,                     // TODO: update this after attach supports STDIN
+		Detach:         true,                      // TODO: current implementation of create does not support AttachStdin, AttachStdout, and AttachStderr flags
+		Restart:        restart,                   // Restart policy to apply when a container exits.
+		Rm:             req.HostConfig.AutoRemove, // Automatically remove container upon exit.
+		Pull:           "missing",                 // nerdctl default.
+		StopSignal:     stopSignal,
+		StopTimeout:    stopTimeout,
+		CidFile:        req.HostConfig.ContainerIDFile, // CidFile write the container ID to the file
+		OomKillDisable: req.HostConfig.OomKillDisable,
 		// #endregion
 
 		// #region for platform flags
@@ -264,14 +265,19 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	if req.HostConfig.DNSOptions != nil {
 		dnsOpt = req.HostConfig.DNSOptions
 	}
+
+	if req.NetworkDisabled {
+		networkMode = "none"
+	}
 	netOpt := ncTypes.NetworkOptions{
 		Hostname:             req.Hostname,
-		NetworkSlice:         []string{networkMode},    // TODO: Set to none if "NetworkDisabled" is true in request
+		NetworkSlice:         []string{networkMode},
 		DNSServers:           req.HostConfig.DNS,       // Custom DNS lookup servers.
 		DNSResolvConfOptions: dnsOpt,                   // DNS options.
 		DNSSearchDomains:     req.HostConfig.DNSSearch, // Custom DNS search domains.
 		PortMappings:         portMappings,
 		AddHost:              req.HostConfig.ExtraHosts, // Extra hosts.
+		MACAddress:           req.MacAddress,
 	}
 
 	ctx := namespaces.WithNamespace(r.Context(), h.Config.Namespace)

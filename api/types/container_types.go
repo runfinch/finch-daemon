@@ -42,12 +42,12 @@ type ContainerConfig struct {
 	Cmd []string `json:",omitempty"` // Command to run when starting the container
 	// TODO Healthcheck     *HealthConfig       `json:",omitempty"` // Healthcheck describes how to check the container is healthy
 	// TODO: ArgsEscaped     bool                `json:",omitempty"` // True if command is already escaped (meaning treat as a command line) (Windows specific).
-	Image      string              // Name of the image as it was passed by the operator (e.g. could be symbolic)
-	Volumes    map[string]struct{} `json:",omitempty"` // List of volumes (mounts) used for the container
-	WorkingDir string              `json:",omitempty"` // Current directory (PWD) in the command will be launched
-	Entrypoint []string            `json:",omitempty"` // Entrypoint to run when starting the container
-	// TODO: NetworkDisabled bool                `json:",omitempty"` // Is network disabled
-	// TODO: MacAddress      string              `json:",omitempty"` // Mac Address of the container
+	Image           string              // Name of the image as it was passed by the operator (e.g. could be symbolic)
+	Volumes         map[string]struct{} `json:",omitempty"` // List of volumes (mounts) used for the container
+	WorkingDir      string              `json:",omitempty"` // Current directory (PWD) in the command will be launched
+	Entrypoint      []string            `json:",omitempty"` // Entrypoint to run when starting the container
+	NetworkDisabled bool                `json:",omitempty"` // Is network disabled
+	MacAddress      string              `json:",omitempty"` // Mac Address of the container
 	// TODO: OnBuild         []string            // ONBUILD metadata that were defined on the image Dockerfile
 	Labels      map[string]string `json:",omitempty"` // List of labels set to this container
 	StopSignal  string            `json:",omitempty"` // Signal to stop a container
@@ -82,7 +82,7 @@ type ContainerHostConfig struct {
 	// TODO: IpcMode IpcMode // IPC namespace to use for the container
 	// TODO: Cgroup          CgroupSpec        // Cgroup to use for the container
 	// TODO: Links           []string          // List of links (in the name:alias form)
-	// TODO: OomKillDisable bool // specifies whether to disable OOM Killer
+	OomKillDisable bool // specifies whether to disable OOM Killer
 	// TODO: OomScoreAdj    int               // specifies the tune container’s OOM preferences (-1000 to 1000, rootless: 100 to 1000)
 	// TODO: PidMode        string            // PID namespace to use for the container
 	Privileged bool // Is the container in privileged mode

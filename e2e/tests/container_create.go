@@ -654,6 +654,101 @@ func ContainerCreate(opt *option.Option) {
 				}
 			}
 		})
+		It("should create a container with OomKillDisable set to true", func() {
+			// Define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.OomKillDisable = true
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// Start container
+			command.Run(opt, "start", testContainerName)
+
+			// Inspect the container using native format to verify OomKillDisable
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Navigate to the linux resources memory section
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			linux, ok := spec["linux"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			resources, ok := linux["resources"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			memory, ok := resources["memory"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+
+			// Verify OomKillDisable is set
+			oomKillDisable, ok := memory["disableOOMKiller"].(bool)
+			Expect(ok).Should(BeTrue())
+			Expect(oomKillDisable).Should(BeTrue())
+		})
+
+		It("should create a container with NetworkDisabled set to true", func() {
+			// Define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.NetworkDisabled = true
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// Start container
+			command.Run(opt, "start", testContainerName)
+
+			// Inspect using the native format to verify network mode is "none"
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Check that network is set to "none" in nerdctl/networks label
+			labels, ok := nativeInspect[0]["Labels"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			networks, ok := labels["nerdctl/networks"].(string)
+			Expect(ok).Should(BeTrue())
+			Expect(networks).Should(ContainSubstring(`"none"`))
+		})
+
+		It("should create a container with specified MAC address", func() {
+			// Define custom MAC address
+			macAddress := "02:42:ac:11:00:42"
+
+			// Define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.MacAddress = macAddress
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// Start container
+			command.Run(opt, "start", testContainerName)
+
+			// Inspect container using Docker-compatible format
+			resp := command.Stdout(opt, "inspect", testContainerName)
+			var inspect []*dockercompat.Container
+			err := json.Unmarshal(resp, &inspect)
+			Expect(err).Should(BeNil())
+			Expect(inspect).Should(HaveLen(1))
+
+			// Verify MAC address in NetworkSettings
+			Expect(inspect[0].NetworkSettings.MacAddress).Should(Equal(macAddress))
+
+			// Also verify MAC address in the network details
+			for _, netDetails := range inspect[0].NetworkSettings.Networks {
+				Expect(netDetails.MacAddress).Should(Equal(macAddress))
+			}
+		})
 	})
 }
 
