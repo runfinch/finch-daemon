@@ -617,6 +617,7 @@ func ContainerCreate(opt *option.Option) {
 			command.Run(opt, "start", testContainerName)
 			verifyNetworkSettings(opt, testContainerName, "bridge")
 		})
+
 		It("should create a container with specified restart options", func() {
 			// define options
 			options.Cmd = []string{"sleep", "Infinity"}
@@ -1125,6 +1126,144 @@ func ContainerCreate(opt *option.Option) {
 				}
 			}
 			Expect(foundUTSNamespace).Should(BeFalse())
+		})
+
+		It("should create a container with specified PidMode", func() {
+			// First create a container that will be referenced in pid mode
+			hostOptions := types.ContainerCreateRequest{}
+			hostOptions.Image = defaultImage
+			hostOptions.Cmd = []string{"sleep", "Infinity"}
+			statusCode, hostCtr := createContainer(uClient, url, "host-container", hostOptions)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(hostCtr.ID).ShouldNot(BeEmpty())
+			command.Run(opt, "start", "host-container")
+
+			// Define options for the container with pid mode
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.PidMode = "container:host-container"
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// Inspect container using Docker-compatible format
+			resp := command.Stdout(opt, "inspect", testContainerName)
+			var inspect []*dockercompat.Container
+			err := json.Unmarshal(resp, &inspect)
+			Expect(err).Should(BeNil())
+			Expect(inspect).Should(HaveLen(1))
+
+			// Verify PidMode configuration
+			Expect(inspect[0].HostConfig.PidMode).Should(Equal(hostCtr.ID))
+
+			// Cleanup
+			command.Run(opt, "rm", "-f", "host-container")
+		})
+
+		It("should create a container with private IPC mode", func() {
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.IpcMode = "private"
+
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			command.Run(opt, "start", testContainerName)
+
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			linux, ok := spec["linux"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			namespaces, ok := linux["namespaces"].([]interface{})
+			Expect(ok).Should(BeTrue())
+
+			// For private IPC mode, verify IPC namespace is present
+			foundIpcNamespace := false
+			for _, ns := range namespaces {
+				namespace := ns.(map[string]interface{})
+				if namespace["type"] == "ipc" {
+					foundIpcNamespace = true
+					break
+				}
+			}
+			Expect(foundIpcNamespace).Should(BeTrue())
+		})
+
+		It("should create a container with privileged mode", func() {
+			// Define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.Privileged = true
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// Start container
+			command.Run(opt, "start", testContainerName)
+
+			// Inspect the container using native format
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Navigate to the process capabilities section
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			process, ok := spec["process"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			capabilities, ok := process["capabilities"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+
+			// Verify privileged capabilities
+			// In privileged mode, the container should have extensive capabilities
+			expectedCaps := []string{
+				"CAP_SYS_ADMIN",
+				"CAP_NET_ADMIN",
+				"CAP_SYS_MODULE",
+			}
+
+			for _, capType := range []string{"bounding", "effective", "permitted"} {
+				caps, ok := capabilities[capType].([]interface{})
+				Expect(ok).Should(BeTrue())
+				capsList := make([]string, len(caps))
+				for i, cap := range caps {
+					capsList[i] = cap.(string)
+				}
+				for _, expectedCap := range expectedCaps {
+					Expect(capsList).Should(ContainElement(expectedCap))
+				}
+			}
+
+			// Also verify that devices are allowed in privileged mode
+			linux, ok := spec["linux"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			resources, ok := linux["resources"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			devices, ok := resources["devices"].([]interface{})
+			Expect(ok).Should(BeTrue())
+
+			// In privileged mode, there should be a device rule that allows all devices
+			foundAllowAllDevices := false
+			for _, device := range devices {
+				dev := device.(map[string]interface{})
+				if dev["allow"] == true && dev["access"] == "rwm" {
+					if _, hasType := dev["type"]; !hasType {
+						foundAllowAllDevices = true
+						break
+					}
+				}
+			}
+			Expect(foundAllowAllDevices).Should(BeTrue())
 		})
 	})
 }

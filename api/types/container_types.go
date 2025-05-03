@@ -79,14 +79,15 @@ type ContainerHostConfig struct {
 	DNSOptions []string `json:"DnsOptions"` // List of DNSOption to look for
 	DNSSearch  []string `json:"DnsSearch"`  // List of DNSSearch to look for
 	ExtraHosts []string // List of extra hosts
-	// TODO: GroupAdd []string // List of additional groups that the container process will run as
-	// TODO: IpcMode IpcMode // IPC namespace to use for the container
+	GroupAdd   []string // List of additional groups that the container process will run as
+	IpcMode    string   // IPC namespace to use for the container
 	// TODO: Cgroup          CgroupSpec        // Cgroup to use for the container
 	// TODO: Links           []string          // List of links (in the name:alias form)
 	OomKillDisable bool // specifies whether to disable OOM Killer
-	// TODO: OomScoreAdj    int               // specifies the tune container’s OOM preferences (-1000 to 1000, rootless: 100 to 1000)
-	// TODO: PidMode        string            // PID namespace to use for the container
-	Privileged bool // Is the container in privileged mode
+	// TODO: OomScoreAdj        int    // specifies the tune container’s OOM preferences (-1000 to 1000, rootless: 100 to 1000)
+	// TODO: OomScoreAdjChanged bool   // OomScoreAdjChanged specifies whether the OOM preferences
+	PidMode    string // PID namespace to use for the container
+	Privileged bool   // Is the container in privileged mode
 	// TODO: ReadonlyRootfs bool              // Is the container root filesystem in read-only
 	// TODO: SecurityOpt []string          // List of string values to customize labels for MLS systems, such as SELinux. (["key=value"])
 	Tmpfs   map[string]string `json:",omitempty"` // List of tmpfs (mounts) used for the container
