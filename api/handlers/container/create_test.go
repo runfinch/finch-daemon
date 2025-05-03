@@ -461,7 +461,7 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
-		It("should set CapDrop option", func() {
+		It("should set CapDrop and GroupAdd option", func() {
 			body := []byte(`{
 				"Image": "test-image",
 				"HostConfig": {
@@ -472,6 +472,27 @@ var _ = Describe("Container Create API ", func() {
 
 			// expected create options
 			createOpt.CapDrop = []string{"MKNOD"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set GroupAdd option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"GroupAdd": ["someGroup"]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.GroupAdd = []string{"someGroup"}
 
 			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
 				cid, nil)
@@ -691,6 +712,48 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
+		It("should set PidMode option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"PidMode": "host"
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.Pid = "host"
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set IPC option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"IpcMode": "host"
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.IPC = "host"
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
 		Context("translate port mappings", func() {
 			It("should return empty if port mappings is nil", func() {
 				Expect(translatePortMappings(nil)).Should(BeEmpty())
@@ -820,6 +883,7 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 		CapAdd:      []string{}, // nerdctl default.
 		CapDrop:     []string{}, // nerdctl default.
 		Privileged:  false,
+		GroupAdd:    []string{}, // nerdctl default.
 		// #endregion
 
 		// #region for runtime flags
