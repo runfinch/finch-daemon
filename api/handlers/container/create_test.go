@@ -905,6 +905,29 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
+		It("should set ReadonlyRootfs and SecurityOpt option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"ReadonlyRootfs": true,
+					"SecurityOpt": [ "seccomp=/path/to/custom_seccomp.json", "apparmor=unconfined"]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.ReadOnly = true
+			createOpt.SecurityOpt = []string{"seccomp=/path/to/custom_seccomp.json", "apparmor=unconfined"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
 		Context("translate port mappings", func() {
 			It("should return empty if port mappings is nil", func() {
 				Expect(translatePortMappings(nil)).Should(BeEmpty())
