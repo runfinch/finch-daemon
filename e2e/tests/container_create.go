@@ -749,6 +749,39 @@ func ContainerCreate(opt *option.Option) {
 				Expect(netDetails.MacAddress).Should(Equal(macAddress))
 			}
 		})
+		It("should create a container with readonly root filesystem", func() {
+			// Define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.ReadonlyRootfs = true
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// // Start container
+			// command.Run(opt, "start", testContainerName)
+
+			// // Verify readonly root filesystem by attempting to create a file
+			// err := command.RunWithoutSuccessfulExit(opt, "exec", testContainerName, "touch", "/test-file")
+			// Expect(err).Should(HaveOccurred())
+
+			// Additional verification through native inspect
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Verify readonly root in the spec
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			root, ok := spec["root"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			readonly, ok := root["readonly"].(bool)
+			Expect(ok).Should(BeTrue())
+			Expect(readonly).Should(BeTrue())
+		})
 	})
 }
 

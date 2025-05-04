@@ -85,9 +85,9 @@ type ContainerHostConfig struct {
 	OomKillDisable bool // specifies whether to disable OOM Killer
 	// TODO: OomScoreAdj    int               // specifies the tune container’s OOM preferences (-1000 to 1000, rootless: 100 to 1000)
 	// TODO: PidMode        string            // PID namespace to use for the container
-	Privileged bool // Is the container in privileged mode
-	// TODO: ReadonlyRootfs bool              // Is the container root filesystem in read-only
-	// TODO: SecurityOpt []string          // List of string values to customize labels for MLS systems, such as SELinux. (["key=value"])
+	Privileged     bool     // Is the container in privileged mode
+	ReadonlyRootfs bool     // Is the container root filesystem in read-only
+	SecurityOpt    []string // List of string values to customize labels for MLS systems, such as SELinux. (["key=value"])
 	// TODO: Tmpfs   map[string]string `json:",omitempty"` // List of tmpfs (mounts) used for the container
 	// TODO: UTSMode string            // UTS namespace to use for the container
 	// TODO: ShmSize int64             // Size of /dev/shm in bytes. The size must be greater than 0.

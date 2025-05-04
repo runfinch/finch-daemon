@@ -165,6 +165,11 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CpuQuota = req.HostConfig.CPUQuota
 	}
 
+	securityOpt := []string{}
+	if req.HostConfig.SecurityOpt != nil {
+		securityOpt = req.HostConfig.SecurityOpt
+	}
+
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
 		Stdout:   nil,
@@ -210,7 +215,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #endregion
 
 		// #region for security flags
-		SecurityOpt: []string{}, // nerdctl default.
+		SecurityOpt: securityOpt,
 		CapAdd:      capAdd,
 		CapDrop:     capDrop,
 		Privileged:  req.HostConfig.Privileged,
@@ -249,6 +254,11 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 			Stderr:        nil,
 		},
 		// #endregion
+
+		// #region for rootfs flags
+		ReadOnly: req.HostConfig.ReadonlyRootfs, // Is the container root filesystem in read-only
+		// #endregion
+
 	}
 
 	portMappings, err := translatePortMappings(req.HostConfig.PortBindings)
