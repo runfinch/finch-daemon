@@ -749,6 +749,47 @@ func ContainerCreate(opt *option.Option) {
 				Expect(netDetails.MacAddress).Should(Equal(macAddress))
 			}
 		})
+
+		It("should create a container with both CPUSetCPUs and CPUSetMems options", func() {
+			// define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.CPUSetCPUs = "0,1" // Use CPUs 0 and 1
+			options.HostConfig.CPUSetMems = "0"   // Use only memory node 0
+
+			// create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// start container
+			command.Run(opt, "start", testContainerName)
+
+			// Get native container configuration
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Navigate to the CPU settings
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			linux, ok := spec["linux"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			resources, ok := linux["resources"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			cpu, ok := resources["cpu"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+
+			// Verify both settings are correct
+			cpuSet, ok := cpu["cpus"].(string)
+			Expect(ok).Should(BeTrue())
+			Expect(cpuSet).Should(Equal("0,1"))
+
+			memSet, ok := cpu["mems"].(string)
+			Expect(ok).Should(BeTrue())
+			Expect(memSet).Should(Equal("0"))
+		})
 	})
 }
 
