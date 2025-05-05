@@ -415,7 +415,7 @@ func translateSysctls(sysctls map[string]string) []string {
 		return nil
 	}
 
-	result := make([]string, 0, len(sysctls))
+	var result []string
 	for key, val := range sysctls {
 		result = append(result, fmt.Sprintf("%s=%s", key, val))
 	}
