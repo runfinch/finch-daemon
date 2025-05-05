@@ -11,8 +11,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
+	"github.com/containerd/continuity/testutil/loopback"
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	"github.com/docker/go-connections/nat"
 	. "github.com/onsi/ginkgo/v2"
@@ -20,6 +22,7 @@ import (
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/ffs"
 	"github.com/runfinch/common-tests/option"
+	"golang.org/x/sys/unix"
 
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/e2e/client"
@@ -789,6 +792,97 @@ func ContainerCreate(opt *option.Option) {
 			memSet, ok := cpu["mems"].(string)
 			Expect(ok).Should(BeTrue())
 			Expect(memSet).Should(Equal("0"))
+		})
+
+		It("should create a container with device mappings", func() {
+			// Create a temporary loop device
+			lo, err := loopback.New(4096)
+			Expect(err).Should(BeNil())
+			defer lo.Close()
+
+			// Write some test content to the device
+			err = os.WriteFile(lo.Device, []byte("test-content"), 0644)
+			Expect(err).Should(BeNil())
+
+			// Get device info to verify major/minor numbers
+			info, err := os.Stat(lo.Device)
+			Expect(err).Should(BeNil())
+			stat := info.Sys().(*syscall.Stat_t)
+			major := unix.Major(stat.Rdev)
+			minor := unix.Minor(stat.Rdev)
+
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.Devices = []types.DeviceMapping{
+				{
+					PathOnHost:        lo.Device,
+					PathInContainer:   lo.Device,
+					CgroupPermissions: "rwm",
+				},
+			}
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// Start container
+			command.Run(opt, "start", testContainerName)
+
+			// Inspect using native format
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err = json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Navigate to the linux section
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			linux, ok := spec["linux"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+
+			// Verify device in linux.devices
+			devices, ok := linux["devices"].([]interface{})
+			Expect(ok).Should(BeTrue())
+
+			foundDevice := false
+			for _, device := range devices {
+				d := device.(map[string]interface{})
+				if d["path"] == lo.Device {
+					foundDevice = true
+					Expect(d["type"]).Should(Equal("b")) // block device
+					Expect(d["major"].(float64)).Should(Equal(float64(major)))
+					Expect(d["minor"].(float64)).Should(Equal(float64(minor)))
+					break
+				}
+			}
+			Expect(foundDevice).Should(BeTrue())
+
+			// Verify device permissions in linux.resources.devices
+			resources, ok := linux["resources"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			resourceDevices, ok := resources["devices"].([]interface{})
+			Expect(ok).Should(BeTrue())
+
+			// First rule should be deny all
+			denyAll := resourceDevices[0].(map[string]interface{})
+			Expect(denyAll["allow"]).Should(BeFalse())
+			Expect(denyAll["access"]).Should(Equal("rwm"))
+
+			// Should find an allow rule for our device
+			foundAllowRule := false
+			for _, rule := range resourceDevices {
+				r := rule.(map[string]interface{})
+				if r["allow"] == true &&
+					r["type"] == "b" &&
+					r["major"].(float64) == float64(major) &&
+					r["minor"].(float64) == float64(minor) {
+					foundAllowRule = true
+					Expect(r["access"]).Should(Equal("rwm"))
+					break
+				}
+			}
+			Expect(foundAllowRule).Should(BeTrue())
 		})
 	})
 }

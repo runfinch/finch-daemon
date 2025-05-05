@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	containerTypes "github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/mocks/mocks_container"
 	"github.com/runfinch/finch-daemon/mocks/mocks_logger"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
@@ -691,6 +692,27 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
+		It("should set Devices option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"Devices": [{"PathOnHost": "/dev/null", "PathInContainer": "/dev/null", "CgroupPermissions": "rwm"},{"PathOnHost": "/var/lib", "CgroupPermissions": "ro"}]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.Device = []string{"/dev/null:/dev/null:rwm", "/var/lib:ro"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
 		Context("translate port mappings", func() {
 			It("should return empty if port mappings is nil", func() {
 				Expect(translatePortMappings(nil)).Should(BeEmpty())
@@ -759,6 +781,79 @@ var _ = Describe("Container Create API ", func() {
 				Expect(cniPortMappings).Should(ContainElements(expected))
 			})
 		})
+
+		Context("translate devices", func() {
+			It("should return nil for nil input", func() {
+				Expect(translateDevices(nil)).Should(BeNil())
+			})
+
+			It("should return empty slice for empty input", func() {
+				Expect(translateDevices([]containerTypes.DeviceMapping{})).Should(BeEmpty())
+			})
+
+			It("should handle device with only PathOnHost", func() {
+				input := []containerTypes.DeviceMapping{
+					{
+						PathOnHost: "/dev/ttyUSB0",
+					},
+				}
+				expected := []string{"/dev/ttyUSB0"}
+				Expect(translateDevices(input)).Should(Equal(expected))
+			})
+
+			It("should handle device with PathOnHost and PathInContainer", func() {
+				input := []containerTypes.DeviceMapping{
+					{
+						PathOnHost:      "/dev/ttyUSB0",
+						PathInContainer: "/dev/ttyUSB0",
+					},
+				}
+				expected := []string{"/dev/ttyUSB0:/dev/ttyUSB0"}
+				Expect(translateDevices(input)).Should(Equal(expected))
+			})
+
+			It("should handle device with all fields", func() {
+				input := []containerTypes.DeviceMapping{
+					{
+						PathOnHost:        "/dev/ttyUSB0",
+						PathInContainer:   "/dev/ttyUSB0",
+						CgroupPermissions: "rwm",
+					},
+				}
+				expected := []string{"/dev/ttyUSB0:/dev/ttyUSB0:rwm"}
+				Expect(translateDevices(input)).Should(Equal(expected))
+			})
+
+			It("should handle device with PathOnHost and CgroupPermissions", func() {
+				input := []containerTypes.DeviceMapping{
+					{
+						PathOnHost:        "/var/lib",
+						CgroupPermissions: "ro",
+					},
+				}
+				expected := []string{"/var/lib:ro"}
+				Expect(translateDevices(input)).Should(Equal(expected))
+			})
+
+			It("should handle multiple devices with different configurations", func() {
+				input := []containerTypes.DeviceMapping{
+					{
+						PathOnHost:        "/dev/null",
+						PathInContainer:   "/dev/null",
+						CgroupPermissions: "rwm",
+					},
+					{
+						PathOnHost:        "/var/lib",
+						CgroupPermissions: "ro",
+					},
+				}
+				expected := []string{
+					"/dev/null:/dev/null:rwm",
+					"/var/lib:ro",
+				}
+				Expect(translateDevices(input)).Should(Equal(expected))
+			})
+		})
 	})
 })
 
@@ -809,6 +904,7 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 		PidsLimit:          -1,                      // nerdctl default.
 		Cgroupns:           defaults.CgroupnsMode(), // nerdctl default.
 		Ulimit:             []string{},
+		Device:             []string{},
 		// #endregion
 
 		// #region for user flags
