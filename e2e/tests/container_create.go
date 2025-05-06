@@ -1412,6 +1412,46 @@ func ContainerCreate(opt *option.Option) {
 			Expect(ok).Should(BeTrue())
 			Expect(annotations["com.example.key"]).Should(Equal("test-value"))
 		})
+
+		It("should create a container with CgroupnsMode set to host", func() {
+			// Define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.CgroupnsMode = "host"
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// Start container
+			command.Run(opt, "start", testContainerName)
+
+			// Inspect using native format to verify cgroup namespace configuration
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Navigate to the namespaces section
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			linux, ok := spec["linux"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			namespaces, ok := linux["namespaces"].([]interface{})
+			Expect(ok).Should(BeTrue())
+
+			// For host mode, cgroup namespace should not be present in the namespaces list
+			foundCgroupNS := false
+			for _, ns := range namespaces {
+				namespace := ns.(map[string]interface{})
+				if namespace["type"] == "cgroup" {
+					foundCgroupNS = true
+					break
+				}
+			}
+			Expect(foundCgroupNS).Should(BeFalse())
+		})
 	})
 }
 
