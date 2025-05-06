@@ -165,6 +165,21 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CpuQuota = req.HostConfig.CPUQuota
 	}
 
+	sysctl := []string{}
+	if req.HostConfig.Sysctls != nil {
+		sysctl = translateSysctls(req.HostConfig.Sysctls)
+	}
+
+	shmSize := ""
+	if req.HostConfig.ShmSize > 0 {
+		shmSize = fmt.Sprint(req.HostConfig.ShmSize)
+	}
+
+	runtime := defaults.Runtime
+	if req.HostConfig.Runtime != "" {
+		runtime = req.HostConfig.Runtime
+	}
+
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
 		Stdout:   nil,
@@ -205,6 +220,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CPUPeriod:          uint64(req.HostConfig.CPUPeriod), // CPU CFS (Completely Fair Scheduler) period
 		CPUSetCPUs:         req.HostConfig.CPUSetCPUs,        // CpusetCpus 0-2, 0,1
 		CPUSetMems:         req.HostConfig.CPUSetMems,        // CpusetMems 0-2, 0,1
+		ShmSize:            shmSize,
 		// #endregion
 
 		// #region for user flags
@@ -218,7 +234,8 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		Privileged:  req.HostConfig.Privileged,
 		// #endregion
 		// #region for runtime flags
-		Runtime: defaults.Runtime, // nerdctl default.
+		Runtime: runtime, // Runtime to use for this container, e.g. "crun", or "io.containerd.runc.v2".
+		Sysctl:  sysctl,
 		// #endregion
 
 		// #region for volume flags
@@ -331,4 +348,17 @@ func translatePortMappings(portMappings nat.PortMap) ([]gocni.PortMapping, error
 		}
 	}
 	return ports, nil
+}
+
+// translateSysctls converts a map of sysctls to a slice of strings in the format "KEY=VALUE".
+func translateSysctls(sysctls map[string]string) []string {
+	if sysctls == nil {
+		return nil
+	}
+
+	var result []string
+	for key, val := range sysctls {
+		result = append(result, fmt.Sprintf("%s=%s", key, val))
+	}
+	return result
 }
