@@ -165,6 +165,11 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CpuQuota = req.HostConfig.CPUQuota
 	}
 
+	cgroupnsMode := defaults.CgroupnsMode()
+	if req.HostConfig.CgroupnsMode.Valid() {
+		cgroupnsMode = string(req.HostConfig.CgroupnsMode)
+	}
+
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
 		Stdout:   nil,
@@ -198,7 +203,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CPUQuota:           CpuQuota,                         // CPUQuota limits the CPU CFS (Completely Fair Scheduler) quota
 		MemorySwappiness64: memorySwappiness,                 // Tuning container memory swappiness behaviour
 		PidsLimit:          pidLimit,                         // PidsLimit specifies the tune container pids limit
-		Cgroupns:           defaults.CgroupnsMode(),          // nerdctl default.
+		Cgroupns:           cgroupnsMode,                     // Cgroupns specifies the cgroup namespace to use
 		MemoryReservation:  memoryReservation,                // Memory soft limit (in bytes)
 		MemorySwap:         memorySwap,                       // Total memory usage (memory + swap); set `-1` to enable unlimited swap
 		Ulimit:             ulimits,                          // List of ulimits to be set in the container
