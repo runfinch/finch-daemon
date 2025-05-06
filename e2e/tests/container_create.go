@@ -790,6 +790,36 @@ func ContainerCreate(opt *option.Option) {
 			Expect(ok).Should(BeTrue())
 			Expect(memSet).Should(Equal("0"))
 		})
+
+		It("should create a container with specified annotation", func() {
+			// Define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.Annotations = map[string]string{
+				"com.example.key": "test-value",
+			}
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// Start container
+			command.Run(opt, "start", testContainerName)
+
+			// Inspect using native format to verify annotation
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Verify annotation in container spec
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			annotations, ok := spec["annotations"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			Expect(annotations["com.example.key"]).Should(Equal("test-value"))
+		})
 	})
 }
 

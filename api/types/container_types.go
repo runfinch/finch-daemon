@@ -68,7 +68,7 @@ type ContainerHostConfig struct {
 	// TODO: VolumeDriver    string            // Name of the volume driver used to mount volumes
 	// TODO: VolumesFrom     []string      // List of volumes to take from other container
 	// TODO: ConsoleSize     [2]uint           // Initial console size (height,width)
-	// TODO: Annotations     map[string]string `json:",omitempty"` // Arbitrary non-identifying metadata attached to container and provided to the runtime
+	Annotations map[string]string `json:",omitempty"` // Arbitrary non-identifying metadata attached to container and provided to the runtime
 
 	// Applicable to UNIX platforms
 	CapAdd  []string // List of kernel capabilities to add to the container
