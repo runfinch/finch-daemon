@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.16.0](https://github.com/runfinch/finch-daemon/compare/v0.15.0...v0.16.0) (2025-05-13)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/moby/moby ([c683e9c](https://github.com/runfinch/finch-daemon/commit/c683e9cf2419d9c3932bc1ab4f1e5bf78db8e95a))
+* **deps:** Bump github.com/moby/moby from 28.0.1+incompatible to 28.1.1+incompatible ([#221](https://github.com/runfinch/finch-daemon/issues/221)) ([c683e9c](https://github.com/runfinch/finch-daemon/commit/c683e9cf2419d9c3932bc1ab4f1e5bf78db8e95a))
+* **deps:** Bump github.com/onsi/gomega from 1.36.3 to 1.37.0 ([#216](https://github.com/runfinch/finch-daemon/issues/216)) ([c1b516e](https://github.com/runfinch/finch-daemon/commit/c1b516e0208c62225733dea8b523c501ba984e74))
+* **deps:** Bump github.com/pelletier/go-toml/v2 from 2.2.3 to 2.2.4 ([#215](https://github.com/runfinch/finch-daemon/issues/215)) ([6c55ee6](https://github.com/runfinch/finch-daemon/commit/6c55ee611606ce8ed258ada429643202e3950c6e))
+* **deps:** Bump github.com/runfinch/common-tests from 0.9.2 to 0.9.4 ([#239](https://github.com/runfinch/finch-daemon/issues/239)) ([3cfd4a0](https://github.com/runfinch/finch-daemon/commit/3cfd4a0f84cf0b1a14e050fec8adc9439bc7649f))
+* **deps:** Bump google.golang.org/protobuf from 1.36.5 to 1.36.6 ([#213](https://github.com/runfinch/finch-daemon/issues/213)) ([8943984](https://github.com/runfinch/finch-daemon/commit/8943984c7cec5a3b208a960f4eb3e6e112771d77))
+
+
+### Features
+
+* Add Cpu options and missing tests to cidfile option ([#230](https://github.com/runfinch/finch-daemon/issues/230)) ([669a0ee](https://github.com/runfinch/finch-daemon/commit/669a0eeb974b8c72c884eb01503228e0842552f3))
+* Add OomKillDisabled, NetworkDisabled and MACAddress option ([#228](https://github.com/runfinch/finch-daemon/issues/228)) ([58eef04](https://github.com/runfinch/finch-daemon/commit/58eef04d66523c9c994a6194d709fbce31cc5cbc))
+* Add unpause container support ([#192](https://github.com/runfinch/finch-daemon/issues/192)) ([460b73f](https://github.com/runfinch/finch-daemon/commit/460b73f5872c7579be20572dde98bfd69ee9af14))
+
 ## [0.15.0](https://github.com/runfinch/finch-daemon/compare/v0.14.0...v0.15.0) (2025-04-10)
 
 
