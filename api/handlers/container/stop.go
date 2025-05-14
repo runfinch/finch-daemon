@@ -4,11 +4,13 @@
 package container
 
 import (
+	"io"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/containerd/containerd/v2/pkg/namespaces"
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
@@ -24,8 +26,18 @@ func (h *handler) stop(w http.ResponseWriter, r *http.Request) {
 	}
 	timeout := time.Second * time.Duration(t)
 
+	signal := r.URL.Query().Get("signal")
+
 	ctx := namespaces.WithNamespace(r.Context(), h.Config.Namespace)
-	err = h.service.Stop(ctx, cid, &timeout)
+	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
+	stopOpts := ncTypes.ContainerStopOptions{
+		Stdout:   io.Discard,
+		Stderr:   io.Discard,
+		Timeout:  &timeout,
+		Signal:   signal,
+		GOptions: globalOpt,
+	}
+	err = h.service.Stop(ctx, cid, stopOpts)
 	// map the error into http status code and send response.
 	if err != nil {
 		var code int
