@@ -114,8 +114,8 @@ type ContainerHostConfig struct {
 
 	Ulimits []*Ulimit // List of ulimits to be set in the container
 	// TODO: BlkioWeight uint16          // Block IO weight (relative weight vs. other containers)
-	// TODO: Devices     []DeviceMapping // List of devices to map inside the container
-	PidsLimit int64 // Setting PIDs limit for a container; Set `0` or `-1` for unlimited, or `null` to not change.
+	Devices   []DeviceMapping // List of devices to map inside the container
+	PidsLimit int64           // Setting PIDs limit for a container; Set `0` or `-1` for unlimited, or `null` to not change.
 	// Mounts specs used by the container
 	// TODO: Mounts []mount.Mount `json:",omitempty"`
 
@@ -264,3 +264,9 @@ type StatsJSON struct {
 }
 
 type Ulimit = units.Ulimit
+
+type DeviceMapping struct {
+	PathOnHost        string
+	PathInContainer   string
+	CgroupPermissions string
+}

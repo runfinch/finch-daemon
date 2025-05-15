@@ -165,6 +165,11 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CpuQuota = req.HostConfig.CPUQuota
 	}
 
+	devices := []string{}
+	if req.HostConfig.Devices != nil {
+		devices = translateDevices(req.HostConfig.Devices)
+	}
+
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
 		Stdout:   nil,
@@ -205,6 +210,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CPUPeriod:          uint64(req.HostConfig.CPUPeriod), // CPU CFS (Completely Fair Scheduler) period
 		CPUSetCPUs:         req.HostConfig.CPUSetCPUs,        // CpusetCpus 0-2, 0,1
 		CPUSetMems:         req.HostConfig.CPUSetMems,        // CpusetMems 0-2, 0,1
+		Device:             devices,                          // Device specifies add a host device to the container
 		// #endregion
 
 		// #region for user flags
@@ -331,4 +337,28 @@ func translatePortMappings(portMappings nat.PortMap) ([]gocni.PortMapping, error
 		}
 	}
 	return ports, nil
+}
+
+// translateDevices converts a slice of DeviceMapping to a slice of strings in the format "PATH_ON_HOST[:PATH_IN_CONTAINER][:CGROUP_PERMISSIONS]".
+func translateDevices(devices []types.DeviceMapping) []string {
+	if devices == nil {
+		return nil
+	}
+
+	result := make([]string, 0, len(devices))
+	for _, deviceMap := range devices {
+		deviceString := deviceMap.PathOnHost
+
+		if deviceMap.PathInContainer != "" {
+			deviceString += ":" + deviceMap.PathInContainer
+			if deviceMap.CgroupPermissions != "" {
+				deviceString += ":" + deviceMap.CgroupPermissions
+			}
+		} else if deviceMap.CgroupPermissions != "" {
+			deviceString += ":" + deviceMap.CgroupPermissions
+		}
+
+		result = append(result, deviceString)
+	}
+	return result
 }
