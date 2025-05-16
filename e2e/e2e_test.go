@@ -94,7 +94,7 @@ func runE2ETests(t *testing.T) {
 	pOpt := createPrefixedOption()
 
 	ginkgo.Describe(e2eTestDescription, func() {
-		runContainerTests(opt)
+		runContainerTests(opt, pOpt)
 		runVolumeTests(opt)
 		runNetworkTests(opt, pOpt)
 		runImageTests(opt)
@@ -123,8 +123,8 @@ func runTests(t *testing.T, description string) {
 }
 
 // functional test for container APIs.
-func runContainerTests(opt *option.Option) {
-	tests.ContainerCreate(opt)
+func runContainerTests(opt *option.Option, pOpt func([]string, ...option.Modifier) (*option.Option, error)) {
+	tests.ContainerCreate(opt, pOpt)
 	tests.ContainerStart(opt)
 	tests.ContainerStop(opt)
 	tests.ContainerRestart(opt)

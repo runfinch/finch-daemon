@@ -9,7 +9,7 @@ In the current implementation, users can use OPA Rego policies to filter API req
 
 ## Setting up a policy 
 
-Use the [sample rego](../docs/sample-rego-policies/default.rego) policy template to build your policy rules. 
+Use the [sample rego](../docs/sample-rego-policies/example.rego) policy template to build your policy rules. 
 
 The package name must be `finch.authz`, the daemon middleware will look for the result of the `allow` key on each API call to determine wether to allow/deny the request. 
 An approved request will go through without any events, a rejected request will fail with status code 403
@@ -34,12 +34,23 @@ Use the [Rego playground](https://play.openpolicyagent.org/) to fine tune your r
 
 ## Enable OPA Middleware
 
-Once you are ready with your policy document, use the `--enable-middleware` flag to tell the finch-daemon to enable the OPA middleware. The daemon will then look for the policy document provided by the `--rego-file` flag.
+Once you are ready with your policy document, use the `--enable-opa-middleware` flag to tell the finch-daemon to enable the OPA middleware. The daemon will then look for the policy document provided by the `--rego-file` flag.
 
-Note: The `--rego-file` flag is required when `--enable-middleware` is set.
+Note: The `--rego-file` flag is required when `--enable-opa-middleware` is set.
 
-Example: 
-`sudo bin/finch-daemon --debug --socket-owner $UID --socket-addr /run/finch-test.sock --pidfile /run/finch-test.pid --enable-middleware --rego-file /<path-to>/finch-daemon/docs/sample-rego-policies/default.rego &`
+The daemon enforces strict permissions (0600 or more restrictive) on the Rego policy file to prevent unauthorized modifications. You can bypass this check using the `--skip-rego-perm-check` flag.
+
+Examples:
+
+Standard secure usage:
+```bash
+sudo bin/finch-daemon --debug --socket-owner $UID --socket-addr /run/finch-test.sock --pidfile /run/finch-test.pid --enable-opa-middleware --rego-file /path/to/policy.rego
+```
+
+With permission check bypassed:
+```bash
+sudo bin/finch-daemon --debug --socket-owner $UID --socket-addr /run/finch-test.sock --pidfile /run/finch-test.pid --enable-opa-middleware --rego-file /path/to/policy.rego --skip-rego-perm-check
+```
 
 
 # Best practices for secure rego policies
@@ -109,7 +120,21 @@ The finch-daemon's inability to start due to policy issues could impact system o
   - Monitor for unexpected denials
 
 
-### Critical Security Considerations : Rego Policy File Protection
+### Critical Security Considerations: Rego Policy File Protection
+
+### Rego File Permissions
+By default, the daemon requires the Rego policy file to have permissions no more permissive than 0600 (readable and writable only by the owner). This restriction helps prevent unauthorized modifications to the policy file.
+
+The `--skip-rego-perm-check` flag can be used to bypass this permission check. However, using this flag comes with significant security risks:
+- More permissive file permissions could allow unauthorized users to modify the policy
+- Changes to the policy file could go unnoticed
+- Security controls could be weakened without proper oversight
+
+It is strongly recommended to:
+- Avoid using `--skip-rego-perm-check` in production environments
+- Always use proper file permissions (0600 or more restrictive)
+- Implement additional monitoring if the flag must be used
+
 The Rego policy file is a critical security control. 
 Any user with sudo privileges can:
 

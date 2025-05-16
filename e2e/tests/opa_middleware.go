@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -91,18 +94,6 @@ func OpaMiddlewareTest(opt *option.Option) {
 			Expect(res.StatusCode).Should(Equal(http.StatusForbidden))
 		})
 
-		It("should not allow updates to the rego file", func() {
-			regoFilePath := os.Getenv("REGO_FILE_PATH")
-			Expect(regoFilePath).NotTo(BeEmpty(), "REGO_FILE_PATH environment variable should be set")
-
-			fileInfo, err := os.Stat(regoFilePath)
-			Expect(err).NotTo(HaveOccurred(), "Failed to get Rego file info")
-
-			// Check file permissions
-			mode := fileInfo.Mode()
-			Expect(mode.Perm()).To(Equal(os.FileMode(0400)), "Rego file should be read-only (0400)")
-		})
-
 		It("should fail unimplemented API calls, fail via daemon", func() {
 			fmt.Println("incompatibleUrl = ", unimplementedUnspecifiedUrl)
 			res, _ := uClient.Get(unimplementedUnspecifiedUrl)
@@ -115,6 +106,50 @@ func OpaMiddlewareTest(opt *option.Option) {
 			res, _ := uClient.Get(unimplementedSpecifiedUrl)
 
 			Expect(res.StatusCode).Should(Equal(http.StatusNotFound))
+		})
+
+		// Add this test to OpaMiddlewareTest function
+		It("should handle rego file permissions correctly", func() {
+			// Create a temporary rego file with overly permissive permissions
+			tmpDir := GinkgoT().TempDir()
+
+			regoPath := filepath.Join(tmpDir, "test.rego")
+			regoContent := []byte(`package finch.authz
+			default allow = false`)
+
+			var err error
+			err = os.WriteFile(regoPath, regoContent, 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Try to start daemon with overly permissive file
+			cmd := exec.Command(GetFinchDaemonExe(), //nolint:gosec // G204: This is a test file with controlled inputs
+				"--socket-addr", "/run/test.sock",
+				"--pidfile", "/run/test.pid",
+				"--rego-file", regoPath,
+				"--enable-opa-middleware")
+			err = cmd.Run()
+
+			// Should fail due to permissions
+			Expect(err).To(HaveOccurred())
+
+			// For the second test with skip-check:
+			cmd = exec.Command(GetFinchDaemonExe(), //nolint:gosec // G204: This is a test file with controlled inputs
+				"--socket-addr", "/run/test.sock",
+				"--pidfile", "/run/test.pid",
+				"--rego-file", regoPath,
+				"--enable-opa-middleware",
+				"--skip-rego-perm-check")
+
+			// Start the process in background
+			err = cmd.Start()
+			Expect(err).NotTo(HaveOccurred())
+
+			// Give it a moment to initialize
+			time.Sleep(1 * time.Second)
+
+			// Kill the process
+			err = cmd.Process.Kill()
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 }
