@@ -14,7 +14,6 @@ import (
 	"github.com/containerd/containerd/v2/pkg/namespaces"
 	"github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/containerd/nerdctl/v2/pkg/config"
-	"github.com/gofrs/flock"
 	toml "github.com/pelletier/go-toml/v2"
 	"github.com/runfinch/finch-daemon/api/router"
 	"github.com/runfinch/finch-daemon/internal/backend"
@@ -97,7 +96,7 @@ func createContainerdClient(conf *config.Config) (*backend.ContainerdClientWrapp
 // sanitizeRegoFile validates and prepares the Rego policy file for use.
 // It checks validates the file, acquires a file lock,
 // and sets rego file to be read-only.
-func sanitizeRegoFile(options *DaemonOptions) (string, error) {
+func sanitizeRegoFile(options *DaemonOptions, logger *flog.Logrus) (string, error) {
 	if options.regoFilePath != "" {
 		if !options.enableMiddleware {
 			return "", fmt.Errorf("rego file path was provided without the --enable-middleware flag, please provide the --enable-middleware flag") // todo, can we default to setting this flag ourselves is this better UX?
@@ -106,30 +105,25 @@ func sanitizeRegoFile(options *DaemonOptions) (string, error) {
 		if err := checkRegoFileValidity(options.regoFilePath); err != nil {
 			return "", err
 		}
+
+		if !options.skipRegoPermCheck {
+			fileInfo, err := os.Stat(options.regoFilePath)
+			if err != nil {
+				return "", fmt.Errorf("error checking rego file permissions: %v", err)
+			}
+
+			if fileInfo.Mode().Perm() > 0600 {
+				return "", fmt.Errorf("rego file permissions %o are too permissive - must be no more permissive than 0600", fileInfo.Mode().Perm())
+			}
+			logger.Debugf("rego file permissions check passed: %o", fileInfo.Mode().Perm())
+		} else {
+			logger.Warnf("skipping rego file permission check - file may have permissions more permissive than 0600")
+		}
 	}
 
 	if options.enableMiddleware && options.regoFilePath == "" {
 		return "", fmt.Errorf("rego file path not provided, please provide the policy file path using the --rego-file flag")
 	}
-
-	fileLock := flock.New(options.regoFilePath)
-
-	locked, err := fileLock.TryLock()
-	if err != nil {
-		return "", fmt.Errorf("error acquiring lock on rego file: %v", err)
-	}
-	if !locked {
-		return "", fmt.Errorf("unable to acquire lock on rego file, it may be in use by another process")
-	}
-
-	// Change file permissions to read-only
-	err = os.Chmod(options.regoFilePath, 0400)
-	if err != nil {
-		fileLock.Unlock()
-		return "", fmt.Errorf("error changing rego file permissions: %v", err)
-	}
-	options.regoFileLock = fileLock
-
 	return options.regoFilePath, nil
 }
 
@@ -162,7 +156,6 @@ func createRouterOptions(
 
 // checkRegoFileValidity verifies that the given rego file exists and has the right file extension.
 func checkRegoFileValidity(regoFilePath string) error {
-	fmt.Println("filepath in checkRegoFileValidity = ", regoFilePath)
 	if _, err := os.Stat(regoFilePath); os.IsNotExist(err) {
 		return fmt.Errorf("provided Rego file path does not exist: %s", regoFilePath)
 	}
@@ -170,7 +163,6 @@ func checkRegoFileValidity(regoFilePath string) error {
 	// Check if the file has a valid extension (.rego)
 	fileExt := strings.ToLower(filepath.Ext(regoFilePath))
 
-	fmt.Println("fileExt = ", fileExt)
 	if fileExt != ".rego" {
 		return fmt.Errorf("invalid file extension for Rego file. Only .rego files are supported")
 	}

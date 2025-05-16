@@ -135,20 +135,26 @@ func CreateRegoMiddleware(regoFilePath string) (func(next http.Handler) http.Han
 				Path:   r.URL.Path,
 			}
 
-			fmt.Printf("Evaluating policy rules for API request with Method = %s and Path = %s \n", input.Method, input.Path)
+			fmt.Printf("[OPA Debug] Input being evaluated: Method=%s, Path=%s\n", input.Method, input.Path)
+			fmt.Printf("[OPA Debug] Query being executed: %s\n", query)
+
 			rs, err := preppedQuery.Eval(r.Context(), rego.EvalInput(input))
 			if err != nil {
+				fmt.Printf("[OPA Error] Policy evaluation failed: %v\n", err)
 				response.SendErrorResponse(w, http.StatusInternalServerError, errInput)
 				return
 			}
 
+			fmt.Printf("[OPA Debug] Evaluation results: %+v\n", rs)
+			fmt.Printf("[OPA Debug] Number of results: %d\n", len(rs))
+
 			if !rs.Allowed() {
-				// need to log evaluation result in order to mitigate Repudiation threat
-				fmt.Printf("Evaluation result: failed, method %s not allowed for path %s \n", r.Method, r.URL.Path)
+				fmt.Printf("[OPA Denied] Request denied: Method=%s, Path=%s\n", r.Method, r.URL.Path)
 				response.SendErrorResponse(w, http.StatusForbidden,
 					fmt.Errorf("method %s not allowed for path %s", r.Method, r.URL.Path))
 				return
 			}
+			fmt.Printf("[OPA Allowed] Request allowed: Method=%s, Path=%s\n", r.Method, r.URL.Path)
 			newReq := r.WithContext(r.Context())
 			next.ServeHTTP(w, newReq)
 		})
