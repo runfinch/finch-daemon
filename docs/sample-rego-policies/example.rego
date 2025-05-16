@@ -7,7 +7,7 @@ default allow = false
 
 allow if {
     not is_container_create
-    not is_networs_api
+    not is_networks_api
     not is_swarm_api
     not is_plugins
 }
@@ -17,7 +17,7 @@ is_container_create if {
     glob.match("/**/containers/create", ["/"], input.Path)
 }
 
-is_networs_api if {
+is_networks_api if {
     input.Method == "GET"
     glob.match("/**/networks", ["/"], input.Path)
 }

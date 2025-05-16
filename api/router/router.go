@@ -62,16 +62,17 @@ type Options struct {
 func New(opts *Options) (http.Handler, error) {
 	r := mux.NewRouter()
 	r.Use(VersionMiddleware)
+
+	logger := flog.NewLogrus()
+
 	if opts.RegoFilePath != "" {
-		regoMiddleware, err := CreateRegoMiddleware(opts.RegoFilePath)
+		regoMiddleware, err := CreateRegoMiddleware(opts.RegoFilePath, logger)
 		if err != nil {
 			return nil, err
 		}
 		r.Use(regoMiddleware)
 	}
 	vr := types.VersionedRouter{Router: r}
-
-	logger := flog.NewLogrus()
 	system.RegisterHandlers(vr, opts.SystemService, opts.Config, opts.NerdctlWrapper, logger)
 	image.RegisterHandlers(vr, opts.ImageService, opts.Config, logger)
 	container.RegisterHandlers(vr, opts.ContainerService, opts.Config, logger)
@@ -112,7 +113,7 @@ func VersionMiddleware(next http.Handler) http.Handler {
 // CreateRegoMiddleware dynamically parses the rego file at the path specified in options
 // and allows or denies the request based on the policy.
 // Will return a nil function and an error if the given file path is blank or invalid.
-func CreateRegoMiddleware(regoFilePath string) (func(next http.Handler) http.Handler, error) {
+func CreateRegoMiddleware(regoFilePath string, logger *flog.Logrus) (func(next http.Handler) http.Handler, error) {
 	if regoFilePath == "" {
 		return nil, errRego
 	}
@@ -135,20 +136,24 @@ func CreateRegoMiddleware(regoFilePath string) (func(next http.Handler) http.Han
 				Path:   r.URL.Path,
 			}
 
-			fmt.Printf("Evaluating policy rules for API request with Method = %s and Path = %s \n", input.Method, input.Path)
+			logger.Debugf("OPA input being evaluated: Method=%s, Path=%s", input.Method, input.Path)
+
 			rs, err := preppedQuery.Eval(r.Context(), rego.EvalInput(input))
 			if err != nil {
+				logger.Errorf("OPA policy evaluation failed: %v", err)
 				response.SendErrorResponse(w, http.StatusInternalServerError, errInput)
 				return
 			}
 
+			logger.Debugf("OPA evaluation results: %+v", rs)
+
 			if !rs.Allowed() {
-				// need to log evaluation result in order to mitigate Repudiation threat
-				fmt.Printf("Evaluation result: failed, method %s not allowed for path %s \n", r.Method, r.URL.Path)
+				logger.Infof("OPA request denied: Method=%s, Path=%s", r.Method, r.URL.Path)
 				response.SendErrorResponse(w, http.StatusForbidden,
 					fmt.Errorf("method %s not allowed for path %s", r.Method, r.URL.Path))
 				return
 			}
+			logger.Debugf("OPA request allowed: Method=%s, Path=%s", r.Method, r.URL.Path)
 			newReq := r.WithContext(r.Context())
 			next.ServeHTTP(w, newReq)
 		})

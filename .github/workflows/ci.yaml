@@ -105,17 +105,19 @@ jobs:
         run: |
           sudo ls /etc/cni/net.d
           sudo rm /etc/cni/net.d/87-podman-bridge.conflist
+      - name: Verify Rego file presence
+        run: ls -l ${{ github.workspace }}/docs/sample-rego-policies/example.rego
+      - name: Set Rego file path
+        run: echo "REGO_FILE_PATH=${{ github.workspace }}/docs/sample-rego-policies/example.rego" >> $GITHUB_ENV
+      - name: Start finch-daemon with opa Authz
+        run: sudo bin/finch-daemon --debug --enable-opa-middleware --rego-file ${{ github.workspace }}/docs/sample-rego-policies/example.rego --skip-rego-perm-check --socket-owner $UID --socket-addr /run/finch.sock --pidfile /run/finch.pid &
+      - name: Run opa e2e tests
+        run: sudo -E make test-e2e-opa
+      - name: Clean up Daemon socket
+        run: sudo rm /run/finch.sock && sudo rm /run/finch.pid
       - name: Start finch-daemon
         run: sudo bin/finch-daemon  --debug --socket-owner $UID &
       - name: Run e2e test
         run: sudo make test-e2e
       - name: Clean up Daemon socket
         run: sudo rm /var/run/finch.sock && sudo rm /run/finch.pid
-      - name: Verify Rego file presence
-        run: ls -l ${{ github.workspace }}/docs/sample-rego-policies/default.rego
-      - name: Set Rego file path
-        run: echo "REGO_FILE_PATH=${{ github.workspace }}/docs/sample-rego-policies/default.rego" >> $GITHUB_ENV
-      - name: Start finch-daemon with opa Authz
-        run: sudo bin/finch-daemon --debug --enable-middleware --rego-file ${{ github.workspace }}/docs/sample-rego-policies/default.rego --socket-owner $UID &
-      - name: Run opa e2e tests
-        run: sudo -E make test-e2e-opa
