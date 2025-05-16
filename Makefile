@@ -117,9 +117,10 @@ test-e2e: linux
 .PHONY: test-e2e-opa
 test-e2e-opa: linux
 	DOCKER_HOST="unix:///run/finch.sock" \
-	DOCKER_API_VERSION="v1.43" \
+	DOCKER_API_VERSION="v1.41" \
 	MIDDLEWARE_E2E=1 \
-	TEST_E2E=1 \
+	TEST_E2E=0 \
+	DAEMON_ROOT="$(BIN)/finch-daemon" \
 	$(GINKGO) $(GFLAGS) ./e2e/...
 
 .PHONY: licenses
