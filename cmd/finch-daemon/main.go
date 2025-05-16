@@ -43,15 +43,15 @@ const (
 )
 
 type DaemonOptions struct {
-	debug            bool
-	socketAddr       string
-	socketOwner      int
-	debugAddress     string
-	configPath       string
-	pidFile          string
-	regoFilePath     string
-	enableMiddleware bool
-	regoFileLock     *flock.Flock
+	debug             bool
+	socketAddr        string
+	socketOwner       int
+	debugAddress      string
+	configPath        string
+	pidFile           string
+	regoFilePath      string
+	enableMiddleware  bool
+	skipRegoPermCheck bool
 }
 
 var options = new(DaemonOptions)
@@ -72,6 +72,8 @@ func main() {
 	rootCmd.Flags().StringVar(&options.pidFile, "pidfile", defaultPidFile, "pid file location")
 	rootCmd.Flags().StringVar(&options.regoFilePath, "rego-file", "", "Rego Policy Path")
 	rootCmd.Flags().BoolVar(&options.enableMiddleware, "enable-middleware", false, "turn on middleware for allowlisting")
+	rootCmd.Flags().BoolVar(&options.skipRegoPermCheck, "skip-rego-perm-check", false, "skip the rego file permission check (allows permissions more permissive than 0600)")
+
 	if err := rootCmd.Execute(); err != nil {
 		log.Printf("got error: %v", err)
 		log.Fatal(err)
@@ -149,10 +151,6 @@ func run(options *DaemonOptions) error {
 	logger := flog.NewLogrus()
 	r, err := newRouter(options, logger)
 	if err != nil {
-		// call regoFile cleanup function here to unlock previously locked file
-		if options.regoFilePath != "" {
-			cleanupRegoFile(options, logger)
-		}
 		return fmt.Errorf("failed to create a router: %w", err)
 	}
 
@@ -202,8 +200,6 @@ func run(options *DaemonOptions) error {
 		}
 	}()
 
-	defer cleanupRegoFile(options, logger)
-
 	sdNotify(daemon.SdNotifyReady, logger)
 	serverWg.Wait()
 	logger.Debugln("Server stopped. Exiting...")
@@ -228,7 +224,7 @@ func newRouter(options *DaemonOptions, logger *flog.Logrus) (http.Handler, error
 
 	var regoFilePath string
 	if options.enableMiddleware {
-		regoFilePath, err = sanitizeRegoFile(options)
+		regoFilePath, err = sanitizeRegoFile(options, logger)
 		if err != nil {
 			return nil, err
 		}

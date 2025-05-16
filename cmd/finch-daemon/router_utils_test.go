@@ -10,8 +10,6 @@ import (
 	"testing"
 
 	"github.com/containerd/nerdctl/v2/pkg/config"
-	"github.com/gofrs/flock"
-	"github.com/runfinch/finch-daemon/pkg/flog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -74,66 +72,6 @@ namespace = "test_namespace"
 	assert.NoError(t, err, "Valid TOML should not cause an error.")
 	assert.Equal(t, "test_address", cfg.Address)
 	assert.Equal(t, "test_namespace", cfg.Namespace)
-}
-
-func TestCleanupRegoFile(t *testing.T) {
-	tests := []struct {
-		name      string
-		setupFunc func() (*DaemonOptions, *flog.Logrus, func())
-	}{
-		{
-			name: "successful cleanup",
-			setupFunc: func() (*DaemonOptions, *flog.Logrus, func()) {
-				tmpFile, err := os.CreateTemp("", "test.rego")
-				require.NoError(t, err)
-
-				fileLock := flock.New(tmpFile.Name())
-				_, err = fileLock.TryLock()
-				require.NoError(t, err)
-
-				err = os.Chmod(tmpFile.Name(), 0400)
-				require.NoError(t, err)
-
-				logger := flog.NewLogrus()
-
-				cleanup := func() {
-					os.Remove(tmpFile.Name())
-				}
-
-				return &DaemonOptions{
-					regoFilePath: tmpFile.Name(),
-					regoFileLock: fileLock,
-				}, logger, cleanup
-			},
-		},
-		{
-			name: "nil lock handle",
-			setupFunc: func() (*DaemonOptions, *flog.Logrus, func()) {
-				return &DaemonOptions{
-					regoFileLock: nil,
-				}, flog.NewLogrus(), func() {}
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			options, logger, cleanup := tt.setupFunc()
-			defer cleanup()
-
-			cleanupRegoFile(options, logger)
-
-			if options.regoFilePath != "" {
-				// Verify file permissions are restored
-				info, err := os.Stat(options.regoFilePath)
-				require.NoError(t, err)
-				assert.Equal(t, os.FileMode(0600), info.Mode().Perm())
-			}
-
-			// Verify lock is released
-			assert.Nil(t, options.regoFileLock)
-		})
-	}
 }
 
 func TestCheckRegoFileValidity(t *testing.T) {
