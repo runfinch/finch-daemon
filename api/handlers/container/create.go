@@ -175,6 +175,10 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	if req.HostConfig.Tmpfs != nil {
 		tmpfs = translateTmpfs(req.HostConfig.Tmpfs)
 	}
+	groupAdd := []string{}
+	if req.HostConfig.GroupAdd != nil {
+		groupAdd = req.HostConfig.GroupAdd
+	}
 
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
@@ -193,6 +197,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		StopTimeout:    stopTimeout,
 		CidFile:        req.HostConfig.ContainerIDFile, // CidFile write the container ID to the file
 		OomKillDisable: req.HostConfig.OomKillDisable,
+		Pid:            req.HostConfig.PidMode, // Pid namespace to use
 		// #endregion
 
 		// #region for platform flags
@@ -222,10 +227,12 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		BlkioDeviceWriteBps:  throttleDevicesToStrings(req.HostConfig.BlkioDeviceWriteBps),
 		BlkioDeviceReadIOps:  throttleDevicesToStrings(req.HostConfig.BlkioDeviceReadIOps),
 		BlkioDeviceWriteIOps: throttleDevicesToStrings(req.HostConfig.BlkioDeviceWriteIOps),
+		IPC:                  req.HostConfig.IpcMode, // IPC namespace to use
 		// #endregion
 
 		// #region for user flags
-		User: req.User,
+		User:     req.User,
+		GroupAdd: groupAdd,
 		// #endregion
 
 		// #region for security flags
