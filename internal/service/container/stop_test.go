@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/runfinch/finch-daemon/api/handlers/container"
 	"github.com/runfinch/finch-daemon/mocks/mocks_archive"
 	"github.com/runfinch/finch-daemon/mocks/mocks_backend"
@@ -32,6 +33,7 @@ var _ = Describe("Container Stop API ", func() {
 		cid          string
 		tarExtractor *mocks_archive.MockTarExtractor
 		service      container.Service
+		stopOptions  ncTypes.ContainerStopOptions
 	)
 	BeforeEach(func() {
 		ctx = context.Background()
@@ -43,6 +45,7 @@ var _ = Describe("Container Stop API ", func() {
 		con = mocks_container.NewMockContainer(mockCtrl)
 		con.EXPECT().ID().Return(cid).AnyTimes()
 		tarExtractor = mocks_archive.NewMockTarExtractor(mockCtrl)
+		stopOptions = ncTypes.ContainerStopOptions{}
 
 		service = NewService(cdClient, mockNerdctlService{ncClient, nil}, logger, nil, nil, tarExtractor)
 	})
@@ -53,10 +56,10 @@ var _ = Describe("Container Stop API ", func() {
 			cdClient.EXPECT().SearchContainer(gomock.Any(), gomock.Any()).Return(
 				[]containerd.Container{con}, nil)
 
-			ncClient.EXPECT().StopContainer(ctx, con, gomock.Any())
+			ncClient.EXPECT().StopContainer(ctx, con.ID(), gomock.Any())
 			logger.EXPECT().Debugf("successfully stopped: %s", cid)
 
-			err := service.Stop(ctx, cid, nil)
+			err := service.Stop(ctx, cid, stopOptions)
 			Expect(err).Should(BeNil())
 		})
 		It("should return not found error", func() {
@@ -66,7 +69,7 @@ var _ = Describe("Container Stop API ", func() {
 			logger.EXPECT().Debugf("no such container: %s", cid)
 
 			// service should return NotFound error
-			err := service.Stop(ctx, cid, nil)
+			err := service.Stop(ctx, cid, stopOptions)
 			Expect(errdefs.IsNotFound(err)).Should(BeTrue())
 		})
 		It("should return multiple containers found error", func() {
@@ -76,7 +79,7 @@ var _ = Describe("Container Stop API ", func() {
 			logger.EXPECT().Debugf("multiple IDs found with provided prefix: %s, total containers found: %d", cid, 2)
 
 			// service should return error
-			err := service.Stop(ctx, cid, nil)
+			err := service.Stop(ctx, cid, stopOptions)
 			Expect(err).Should(Not(BeNil()))
 		})
 		It("should return not modified error as container is stopped already", func() {
@@ -86,7 +89,7 @@ var _ = Describe("Container Stop API ", func() {
 				[]containerd.Container{con}, nil)
 
 			// service should return not modified error.
-			err := service.Stop(ctx, cid, nil)
+			err := service.Stop(ctx, cid, stopOptions)
 			Expect(errdefs.IsNotModified(err)).Should(BeTrue())
 		})
 		It("should return not modified error as container is not running", func() {
@@ -96,7 +99,7 @@ var _ = Describe("Container Stop API ", func() {
 				[]containerd.Container{con}, nil)
 
 			// service should return not modified error.
-			err := service.Stop(ctx, cid, nil)
+			err := service.Stop(ctx, cid, stopOptions)
 			Expect(errdefs.IsNotModified(err)).Should(BeTrue())
 		})
 		It("should fail due to nerdctl client error", func() {
@@ -106,12 +109,27 @@ var _ = Describe("Container Stop API ", func() {
 				[]containerd.Container{con}, nil)
 
 			expectedErr := fmt.Errorf("nerdctl error")
-			ncClient.EXPECT().StopContainer(ctx, con, gomock.Any()).Return(expectedErr)
+			ncClient.EXPECT().StopContainer(ctx, con.ID(), gomock.Any()).Return(expectedErr)
 			logger.EXPECT().Errorf("Failed to stop container: %s. Error: %v", cid, expectedErr)
 
 			// service should return not modified error.
-			err := service.Stop(ctx, cid, nil)
+			err := service.Stop(ctx, cid, stopOptions)
 			Expect(err).Should(Equal(expectedErr))
+		})
+		It("should stop container with custom signal", func() {
+			stopOptions.Signal = "SIGKILL"
+
+			// set up the mock to return a container that is in running state
+			cdClient.EXPECT().GetContainerStatus(gomock.Any(), gomock.Any()).Return(containerd.Running)
+			cdClient.EXPECT().SearchContainer(gomock.Any(), gomock.Any()).Return(
+				[]containerd.Container{con}, nil)
+
+			// Expect StopContainer to be called with the custom options containing SIGKILL
+			ncClient.EXPECT().StopContainer(ctx, con.ID(), stopOptions)
+			logger.EXPECT().Debugf("successfully stopped: %s", cid)
+
+			err := service.Stop(ctx, cid, stopOptions)
+			Expect(err).Should(BeNil())
 		})
 	})
 })

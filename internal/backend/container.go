@@ -11,7 +11,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"time"
 
 	containerd "github.com/containerd/containerd/v2/client"
 	"github.com/containerd/nerdctl/v2/pkg/api/types"
@@ -28,7 +27,7 @@ import (
 type NerdctlContainerSvc interface {
 	RemoveContainer(ctx context.Context, c containerd.Container, force bool, removeAnonVolumes bool) error
 	StartContainer(ctx context.Context, cid string, options types.ContainerStartOptions) error
-	StopContainer(ctx context.Context, container containerd.Container, timeout *time.Duration) error
+	StopContainer(ctx context.Context, cid string, options types.ContainerStopOptions) error
 	CreateContainer(ctx context.Context, args []string, netManager containerutil.NetworkOptionsManager, options types.ContainerCreateOptions) (containerd.Container, func(), error)
 	InspectContainer(ctx context.Context, c containerd.Container, size bool) (*dockercompat.Container, error)
 	InspectNetNS(ctx context.Context, pid int) (*native.NetNS, error)
@@ -59,8 +58,8 @@ func (w *NerdctlWrapper) StartContainer(ctx context.Context, cid string, options
 }
 
 // StopContainer wrapper function to call nerdctl function to stop a container.
-func (*NerdctlWrapper) StopContainer(ctx context.Context, container containerd.Container, timeout *time.Duration) error {
-	return containerutil.Stop(ctx, container, timeout, "")
+func (w *NerdctlWrapper) StopContainer(ctx context.Context, cid string, options types.ContainerStopOptions) error {
+	return container.Stop(ctx, w.clientWrapper.client, []string{cid}, options)
 }
 
 func (w *NerdctlWrapper) CreateContainer(ctx context.Context, args []string, netManager containerutil.NetworkOptionsManager, options types.ContainerCreateOptions) (containerd.Container, func(), error) {

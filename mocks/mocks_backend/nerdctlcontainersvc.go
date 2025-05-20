@@ -9,7 +9,6 @@ import (
 	io "io"
 	os "os"
 	reflect "reflect"
-	time "time"
 
 	client "github.com/containerd/containerd/v2/client"
 	types "github.com/containerd/nerdctl/v2/pkg/api/types"
@@ -264,7 +263,7 @@ func (mr *MockNerdctlContainerSvcMockRecorder) StartContainer(arg0, arg1, arg2 i
 }
 
 // StopContainer mocks base method.
-func (m *MockNerdctlContainerSvc) StopContainer(arg0 context.Context, arg1 client.Container, arg2 *time.Duration) error {
+func (m *MockNerdctlContainerSvc) StopContainer(arg0 context.Context, arg1 string, arg2 types.ContainerStopOptions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StopContainer", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
