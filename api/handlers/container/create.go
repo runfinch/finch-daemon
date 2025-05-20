@@ -166,6 +166,16 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CpuQuota = req.HostConfig.CPUQuota
 	}
 
+	volumesFrom := []string{}
+	if req.HostConfig.VolumesFrom != nil {
+		volumesFrom = req.HostConfig.VolumesFrom
+	}
+
+	tmpfs := []string{}
+	if req.HostConfig.Tmpfs != nil {
+		tmpfs = translateTmpfs(req.HostConfig.Tmpfs)
+	}
+
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
 		Stdout:   nil,
@@ -229,7 +239,9 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #endregion
 
 		// #region for volume flags
-		Volume: volumes,
+		Volume:      volumes,
+		VolumesFrom: volumesFrom,
+		Tmpfs:       tmpfs,
 		// #endregion
 
 		// #region for env flags
@@ -287,6 +299,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		PortMappings:         portMappings,
 		AddHost:              req.HostConfig.ExtraHosts, // Extra hosts.
 		MACAddress:           req.MacAddress,
+		UTSNamespace:         req.HostConfig.UTSMode,
 	}
 
 	ctx := namespaces.WithNamespace(r.Context(), h.Config.Namespace)
@@ -308,6 +321,21 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, http.StatusCreated, containerCreateResponse{cid})
+}
+
+// translateTmpfs converts a map of tmpfs mounts to a slice of strings in the format "DEST:OPTIONS".
+// Tmpfs are passed in as a map of strings,
+// but nerdctl expects an array of strings with format [TMPFS1:VALUE1, TMPFS2:VALUE2, ...].
+func translateTmpfs(tmpfs map[string]string) []string {
+	var result []string
+	for dest, options := range tmpfs {
+		if options == "" {
+			result = append(result, dest)
+		} else {
+			result = append(result, fmt.Sprintf("%s:%s", dest, options))
+		}
+	}
+	return result
 }
 
 // translate docker port mappings to go-cni port mappings.

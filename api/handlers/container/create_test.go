@@ -775,6 +775,48 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
+		It("should set VolumesFrom option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"VolumesFrom": [ "parent", "other:ro"]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			createOpt.VolumesFrom = []string{"parent", "other:ro"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set Tmpfs and UTSMode option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"Tmpfs": { "/run": "rw,noexec,nosuid,size=65536k" },
+					"UTSMode": "host"
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.Tmpfs = []string{"/run:rw,noexec,nosuid,size=65536k"}
+			netOpt.UTSNamespace = "host"
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
 		Context("translate port mappings", func() {
 			It("should return empty if port mappings is nil", func() {
 				Expect(translatePortMappings(nil)).Should(BeEmpty())
@@ -841,6 +883,46 @@ var _ = Describe("Container Create API ", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(cniPortMappings).ShouldNot(BeEmpty())
 				Expect(cniPortMappings).Should(ContainElements(expected))
+			})
+		})
+
+		Context("translate tmpfs", func() {
+			It("should return nil for nil input", func() {
+				Expect(translateTmpfs(nil)).Should(BeNil())
+			})
+
+			It("should return empty slice for empty map", func() {
+				Expect(translateTmpfs(map[string]string{})).Should(BeEmpty())
+			})
+
+			It("should handle single tmpfs mount with options", func() {
+				input := map[string]string{
+					"/run": "rw,noexec,nosuid,size=65536k",
+				}
+				expected := []string{"/run:rw,noexec,nosuid,size=65536k"}
+				Expect(translateTmpfs(input)).Should(Equal(expected))
+			})
+
+			It("should handle multiple tmpfs mounts with different options", func() {
+				input := map[string]string{
+					"/run": "rw,noexec,nosuid,size=65536k",
+					"/tmp": "rw,exec,size=32768k",
+					"/var": "",
+				}
+				result := translateTmpfs(input)
+				Expect(result).Should(ConsistOf(
+					"/run:rw,noexec,nosuid,size=65536k",
+					"/tmp:rw,exec,size=32768k",
+					"/var",
+				))
+			})
+
+			It("should handle tmpfs mount without options", func() {
+				input := map[string]string{
+					"/run": "",
+				}
+				expected := []string{"/run"}
+				Expect(translateTmpfs(input)).Should(Equal(expected))
 			})
 		})
 	})
@@ -917,7 +999,9 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 		// #endregion
 
 		// #region for volume flags
-		Volume: nil,
+		Volume:      nil,
+		VolumesFrom: []string{},
+		Tmpfs:       []string{},
 		// #endregion
 
 		// #region for env flags

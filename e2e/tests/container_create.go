@@ -962,6 +962,170 @@ func ContainerCreate(opt *option.Option) {
 			Expect(responseReadIopsDevices[0].String()).Should(Equal(readIopsDevices[0].String()))
 			Expect(responseWriteIopsDevices[0].String()).Should(Equal(writeIopsDevices[0].String()))
 		})
+
+		It("should create container with volumes from another container", func() {
+			tID := testContainerName
+
+			// Create temporary directories
+			rwDir, err := os.MkdirTemp("", "rw")
+			Expect(err).Should(BeNil())
+			roDir, err := os.MkdirTemp("", "ro")
+			Expect(err).Should(BeNil())
+			defer os.RemoveAll(rwDir)
+			defer os.RemoveAll(roDir)
+
+			// Create named volumes
+			rwVolName := tID + "-rw"
+			roVolName := tID + "-ro"
+			command.Run(opt, "volume", "create", rwVolName)
+			command.Run(opt, "volume", "create", roVolName)
+			defer command.Run(opt, "volume", "rm", "-f", rwVolName)
+			defer command.Run(opt, "volume", "rm", "-f", roVolName)
+
+			// Create source container with multiple volume types
+			fromContainerName := tID + "-from"
+			sourceOptions := types.ContainerCreateRequest{}
+			sourceOptions.Image = defaultImage
+			sourceOptions.Cmd = []string{"top"}
+			sourceOptions.HostConfig.Binds = []string{
+				fmt.Sprintf("%s:%s", rwDir, "/mnt1"),
+				fmt.Sprintf("%s:%s:ro", roDir, "/mnt2"),
+				fmt.Sprintf("%s:%s", rwVolName, "/mnt3"),
+				fmt.Sprintf("%s:%s:ro", roVolName, "/mnt4"),
+			}
+
+			// Create and start source container
+			statusCode, _ := createContainer(uClient, url, fromContainerName, sourceOptions)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			command.Run(opt, "start", fromContainerName)
+			defer command.Run(opt, "rm", "-f", fromContainerName)
+
+			// Create target container with volumes-from
+			toContainerName := tID + "-to"
+			targetOptions := types.ContainerCreateRequest{}
+			targetOptions.Image = defaultImage
+			targetOptions.Cmd = []string{"top"}
+			targetOptions.HostConfig.VolumesFrom = []string{fromContainerName}
+
+			// Create and start target container
+			statusCode, _ = createContainer(uClient, url, toContainerName, targetOptions)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			command.Run(opt, "start", toContainerName)
+			defer command.Run(opt, "rm", "-f", toContainerName)
+
+			// Test write permissions
+			command.Run(opt, "exec", toContainerName, "sh", "-exc", "echo -n str1 > /mnt1/file1")
+			command.RunWithoutSuccessfulExit(opt, "exec", toContainerName, "sh", "-exc", "echo -n str2 > /mnt2/file2")
+			command.Run(opt, "exec", toContainerName, "sh", "-exc", "echo -n str3 > /mnt3/file3")
+			command.RunWithoutSuccessfulExit(opt, "exec", toContainerName, "sh", "-exc", "echo -n str4 > /mnt4/file4")
+
+			// Remove target container
+			command.Run(opt, "rm", "-f", toContainerName)
+
+			// Create a new container to verify data persistence
+			verifyOptions := types.ContainerCreateRequest{}
+			verifyOptions.Image = defaultImage
+			verifyOptions.Cmd = []string{"sh", "-c", "cat /mnt1/file1 /mnt3/file3"}
+			verifyOptions.HostConfig.VolumesFrom = []string{fromContainerName}
+
+			statusCode, _ = createContainer(uClient, url, "verify-container", verifyOptions)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			out := command.StdoutStr(opt, "start", "-a", "verify-container")
+			Expect(out).Should(Equal("str1str3"))
+			defer command.Run(opt, "rm", "-f", "verify-container")
+		})
+
+		It("should create a container with tmpfs mounts", func() {
+			// Define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.Tmpfs = map[string]string{
+				"/tmpfs1": "rw,noexec,nosuid,size=65536k",
+				"/tmpfs2": "", // no options
+			}
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// Start container
+			command.Run(opt, "start", testContainerName)
+
+			// Verify tmpfs mounts using native inspect
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Navigate to the mounts section
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			mounts, ok := spec["mounts"].([]interface{})
+			Expect(ok).Should(BeTrue())
+
+			// Verify tmpfs mounts
+			foundMounts := make(map[string]bool)
+			for _, mount := range mounts {
+				m := mount.(map[string]interface{})
+				if m["type"] == "tmpfs" {
+					foundMounts[m["destination"].(string)] = true
+					if m["destination"] == "/tmpfs1" {
+						options := m["options"].([]interface{})
+						optionsStr := make([]string, len(options))
+						for i, opt := range options {
+							optionsStr[i] = opt.(string)
+						}
+						Expect(optionsStr).Should(ContainElements(
+							"rw",
+							"noexec",
+							"nosuid",
+							"size=65536k",
+						))
+					}
+				}
+			}
+		})
+
+		It("should create a container with UTSMode set to host", func() {
+			// Define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.UTSMode = "host"
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// Start container
+			command.Run(opt, "start", testContainerName)
+
+			// Inspect using native format to verify UTS namespace configuration
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Navigate to the namespaces section
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			linux, ok := spec["linux"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			namespaces, ok := linux["namespaces"].([]interface{})
+			Expect(ok).Should(BeTrue())
+
+			// Verify UTS namespace is not present (indicating host namespace is used)
+			foundUTSNamespace := false
+			for _, ns := range namespaces {
+				namespace := ns.(map[string]interface{})
+				if namespace["type"] == "uts" {
+					foundUTSNamespace = true
+					break
+				}
+			}
+			Expect(foundUTSNamespace).Should(BeFalse())
+		})
 	})
 }
 
