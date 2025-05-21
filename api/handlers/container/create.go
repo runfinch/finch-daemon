@@ -108,16 +108,6 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Annotations: TODO - available in nerdctl 2.0
-	// Annotations are passed in as a map of strings,
-	// but nerdctl expects an array of strings with format [annotations1=VALUE1, annotations2=VALUE2, ...].
-	// annotations := []string{}
-	// if req.HostConfig.Annotations != nil {
-	// 	for key, val := range req.HostConfig.Annotations {
-	// 		annotations = append(annotations, fmt.Sprintf("%s=%s", key, val))
-	// 	}
-	// }
-
 	ulimits := []string{}
 	if req.HostConfig.Ulimits != nil {
 		for _, ulimit := range req.HostConfig.Ulimits {
@@ -279,8 +269,9 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #endregion
 
 		// #region for metadata flags
-		Name:  name,   // container name
-		Label: labels, // container labels
+		Name:        name,   // container name
+		Label:       labels, // container labels
+		Annotations: translateAnnotations(req.HostConfig.Annotations),
 		// #endregion
 
 		// #region for logging flags
@@ -426,6 +417,15 @@ func translateSysctls(sysctls map[string]string) []string {
 
 	var result []string
 	for key, val := range sysctls {
+		result = append(result, fmt.Sprintf("%s=%s", key, val))
+	}
+	return result
+}
+
+// translateAnnotations converts a map of annotations to a slice of strings in the format "KEY=VALUE".
+func translateAnnotations(annotations map[string]string) []string {
+	var result []string
+	for key, val := range annotations {
 		result = append(result, fmt.Sprintf("%s=%s", key, val))
 	}
 	return result
