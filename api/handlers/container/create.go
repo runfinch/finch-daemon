@@ -179,6 +179,20 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	if req.HostConfig.GroupAdd != nil {
 		groupAdd = req.HostConfig.GroupAdd
 	}
+	sysctl := []string{}
+	if req.HostConfig.Sysctls != nil {
+		sysctl = translateSysctls(req.HostConfig.Sysctls)
+	}
+
+	shmSize := ""
+	if req.HostConfig.ShmSize > 0 {
+		shmSize = fmt.Sprint(req.HostConfig.ShmSize)
+	}
+
+	runtime := defaults.Runtime
+	if req.HostConfig.Runtime != "" {
+		runtime = req.HostConfig.Runtime
+	}
 
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
@@ -228,6 +242,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		BlkioDeviceReadIOps:  throttleDevicesToStrings(req.HostConfig.BlkioDeviceReadIOps),
 		BlkioDeviceWriteIOps: throttleDevicesToStrings(req.HostConfig.BlkioDeviceWriteIOps),
 		IPC:                  req.HostConfig.IpcMode, // IPC namespace to use
+		ShmSize:              shmSize,
 		// #endregion
 
 		// #region for user flags
@@ -242,7 +257,8 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		Privileged:  req.HostConfig.Privileged,
 		// #endregion
 		// #region for runtime flags
-		Runtime: defaults.Runtime, // nerdctl default.
+		Runtime: runtime, // Runtime to use for this container, e.g. "crun", or "io.containerd.runc.v2".
+		Sysctl:  sysctl,
 		// #endregion
 
 		// #region for volume flags
@@ -391,4 +407,17 @@ func throttleDevicesToStrings(devices []*blkiodev.ThrottleDevice) []string {
 		strings[i] = d.String()
 	}
 	return strings
+}
+
+// translateSysctls converts a map of sysctls to a slice of strings in the format "KEY=VALUE".
+func translateSysctls(sysctls map[string]string) []string {
+	if sysctls == nil {
+		return nil
+	}
+
+	var result []string
+	for key, val := range sysctls {
+		result = append(result, fmt.Sprintf("%s=%s", key, val))
+	}
+	return result
 }
