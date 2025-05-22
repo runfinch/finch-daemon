@@ -482,6 +482,27 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
+		It("should set GroupAdd option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"GroupAdd": ["someGroup"]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.GroupAdd = []string{"someGroup"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
 		It("should set Privileged option", func() {
 			body := []byte(`{
 				"Image": "test-image",
@@ -676,7 +697,7 @@ var _ = Describe("Container Create API ", func() {
 				"Image": "test-image",
 				"HostConfig": {
 					"OomKillDisable": true
-				}
+					}
 			}`)
 			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
 
@@ -686,6 +707,268 @@ var _ = Describe("Container Create API ", func() {
 				cid, nil)
 
 			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+		It("should set the BlkioWeight to a user specified value", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"BlkioWeight": 300
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected network options
+			createOpt.BlkioWeight = 300
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set blkio device settings", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"BlkioWeightDevice": [
+						{
+							"Path": "/dev/sda",
+							"Weight": 400
+						}
+					],
+					"BlkioDeviceReadBps": [
+						{
+							"Path": "/dev/sda",
+							"Rate": 1048576
+						}
+					],
+					"BlkioDeviceWriteBps": [
+						{
+							"Path": "/dev/sda",
+							"Rate": 2097152
+						}
+					],
+					"BlkioDeviceReadIOps": [
+						{
+							"Path": "/dev/sda",
+							"Rate": 1000
+						}
+					],
+					"BlkioDeviceWriteIOps": [
+						{
+							"Path": "/dev/sda",
+							"Rate": 2000
+						}
+					]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options with blkio settings as strings
+			createOpt.BlkioWeightDevice = []string{
+				"/dev/sda:400",
+			}
+			createOpt.BlkioDeviceReadBps = []string{
+				"/dev/sda:1048576",
+			}
+			createOpt.BlkioDeviceWriteBps = []string{
+				"/dev/sda:2097152",
+			}
+			createOpt.BlkioDeviceReadIOps = []string{
+				"/dev/sda:1000",
+			}
+			createOpt.BlkioDeviceWriteIOps = []string{
+				"/dev/sda:2000",
+			}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set VolumesFrom option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"VolumesFrom": [ "parent", "other:ro"]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			createOpt.VolumesFrom = []string{"parent", "other:ro"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set Tmpfs and UTSMode option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"Tmpfs": { "/run": "rw,noexec,nosuid,size=65536k" },
+					"UTSMode": "host"
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.Tmpfs = []string{"/run:rw,noexec,nosuid,size=65536k"}
+			netOpt.UTSNamespace = "host"
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set PidMode option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"PidMode": "host"
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.Pid = "host"
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set IPC option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"IpcMode": "host"
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.IPC = "host"
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set ShmSize, Sysctl and Runtime option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"Sysctls": { "net.ipv4.ip_forward": "1" },
+					"ShmSize": 302348,
+					"Runtime": "crun"
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.ShmSize = "302348"
+			createOpt.Sysctl = []string{"net.ipv4.ip_forward=1"}
+			createOpt.Runtime = "crun"
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set ReadonlyRootfs and SecurityOpt option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"ReadonlyRootfs": true,
+					"SecurityOpt": [ "seccomp=/path/to/custom_seccomp.json", "apparmor=unconfined"]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.ReadOnly = true
+			createOpt.SecurityOpt = []string{"seccomp=/path/to/custom_seccomp.json", "apparmor=unconfined"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set specified annotation", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"Annotations": {
+						"com.example.key": "value1"
+					}
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// Create a copy of default options and add annotation
+			expectedCreateOpt := createOpt
+			expectedCreateOpt.Annotations = []string{"com.example.key=value1"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(expectedCreateOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set specified annotation", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"Annotations": {
+						"com.example.key": "value1"
+					}
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// Create a copy of default options and add annotation
+			expectedCreateOpt := createOpt
+			expectedCreateOpt.Annotations = []string{"com.example.key=value1"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(expectedCreateOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
 			h.create(rr, req)
 			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
@@ -759,6 +1042,78 @@ var _ = Describe("Container Create API ", func() {
 				Expect(cniPortMappings).Should(ContainElements(expected))
 			})
 		})
+
+		Context("translate tmpfs", func() {
+			It("should return nil for nil input", func() {
+				Expect(translateTmpfs(nil)).Should(BeNil())
+			})
+
+			It("should return empty slice for empty map", func() {
+				Expect(translateTmpfs(map[string]string{})).Should(BeEmpty())
+			})
+
+			It("should handle single tmpfs mount with options", func() {
+				input := map[string]string{
+					"/run": "rw,noexec,nosuid,size=65536k",
+				}
+				expected := []string{"/run:rw,noexec,nosuid,size=65536k"}
+				Expect(translateTmpfs(input)).Should(Equal(expected))
+			})
+
+			It("should handle multiple tmpfs mounts with different options", func() {
+				input := map[string]string{
+					"/run": "rw,noexec,nosuid,size=65536k",
+					"/tmp": "rw,exec,size=32768k",
+					"/var": "",
+				}
+				result := translateTmpfs(input)
+				Expect(result).Should(ConsistOf(
+					"/run:rw,noexec,nosuid,size=65536k",
+					"/tmp:rw,exec,size=32768k",
+					"/var",
+				))
+			})
+
+			It("should handle tmpfs mount without options", func() {
+				input := map[string]string{
+					"/run": "",
+				}
+				expected := []string{"/run"}
+				Expect(translateTmpfs(input)).Should(Equal(expected))
+			})
+		})
+
+		Context("translate annotations", func() {
+			It("should return nil for nil input", func() {
+				Expect(translateAnnotations(nil)).Should(BeNil())
+			})
+
+			It("should return empty slice for empty map", func() {
+				Expect(translateAnnotations(map[string]string{})).Should(BeEmpty())
+			})
+
+			It("should handle single annotation", func() {
+				input := map[string]string{
+					"com.example.key": "value1",
+				}
+				expected := []string{"com.example.key=value1"}
+				Expect(translateAnnotations(input)).Should(Equal(expected))
+			})
+
+			It("should handle multiple annotations", func() {
+				input := map[string]string{
+					"com.example.key1":  "value1",
+					"com.example.key2":  "value2",
+					"io.containerd.key": "value3",
+				}
+				result := translateAnnotations(input)
+				Expect(result).Should(ConsistOf(
+					"com.example.key1=value1",
+					"com.example.key2=value2",
+					"io.containerd.key=value3",
+				))
+			})
+		})
 	})
 })
 
@@ -809,6 +1164,12 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 		PidsLimit:          -1,                      // nerdctl default.
 		Cgroupns:           defaults.CgroupnsMode(), // nerdctl default.
 		Ulimit:             []string{},
+
+		BlkioWeightDevice:    []string{},
+		BlkioDeviceReadBps:   []string{},
+		BlkioDeviceWriteBps:  []string{},
+		BlkioDeviceReadIOps:  []string{},
+		BlkioDeviceWriteIOps: []string{},
 		// #endregion
 
 		// #region for user flags
@@ -820,14 +1181,18 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 		CapAdd:      []string{}, // nerdctl default.
 		CapDrop:     []string{}, // nerdctl default.
 		Privileged:  false,
+		GroupAdd:    []string{}, // nerdctl default.
 		// #endregion
 
 		// #region for runtime flags
 		Runtime: defaults.Runtime, // nerdctl default.
+		Sysctl:  []string{},
 		// #endregion
 
 		// #region for volume flags
-		Volume: nil,
+		Volume:      nil,
+		VolumesFrom: []string{},
+		Tmpfs:       []string{},
 		// #endregion
 
 		// #region for env flags

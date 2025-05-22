@@ -15,6 +15,7 @@ import (
 	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/containerd/nerdctl/v2/pkg/defaults"
 	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/blkiodev"
 	"github.com/sirupsen/logrus"
 
 	"github.com/runfinch/finch-daemon/api/response"
@@ -107,16 +108,6 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Annotations: TODO - available in nerdctl 2.0
-	// Annotations are passed in as a map of strings,
-	// but nerdctl expects an array of strings with format [annotations1=VALUE1, annotations2=VALUE2, ...].
-	// annotations := []string{}
-	// if req.HostConfig.Annotations != nil {
-	// 	for key, val := range req.HostConfig.Annotations {
-	// 		annotations = append(annotations, fmt.Sprintf("%s=%s", key, val))
-	// 	}
-	// }
-
 	ulimits := []string{}
 	if req.HostConfig.Ulimits != nil {
 		for _, ulimit := range req.HostConfig.Ulimits {
@@ -165,6 +156,38 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CpuQuota = req.HostConfig.CPUQuota
 	}
 
+	volumesFrom := []string{}
+	if req.HostConfig.VolumesFrom != nil {
+		volumesFrom = req.HostConfig.VolumesFrom
+	}
+
+	tmpfs := []string{}
+	if req.HostConfig.Tmpfs != nil {
+		tmpfs = translateTmpfs(req.HostConfig.Tmpfs)
+	}
+	groupAdd := []string{}
+	if req.HostConfig.GroupAdd != nil {
+		groupAdd = req.HostConfig.GroupAdd
+	}
+	sysctl := []string{}
+	if req.HostConfig.Sysctls != nil {
+		sysctl = translateSysctls(req.HostConfig.Sysctls)
+	}
+
+	shmSize := ""
+	if req.HostConfig.ShmSize > 0 {
+		shmSize = fmt.Sprint(req.HostConfig.ShmSize)
+	}
+
+	runtime := defaults.Runtime
+	if req.HostConfig.Runtime != "" {
+		runtime = req.HostConfig.Runtime
+	}
+	securityOpt := []string{}
+	if req.HostConfig.SecurityOpt != nil {
+		securityOpt = req.HostConfig.SecurityOpt
+	}
+
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
 		Stdout:   nil,
@@ -182,6 +205,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		StopTimeout:    stopTimeout,
 		CidFile:        req.HostConfig.ContainerIDFile, // CidFile write the container ID to the file
 		OomKillDisable: req.HostConfig.OomKillDisable,
+		Pid:            req.HostConfig.PidMode, // Pid namespace to use
 		// #endregion
 
 		// #region for platform flags
@@ -193,36 +217,48 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #endregion
 
 		// #region for resource flags
-		CPUShares:          uint64(req.HostConfig.CPUShares), // CPU shares (relative weight)
-		Memory:             memory,                           // memory limit (in bytes)
-		CPUQuota:           CpuQuota,                         // CPUQuota limits the CPU CFS (Completely Fair Scheduler) quota
-		MemorySwappiness64: memorySwappiness,                 // Tuning container memory swappiness behaviour
-		PidsLimit:          pidLimit,                         // PidsLimit specifies the tune container pids limit
-		Cgroupns:           defaults.CgroupnsMode(),          // nerdctl default.
-		MemoryReservation:  memoryReservation,                // Memory soft limit (in bytes)
-		MemorySwap:         memorySwap,                       // Total memory usage (memory + swap); set `-1` to enable unlimited swap
-		Ulimit:             ulimits,                          // List of ulimits to be set in the container
-		CPUPeriod:          uint64(req.HostConfig.CPUPeriod), // CPU CFS (Completely Fair Scheduler) period
-		CPUSetCPUs:         req.HostConfig.CPUSetCPUs,        // CpusetCpus 0-2, 0,1
-		CPUSetMems:         req.HostConfig.CPUSetMems,        // CpusetMems 0-2, 0,1
+		CPUSetCPUs:           req.HostConfig.CPUSetCPUs,        // CpusetCpus 0-2, 0,1
+		CPUSetMems:           req.HostConfig.CPUSetMems,        // CpusetMems 0-2, 0,1
+		CPUShares:            uint64(req.HostConfig.CPUShares), // CPU shares (relative weight)
+		CPUQuota:             CpuQuota,                         // CPUQuota limits the CPU CFS (Completely Fair Scheduler) quota
+		CPUPeriod:            uint64(req.HostConfig.CPUPeriod),
+		Memory:               memory,                  // memory limit (in bytes)
+		MemorySwap:           memorySwap,              // Total memory usage (memory + swap); set `-1` to enable unlimited swap
+		MemoryReservation:    memoryReservation,       // Memory soft limit (in bytes)
+		MemorySwappiness64:   memorySwappiness,        // Tuning container memory swappiness behaviour
+		Ulimit:               ulimits,                 // List of ulimits to be set in the container
+		PidsLimit:            pidLimit,                // PidsLimit specifies the tune container pids limit
+		Cgroupns:             defaults.CgroupnsMode(), // nerdctl default.
+		BlkioWeight:          req.HostConfig.BlkioWeight,
+		BlkioWeightDevice:    weightDevicesToStrings(req.HostConfig.BlkioWeightDevice),
+		BlkioDeviceReadBps:   throttleDevicesToStrings(req.HostConfig.BlkioDeviceReadBps),
+		BlkioDeviceWriteBps:  throttleDevicesToStrings(req.HostConfig.BlkioDeviceWriteBps),
+		BlkioDeviceReadIOps:  throttleDevicesToStrings(req.HostConfig.BlkioDeviceReadIOps),
+		BlkioDeviceWriteIOps: throttleDevicesToStrings(req.HostConfig.BlkioDeviceWriteIOps),
+		IPC:                  req.HostConfig.IpcMode, // IPC namespace to use
+		ShmSize:              shmSize,
 		// #endregion
 
 		// #region for user flags
-		User: req.User,
+		User:     req.User,
+		GroupAdd: groupAdd,
 		// #endregion
 
 		// #region for security flags
-		SecurityOpt: []string{}, // nerdctl default.
+		SecurityOpt: securityOpt,
 		CapAdd:      capAdd,
 		CapDrop:     capDrop,
 		Privileged:  req.HostConfig.Privileged,
 		// #endregion
 		// #region for runtime flags
-		Runtime: defaults.Runtime, // nerdctl default.
+		Runtime: runtime, // Runtime to use for this container, e.g. "crun", or "io.containerd.runc.v2".
+		Sysctl:  sysctl,
 		// #endregion
 
 		// #region for volume flags
-		Volume: volumes,
+		Volume:      volumes,
+		VolumesFrom: volumesFrom,
+		Tmpfs:       tmpfs,
 		// #endregion
 
 		// #region for env flags
@@ -233,8 +269,9 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #endregion
 
 		// #region for metadata flags
-		Name:  name,   // container name
-		Label: labels, // container labels
+		Name:        name,   // container name
+		Label:       labels, // container labels
+		Annotations: translateAnnotations(req.HostConfig.Annotations),
 		// #endregion
 
 		// #region for logging flags
@@ -251,6 +288,11 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 			Stderr:        nil,
 		},
 		// #endregion
+
+		// #region for rootfs flags
+		ReadOnly: req.HostConfig.ReadonlyRootfs, // Is the container root filesystem in read-only
+		// #endregion
+
 	}
 
 	portMappings, err := translatePortMappings(req.HostConfig.PortBindings)
@@ -280,6 +322,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		PortMappings:         portMappings,
 		AddHost:              req.HostConfig.ExtraHosts, // Extra hosts.
 		MACAddress:           req.MacAddress,
+		UTSNamespace:         req.HostConfig.UTSMode,
 	}
 
 	ctx := namespaces.WithNamespace(r.Context(), h.Config.Namespace)
@@ -301,6 +344,21 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, http.StatusCreated, containerCreateResponse{cid})
+}
+
+// translateTmpfs converts a map of tmpfs mounts to a slice of strings in the format "DEST:OPTIONS".
+// Tmpfs are passed in as a map of strings,
+// but nerdctl expects an array of strings with format [TMPFS1:VALUE1, TMPFS2:VALUE2, ...].
+func translateTmpfs(tmpfs map[string]string) []string {
+	var result []string
+	for dest, options := range tmpfs {
+		if options == "" {
+			result = append(result, dest)
+		} else {
+			result = append(result, fmt.Sprintf("%s:%s", dest, options))
+		}
+	}
+	return result
 }
 
 // translate docker port mappings to go-cni port mappings.
@@ -331,4 +389,44 @@ func translatePortMappings(portMappings nat.PortMap) ([]gocni.PortMapping, error
 		}
 	}
 	return ports, nil
+}
+
+// Helper function to convert WeightDevice array to string array.
+func weightDevicesToStrings(devices []*blkiodev.WeightDevice) []string {
+	strings := make([]string, len(devices))
+	for i, d := range devices {
+		strings[i] = d.String()
+	}
+	return strings
+}
+
+// Helper function to convert ThrottleDevice array to string array.
+func throttleDevicesToStrings(devices []*blkiodev.ThrottleDevice) []string {
+	strings := make([]string, len(devices))
+	for i, d := range devices {
+		strings[i] = d.String()
+	}
+	return strings
+}
+
+// translateSysctls converts a map of sysctls to a slice of strings in the format "KEY=VALUE".
+func translateSysctls(sysctls map[string]string) []string {
+	if sysctls == nil {
+		return nil
+	}
+
+	var result []string
+	for key, val := range sysctls {
+		result = append(result, fmt.Sprintf("%s=%s", key, val))
+	}
+	return result
+}
+
+// translateAnnotations converts a map of annotations to a slice of strings in the format "KEY=VALUE".
+func translateAnnotations(annotations map[string]string) []string {
+	var result []string
+	for key, val := range annotations {
+		result = append(result, fmt.Sprintf("%s=%s", key, val))
+	}
+	return result
 }
