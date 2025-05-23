@@ -226,3 +226,11 @@ func GetFinchExe() string {
 	}
 	return finchexe
 }
+
+func GetFinchDaemonExe() string {
+	daemonPath := os.Getenv("DAEMON_ROOT")
+	if daemonPath == "" {
+		daemonPath = "./bin/finch-daemon" // fallback
+	}
+	return daemonPath
+}
