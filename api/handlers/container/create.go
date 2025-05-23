@@ -187,6 +187,10 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	if req.HostConfig.SecurityOpt != nil {
 		securityOpt = req.HostConfig.SecurityOpt
 	}
+	cgroupnsMode := defaults.CgroupnsMode()
+	if req.HostConfig.CgroupnsMode.Valid() {
+		cgroupnsMode = string(req.HostConfig.CgroupnsMode)
+	}
 
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
@@ -222,13 +226,13 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CPUShares:            uint64(req.HostConfig.CPUShares), // CPU shares (relative weight)
 		CPUQuota:             CpuQuota,                         // CPUQuota limits the CPU CFS (Completely Fair Scheduler) quota
 		CPUPeriod:            uint64(req.HostConfig.CPUPeriod),
-		Memory:               memory,                  // memory limit (in bytes)
-		MemorySwap:           memorySwap,              // Total memory usage (memory + swap); set `-1` to enable unlimited swap
-		MemoryReservation:    memoryReservation,       // Memory soft limit (in bytes)
-		MemorySwappiness64:   memorySwappiness,        // Tuning container memory swappiness behaviour
-		Ulimit:               ulimits,                 // List of ulimits to be set in the container
-		PidsLimit:            pidLimit,                // PidsLimit specifies the tune container pids limit
-		Cgroupns:             defaults.CgroupnsMode(), // nerdctl default.
+		Memory:               memory,            // memory limit (in bytes)
+		MemorySwap:           memorySwap,        // Total memory usage (memory + swap); set `-1` to enable unlimited swap
+		MemoryReservation:    memoryReservation, // Memory soft limit (in bytes)
+		MemorySwappiness64:   memorySwappiness,  // Tuning container memory swappiness behaviour
+		Ulimit:               ulimits,           // List of ulimits to be set in the container
+		PidsLimit:            pidLimit,          // PidsLimit specifies the tune container pids limit
+		Cgroupns:             cgroupnsMode,      // Cgroupns specifies the cgroup namespace to use
 		BlkioWeight:          req.HostConfig.BlkioWeight,
 		BlkioWeightDevice:    weightDevicesToStrings(req.HostConfig.BlkioWeightDevice),
 		BlkioDeviceReadBps:   throttleDevicesToStrings(req.HostConfig.BlkioDeviceReadBps),
