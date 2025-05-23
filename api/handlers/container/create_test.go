@@ -974,6 +974,42 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
+		It("should set Devices option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"Devices": [{"PathOnHost": "/dev/null", "PathInContainer": "/dev/null", "CgroupPermissions": "rwm"},{"PathOnHost": "/var/lib", "CgroupPermissions": "ro"}]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.Device = []string{"/dev/null:/dev/null:rwm", "/var/lib:ro"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should return 400 for invalid Devices configuration", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"Devices": [{"PathOnHost": "", "PathInContainer": "/dev/null", "CgroupPermissions": "rwm"}]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// handler should return bad request message with 400 status code
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusBadRequest))
+			Expect(rr.Body.String()).Should(ContainSubstring("invalid device configuration"))
+		})
+
 		Context("translate port mappings", func() {
 			It("should return empty if port mappings is nil", func() {
 				Expect(translatePortMappings(nil)).Should(BeEmpty())
@@ -1170,6 +1206,7 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 		BlkioDeviceWriteBps:  []string{},
 		BlkioDeviceReadIOps:  []string{},
 		BlkioDeviceWriteIOps: []string{},
+		Device:               []string{},
 		// #endregion
 
 		// #region for user flags
