@@ -1265,6 +1265,153 @@ func ContainerCreate(opt *option.Option) {
 			}
 			Expect(foundAllowAllDevices).Should(BeTrue())
 		})
+
+		It("should create a container with specified ShmSize", func() {
+			// Define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.ShmSize = 134217728 // 128MB
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// Start container
+			command.Run(opt, "start", testContainerName)
+
+			// Inspect container using Docker-compatible format
+			resp := command.Stdout(opt, "inspect", testContainerName)
+			var inspect []*dockercompat.Container
+			err := json.Unmarshal(resp, &inspect)
+			Expect(err).Should(BeNil())
+			Expect(inspect).Should(HaveLen(1))
+
+			// Verify ShmSize in HostConfig
+			Expect(inspect[0].HostConfig.ShmSize).Should(Equal(options.HostConfig.ShmSize))
+		})
+
+		It("should create a container with specified Sysctls", func() {
+			// Define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.Sysctls = map[string]string{
+				"net.ipv4.ip_forward": "1",
+				"kernel.msgmax":       "65536",
+			}
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// Start container
+			command.Run(opt, "start", testContainerName)
+
+			// Verify sysctls using native inspect
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Navigate to the sysctls section
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			linux, ok := spec["linux"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			sysctls, ok := linux["sysctl"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+
+			// Verify sysctl values
+			Expect(sysctls["net.ipv4.ip_forward"]).Should(Equal("1"))
+			Expect(sysctls["kernel.msgmax"]).Should(Equal("65536"))
+		})
+
+		It("should create a container with specified Runtime", func() {
+			// Define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.Runtime = "io.containerd.runc.v2"
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// Start container
+			command.Run(opt, "start", testContainerName)
+
+			// Verify runtime using native inspect
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Navigate to the Runtime section
+			runtime, ok := nativeInspect[0]["Runtime"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+
+			// Verify runtime name
+			runtimeName, ok := runtime["Name"].(string)
+			Expect(ok).Should(BeTrue())
+			Expect(runtimeName).Should(Equal(options.HostConfig.Runtime))
+		})
+
+		It("should create a container with readonly root filesystem", func() {
+			// Define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.ReadonlyRootfs = true
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// Additional verification through native inspect
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Verify readonly root in the spec
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			root, ok := spec["root"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			readonly, ok := root["readonly"].(bool)
+			Expect(ok).Should(BeTrue())
+			Expect(readonly).Should(BeTrue())
+		})
+
+		It("should create a container with specified annotation", func() {
+			// Define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.Annotations = map[string]string{
+				"com.example.key": "test-value",
+			}
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// Start container
+			command.Run(opt, "start", testContainerName)
+
+			// Inspect using native format to verify annotation
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Verify annotation in container spec
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			annotations, ok := spec["annotations"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			Expect(annotations["com.example.key"]).Should(Equal("test-value"))
+		})
 	})
 }
 

@@ -108,16 +108,6 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Annotations: TODO - available in nerdctl 2.0
-	// Annotations are passed in as a map of strings,
-	// but nerdctl expects an array of strings with format [annotations1=VALUE1, annotations2=VALUE2, ...].
-	// annotations := []string{}
-	// if req.HostConfig.Annotations != nil {
-	// 	for key, val := range req.HostConfig.Annotations {
-	// 		annotations = append(annotations, fmt.Sprintf("%s=%s", key, val))
-	// 	}
-	// }
-
 	ulimits := []string{}
 	if req.HostConfig.Ulimits != nil {
 		for _, ulimit := range req.HostConfig.Ulimits {
@@ -179,6 +169,24 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	if req.HostConfig.GroupAdd != nil {
 		groupAdd = req.HostConfig.GroupAdd
 	}
+	sysctl := []string{}
+	if req.HostConfig.Sysctls != nil {
+		sysctl = translateSysctls(req.HostConfig.Sysctls)
+	}
+
+	shmSize := ""
+	if req.HostConfig.ShmSize > 0 {
+		shmSize = fmt.Sprint(req.HostConfig.ShmSize)
+	}
+
+	runtime := defaults.Runtime
+	if req.HostConfig.Runtime != "" {
+		runtime = req.HostConfig.Runtime
+	}
+	securityOpt := []string{}
+	if req.HostConfig.SecurityOpt != nil {
+		securityOpt = req.HostConfig.SecurityOpt
+	}
 
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
@@ -228,6 +236,7 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		BlkioDeviceReadIOps:  throttleDevicesToStrings(req.HostConfig.BlkioDeviceReadIOps),
 		BlkioDeviceWriteIOps: throttleDevicesToStrings(req.HostConfig.BlkioDeviceWriteIOps),
 		IPC:                  req.HostConfig.IpcMode, // IPC namespace to use
+		ShmSize:              shmSize,
 		// #endregion
 
 		// #region for user flags
@@ -236,13 +245,14 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #endregion
 
 		// #region for security flags
-		SecurityOpt: []string{}, // nerdctl default.
+		SecurityOpt: securityOpt,
 		CapAdd:      capAdd,
 		CapDrop:     capDrop,
 		Privileged:  req.HostConfig.Privileged,
 		// #endregion
 		// #region for runtime flags
-		Runtime: defaults.Runtime, // nerdctl default.
+		Runtime: runtime, // Runtime to use for this container, e.g. "crun", or "io.containerd.runc.v2".
+		Sysctl:  sysctl,
 		// #endregion
 
 		// #region for volume flags
@@ -259,8 +269,9 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #endregion
 
 		// #region for metadata flags
-		Name:  name,   // container name
-		Label: labels, // container labels
+		Name:        name,   // container name
+		Label:       labels, // container labels
+		Annotations: translateAnnotations(req.HostConfig.Annotations),
 		// #endregion
 
 		// #region for logging flags
@@ -277,6 +288,11 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 			Stderr:        nil,
 		},
 		// #endregion
+
+		// #region for rootfs flags
+		ReadOnly: req.HostConfig.ReadonlyRootfs, // Is the container root filesystem in read-only
+		// #endregion
+
 	}
 
 	portMappings, err := translatePortMappings(req.HostConfig.PortBindings)
@@ -391,4 +407,26 @@ func throttleDevicesToStrings(devices []*blkiodev.ThrottleDevice) []string {
 		strings[i] = d.String()
 	}
 	return strings
+}
+
+// translateSysctls converts a map of sysctls to a slice of strings in the format "KEY=VALUE".
+func translateSysctls(sysctls map[string]string) []string {
+	if sysctls == nil {
+		return nil
+	}
+
+	var result []string
+	for key, val := range sysctls {
+		result = append(result, fmt.Sprintf("%s=%s", key, val))
+	}
+	return result
+}
+
+// translateAnnotations converts a map of annotations to a slice of strings in the format "KEY=VALUE".
+func translateAnnotations(annotations map[string]string) []string {
+	var result []string
+	for key, val := range annotations {
+		result = append(result, fmt.Sprintf("%s=%s", key, val))
+	}
+	return result
 }

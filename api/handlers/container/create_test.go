@@ -880,6 +880,100 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
+		It("should set ShmSize, Sysctl and Runtime option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"Sysctls": { "net.ipv4.ip_forward": "1" },
+					"ShmSize": 302348,
+					"Runtime": "crun"
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.ShmSize = "302348"
+			createOpt.Sysctl = []string{"net.ipv4.ip_forward=1"}
+			createOpt.Runtime = "crun"
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set ReadonlyRootfs and SecurityOpt option", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"ReadonlyRootfs": true,
+					"SecurityOpt": [ "seccomp=/path/to/custom_seccomp.json", "apparmor=unconfined"]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.ReadOnly = true
+			createOpt.SecurityOpt = []string{"seccomp=/path/to/custom_seccomp.json", "apparmor=unconfined"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set specified annotation", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"Annotations": {
+						"com.example.key": "value1"
+					}
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// Create a copy of default options and add annotation
+			expectedCreateOpt := createOpt
+			expectedCreateOpt.Annotations = []string{"com.example.key=value1"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(expectedCreateOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set specified annotation", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"Annotations": {
+						"com.example.key": "value1"
+					}
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// Create a copy of default options and add annotation
+			expectedCreateOpt := createOpt
+			expectedCreateOpt.Annotations = []string{"com.example.key=value1"}
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(expectedCreateOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
 		Context("translate port mappings", func() {
 			It("should return empty if port mappings is nil", func() {
 				Expect(translatePortMappings(nil)).Should(BeEmpty())
@@ -988,6 +1082,38 @@ var _ = Describe("Container Create API ", func() {
 				Expect(translateTmpfs(input)).Should(Equal(expected))
 			})
 		})
+
+		Context("translate annotations", func() {
+			It("should return nil for nil input", func() {
+				Expect(translateAnnotations(nil)).Should(BeNil())
+			})
+
+			It("should return empty slice for empty map", func() {
+				Expect(translateAnnotations(map[string]string{})).Should(BeEmpty())
+			})
+
+			It("should handle single annotation", func() {
+				input := map[string]string{
+					"com.example.key": "value1",
+				}
+				expected := []string{"com.example.key=value1"}
+				Expect(translateAnnotations(input)).Should(Equal(expected))
+			})
+
+			It("should handle multiple annotations", func() {
+				input := map[string]string{
+					"com.example.key1":  "value1",
+					"com.example.key2":  "value2",
+					"io.containerd.key": "value3",
+				}
+				result := translateAnnotations(input)
+				Expect(result).Should(ConsistOf(
+					"com.example.key1=value1",
+					"com.example.key2=value2",
+					"io.containerd.key=value3",
+				))
+			})
+		})
 	})
 })
 
@@ -1060,6 +1186,7 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 
 		// #region for runtime flags
 		Runtime: defaults.Runtime, // nerdctl default.
+		Sysctl:  []string{},
 		// #endregion
 
 		// #region for volume flags
