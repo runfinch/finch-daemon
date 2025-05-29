@@ -4,7 +4,9 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/containerd/nerdctl/v2/pkg/config"
@@ -70,4 +72,70 @@ namespace = "test_namespace"
 	assert.NoError(t, err, "Valid TOML should not cause an error.")
 	assert.Equal(t, "test_address", cfg.Address)
 	assert.Equal(t, "test_namespace", cfg.Namespace)
+}
+
+func TestCheckRegoFileValidity(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupFunc     func() (string, func())
+		expectedError string
+	}{
+		{
+			name: "valid rego file",
+			setupFunc: func() (string, func()) {
+				// Create a temporary directory
+				tmpDir, err := os.MkdirTemp("", "rego_test")
+				require.NoError(t, err)
+
+				// Create a file with .rego extension and proper content
+				regoPath := filepath.Join(tmpDir, "test.rego")
+				regoContent := `package finch.authz
+
+import future.keywords.if
+import rego.v1
+
+default allow = false
+`
+				fmt.Println("regopath = ", regoPath)
+				err = os.WriteFile(regoPath, []byte(regoContent), 0600)
+				require.NoError(t, err)
+
+				return regoPath, func() {
+					os.RemoveAll(tmpDir)
+				}
+			},
+			expectedError: "",
+		},
+		{
+			name: "non-existent file",
+			setupFunc: func() (string, func()) {
+				return filepath.Join(os.TempDir(), "nonexistent.rego"), func() {}
+			},
+			expectedError: "provided Rego file path does not exist",
+		},
+		{
+			name: "wrong extension",
+			setupFunc: func() (string, func()) {
+				tmpFile, err := os.CreateTemp("", "test.txt")
+				require.NoError(t, err)
+				return tmpFile.Name(), func() { os.Remove(tmpFile.Name()) }
+			},
+			expectedError: "invalid file extension",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filePath, cleanup := tt.setupFunc()
+			defer cleanup()
+
+			err := checkRegoFileValidity(filePath)
+
+			if tt.expectedError != "" {
+				assert.ErrorContains(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
