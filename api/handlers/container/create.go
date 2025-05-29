@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -23,6 +25,8 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 	"github.com/runfinch/finch-daemon/pkg/utility/maputility"
 )
+
+const errGatheringDeviceInfo = "error gathering device information while adding custom device"
 
 type containerCreateResponse struct {
 	ID string `json:"Id"`
@@ -197,6 +201,16 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	} else {
 		cgroupnsMode = defaults.CgroupnsMode()
 	}
+	devices := []string{}
+	if req.HostConfig.Devices != nil {
+		// Validate device configurations
+		for _, device := range req.HostConfig.Devices {
+			if err := validateDevice(w, device.PathOnHost); err != nil {
+				return
+			}
+		}
+		devices = translateDevices(req.HostConfig.Devices)
+	}
 
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
@@ -247,6 +261,8 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		BlkioDeviceWriteIOps: throttleDevicesToStrings(req.HostConfig.BlkioDeviceWriteIOps),
 		IPC:                  req.HostConfig.IpcMode, // IPC namespace to use
 		ShmSize:              shmSize,
+		Device:               devices, // Device specifies add a host device to the container
+
 		// #endregion
 
 		// #region for user flags
@@ -439,4 +455,62 @@ func translateAnnotations(annotations map[string]string) []string {
 		result = append(result, fmt.Sprintf("%s=%s", key, val))
 	}
 	return result
+}
+
+// translateDevices converts a slice of DeviceMapping to a slice of strings in the format "PATH_ON_HOST[:PATH_IN_CONTAINER][:CGROUP_PERMISSIONS]".
+func translateDevices(devices []types.DeviceMapping) []string {
+	if devices == nil {
+		return nil
+	}
+
+	var result []string
+	for _, deviceMap := range devices {
+		deviceString := deviceMap.PathOnHost
+
+		if deviceMap.PathInContainer != "" {
+			deviceString += ":" + deviceMap.PathInContainer
+			if deviceMap.CgroupPermissions != "" {
+				deviceString += ":" + deviceMap.CgroupPermissions
+			}
+		} else if deviceMap.CgroupPermissions != "" {
+			deviceString += ":" + deviceMap.CgroupPermissions
+		}
+
+		result = append(result, deviceString)
+	}
+	return result
+}
+
+// validateDevice validates a device path and returns an error if validation fails.
+// The error is sent as a JSON response with HTTP 400 status code.
+func validateDevice(w http.ResponseWriter, pathOnHost string) error {
+	if pathOnHost == "" {
+		response.JSON(w, http.StatusBadRequest, response.NewErrorFromMsg(errGatheringDeviceInfo))
+		return fmt.Errorf("empty device path")
+	}
+
+	// Check if path exists and resolve symlinks
+	resolvedPath := pathOnHost
+	if src, err := os.Lstat(pathOnHost); err != nil {
+		response.JSON(w, http.StatusBadRequest, response.NewErrorFromMsg(fmt.Sprintf("%s %q: %v", errGatheringDeviceInfo, pathOnHost, err)))
+		return err
+	} else if src.Mode()&os.ModeSymlink == os.ModeSymlink {
+		if linkedPath, err := filepath.EvalSymlinks(pathOnHost); err != nil {
+			response.JSON(w, http.StatusBadRequest, response.NewErrorFromMsg(fmt.Sprintf("%s %q: %v", errGatheringDeviceInfo, pathOnHost, err)))
+			return err
+		} else {
+			resolvedPath = linkedPath
+		}
+	}
+
+	// Check if path is a device or directory
+	if src, err := os.Stat(resolvedPath); err != nil {
+		response.JSON(w, http.StatusBadRequest, response.NewErrorFromMsg(fmt.Sprintf("%s %q: %v", errGatheringDeviceInfo, pathOnHost, err)))
+		return err
+	} else if !src.IsDir() && (src.Mode()&os.ModeDevice) == 0 {
+		response.JSON(w, http.StatusBadRequest, response.NewErrorFromMsg(fmt.Sprintf("%s %q: not a device", errGatheringDeviceInfo, pathOnHost)))
+		return fmt.Errorf("not a device")
+	}
+
+	return nil
 }

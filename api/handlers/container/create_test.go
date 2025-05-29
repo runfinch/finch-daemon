@@ -928,50 +928,64 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
-		It("should set specified annotation", func() {
+		It("should reject invalid device paths", func() {
 			body := []byte(`{
 				"Image": "test-image",
 				"HostConfig": {
-					"Annotations": {
-						"com.example.key": "value1"
-					}
+					"Devices": [
+						{
+							"PathOnHost": "/dev/nonexistent",
+							"PathInContainer": "/dev/nonexistent",
+							"CgroupPermissions": "rwm"
+						}
+					]
 				}
 			}`)
 			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
 
-			// Create a copy of default options and add annotation
-			expectedCreateOpt := createOpt
-			expectedCreateOpt.Annotations = []string{"com.example.key=value1"}
-
-			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(expectedCreateOpt), equalTo(netOpt)).Return(
-				cid, nil)
-
 			h.create(rr, req)
-			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
-			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+			Expect(rr).Should(HaveHTTPStatus(http.StatusBadRequest))
+			Expect(rr.Body.String()).Should(ContainSubstring(`{"message":"error gathering device information while adding custom device \"/dev/nonexistent\": lstat /dev/nonexistent: no such file or directory"}`))
 		})
 
-		It("should set specified annotation", func() {
+		It("should reject empty device paths", func() {
 			body := []byte(`{
 				"Image": "test-image",
 				"HostConfig": {
-					"Annotations": {
-						"com.example.key": "value1"
-					}
+					"Devices": [
+						{
+							"PathOnHost": "",
+							"PathInContainer": "/dev/null",
+							"CgroupPermissions": "rwm"
+						}
+					]
 				}
 			}`)
 			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
 
-			// Create a copy of default options and add annotation
-			expectedCreateOpt := createOpt
-			expectedCreateOpt.Annotations = []string{"com.example.key=value1"}
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusBadRequest))
+			Expect(rr.Body.String()).Should(ContainSubstring(`{"message":"error gathering device information while adding custom device"}`))
+		})
 
-			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(expectedCreateOpt), equalTo(netOpt)).Return(
-				cid, nil)
+		It("should reject non-device paths", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"Devices": [
+						{
+							"PathOnHost": "/etc/hosts",
+							"PathInContainer": "/dev/null",
+							"CgroupPermissions": "rwm"
+						}
+					]
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
 
 			h.create(rr, req)
-			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
-			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+			Expect(rr).Should(HaveHTTPStatus(http.StatusBadRequest))
+			Expect(rr.Body.String()).Should(ContainSubstring(`{"message":"error gathering device information while adding custom device \"/etc/hosts\": not a device"}`))
 		})
 
 		It("should set CgroupnsMode option", func() {
@@ -1206,6 +1220,7 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 		BlkioDeviceWriteBps:  []string{},
 		BlkioDeviceReadIOps:  []string{},
 		BlkioDeviceWriteIOps: []string{},
+		Device:               []string{},
 		// #endregion
 
 		// #region for user flags

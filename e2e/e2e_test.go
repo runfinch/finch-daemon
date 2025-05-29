@@ -59,7 +59,7 @@ func TestRun(t *testing.T) {
 	const description = "Finch Daemon Functional test"
 	ginkgo.Describe(description, func() {
 		// functional test for container APIs
-		tests.ContainerCreate(opt)
+		tests.ContainerCreate(opt, pOpt)
 		tests.ContainerStart(opt)
 		tests.ContainerStop(opt)
 		tests.ContainerRestart(opt)

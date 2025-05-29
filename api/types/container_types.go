@@ -121,8 +121,8 @@ type ContainerHostConfig struct {
 	BlkioDeviceWriteBps  []*blkiodev.ThrottleDevice
 	BlkioDeviceReadIOps  []*blkiodev.ThrottleDevice
 	BlkioDeviceWriteIOps []*blkiodev.ThrottleDevice
-	// TODO: Devices     []DeviceMapping // List of devices to map inside the container
-	PidsLimit int64 // Setting PIDs limit for a container; Set `0` or `-1` for unlimited, or `null` to not change.
+	Devices              []DeviceMapping // List of devices to map inside the container
+	PidsLimit            int64           // Setting PIDs limit for a container; Set `0` or `-1` for unlimited, or `null` to not change.
 	// Mounts specs used by the container
 	// TODO: Mounts []mount.Mount `json:",omitempty"`
 
@@ -285,4 +285,10 @@ const (
 // Valid indicates whether the cgroup namespace mode is valid.
 func (c CgroupnsMode) Valid() bool {
 	return c == CgroupnsModePrivate || c == CgroupnsModeHost
+}
+
+type DeviceMapping struct {
+	PathOnHost        string
+	PathInContainer   string
+	CgroupPermissions string
 }
