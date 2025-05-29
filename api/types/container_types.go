@@ -72,15 +72,15 @@ type ContainerHostConfig struct {
 	Annotations map[string]string `json:",omitempty"` // Arbitrary non-identifying metadata attached to container and provided to the runtime
 
 	// Applicable to UNIX platforms
-	CapAdd  []string // List of kernel capabilities to add to the container
-	CapDrop []string // List of kernel capabilities to remove from the container
-	// TODO: CgroupnsMode CgroupnsMode // Cgroup namespace mode to use for the container
-	DNS        []string `json:"Dns"`        // List of DNS server to lookup
-	DNSOptions []string `json:"DnsOptions"` // List of DNSOption to look for
-	DNSSearch  []string `json:"DnsSearch"`  // List of DNSSearch to look for
-	ExtraHosts []string // List of extra hosts
-	GroupAdd   []string // List of additional groups that the container process will run as
-	IpcMode    string   // IPC namespace to use for the container
+	CapAdd       []string     // List of kernel capabilities to add to the container
+	CapDrop      []string     // List of kernel capabilities to remove from the container
+	CgroupnsMode CgroupnsMode // Cgroup namespace mode to use for the container
+	DNS          []string     `json:"Dns"`        // List of DNS server to lookup
+	DNSOptions   []string     `json:"DnsOptions"` // List of DNSOption to look for
+	DNSSearch    []string     `json:"DnsSearch"`  // List of DNSSearch to look for
+	ExtraHosts   []string     // List of extra hosts
+	GroupAdd     []string     // List of additional groups that the container process will run as
+	IpcMode      string       // IPC namespace to use for the container
 	// TODO: Cgroup          CgroupSpec        // Cgroup to use for the container
 	// TODO: Links           []string          // List of links (in the name:alias form)
 	OomKillDisable bool // specifies whether to disable OOM Killer
@@ -271,3 +271,18 @@ type StatsJSON struct {
 }
 
 type Ulimit = units.Ulimit
+
+// CgroupnsMode represents the cgroup namespace mode of the container.
+type CgroupnsMode string
+
+// cgroup namespace modes for containers.
+const (
+	CgroupnsModeEmpty   CgroupnsMode = ""
+	CgroupnsModePrivate CgroupnsMode = "private"
+	CgroupnsModeHost    CgroupnsMode = "host"
+)
+
+// Valid indicates whether the cgroup namespace mode is valid.
+func (c CgroupnsMode) Valid() bool {
+	return c == CgroupnsModePrivate || c == CgroupnsModeHost
+}
