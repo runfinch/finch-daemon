@@ -144,7 +144,10 @@ func (bd *bridgeDriver) setBridgeName(net *netutil.NetworkConfig, bridgeName str
 			return fmt.Errorf("bridge name %s already in use by network %s", bridgeName, bridgeNet.Name)
 		}
 
-		configFilename := bd.getConfigPathForNetworkName(net.Name)
+		configFilename, err := bd.getConfigPathForNetworkName(net.Name)
+		if err != nil {
+			return err
+		}
 		netMap, bridgePlugin, err := bd.parseBridgeConfig(configFilename)
 		if err != nil {
 			return err
@@ -180,7 +183,10 @@ func (bd *bridgeDriver) setBridgeName(net *netutil.NetworkConfig, bridgeName str
 func (bd *bridgeDriver) getBridgeName(net *netutil.NetworkConfig) (string, error) {
 	var bridgeName string
 	err := lockutil.WithDirLock(bd.getDirForNetworkName(""), func() error {
-		configFilename := bd.getConfigPathForNetworkName(net.Name)
+		configFilename, err := bd.getConfigPathForNetworkName(net.Name)
+		if err != nil {
+			return err
+		}
 		_, bridgePlugin, err := bd.parseBridgeConfig(configFilename)
 		if err != nil {
 			return err
@@ -311,6 +317,21 @@ func (bd *bridgeDriver) getDirForNetworkName(netName string) string {
 }
 
 // From https://github.com/containerd/nerdctl/blob/v2.0.0/pkg/netutil/netutil.go#L277C18-L283
-func (bd *bridgeDriver) getConfigPathForNetworkName(netName string) string {
-	return filepath.Join(bd.getDirForNetworkName(netName), "nerdctl-"+netName+".conflist")
+// getConfigPathForNetworkName returns the path to the network config file.
+func (bd *bridgeDriver) getConfigPathForNetworkName(netName string) (string, error) {
+	namespacedPath := filepath.Join(bd.getDirForNetworkName(netName), "nerdctl-"+netName+".conflist")
+	if _, err := os.Stat(namespacedPath); err == nil {
+		return namespacedPath, nil
+	}
+
+	// For backward compatibility, try the legacy non-namespaced path.
+	// Prior to nerdctl v2.0.0, namespaced networks were placed in the default network config dir.
+	legacyPath := filepath.Join(bd.netClient.NetconfPath(), "nerdctl-"+netName+".conflist")
+	if _, err := os.Stat(legacyPath); err == nil {
+		return legacyPath, nil
+	}
+
+	// If neither exists, return the namespaced path as the default
+	// This will be used for creating new config files
+	return "", fmt.Errorf("network config file not found for network %s", netName)
 }
