@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/e2e/client"
+	"github.com/runfinch/finch-daemon/e2e/util"
 )
 
 type containerCreateResponse struct {
@@ -34,7 +36,7 @@ type containerCreateResponse struct {
 }
 
 // ContainerCreate tests the `POST containers/create` API.
-func ContainerCreate(opt *option.Option) {
+func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 	Describe("create container", func() {
 		var (
 			uClient *http.Client
@@ -1451,6 +1453,113 @@ func ContainerCreate(opt *option.Option) {
 				}
 			}
 			Expect(foundCgroupNS).Should(BeFalse())
+		})
+
+		It("should create a container with device mappings", func() {
+			// Create a temporary file to use as backing store
+			tmpFileOpt, _ := pOpt([]string{"touch", "/tmp/loopdev"})
+			command.Run(tmpFileOpt)
+			defer func() {
+				rmOpt, _ := pOpt([]string{"rm", "-f", "/tmp/loopdev"})
+				command.Run(rmOpt)
+			}()
+
+			// Write 4KB of data to the file
+			ddOpt, _ := pOpt([]string{"dd", "if=/dev/zero", "of=/tmp/loopdev", "bs=4096", "count=1"})
+			command.Run(ddOpt)
+
+			// Set up loop device
+			loopDevOpt, _ := pOpt([]string{"losetup", "-f", "--show", "/tmp/loopdev"})
+			loopDev := command.StdoutStr(loopDevOpt)
+			Expect(loopDev).ShouldNot(BeEmpty())
+			defer func() {
+				detachOpt, _ := pOpt([]string{"losetup", "-d", loopDev})
+				command.Run(detachOpt)
+			}()
+
+			// Write test content to the device
+			writeOpt, _ := pOpt([]string{"sh", "-c", "echo -n test-content > " + loopDev})
+			command.Run(writeOpt)
+
+			// Get device info to verify major/minor numbers
+			statOpt, _ := pOpt([]string{"stat", "-c", "%t,%T", loopDev})
+			devNums := command.StdoutStr(statOpt)
+			parts := strings.Split(devNums, ",")
+			major, _ := strconv.ParseUint(parts[0], 16, 64)
+			minor, _ := strconv.ParseUint(parts[1], 16, 64)
+
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.Devices = []types.DeviceMapping{
+				{
+					PathOnHost:        loopDev,
+					PathInContainer:   loopDev,
+					CgroupPermissions: "rwm",
+				},
+			}
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// Start container
+			command.Run(opt, "start", testContainerName)
+
+			// Inspect using native format
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Navigate to the linux section
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			linux, ok := spec["linux"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+
+			// Verify device in linux.devices
+			devices, ok := linux["devices"].([]interface{})
+			Expect(ok).Should(BeTrue())
+
+			foundDevice := false
+			for _, device := range devices {
+				d := device.(map[string]interface{})
+				if d["path"] == loopDev {
+					foundDevice = true
+					Expect(d["type"]).Should(Equal("b")) // block device
+					Expect(d["major"].(float64)).Should(Equal(float64(major)))
+					Expect(d["minor"].(float64)).Should(Equal(float64(minor)))
+					break
+				}
+			}
+			Expect(foundDevice).Should(BeTrue())
+
+			// Verify device permissions in linux.resources.devices
+			resources, ok := linux["resources"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			resourceDevices, ok := resources["devices"].([]interface{})
+			Expect(ok).Should(BeTrue())
+
+			// First rule should be deny all
+			denyAll := resourceDevices[0].(map[string]interface{})
+			Expect(denyAll["allow"]).Should(BeFalse())
+			Expect(denyAll["access"]).Should(Equal("rwm"))
+
+			// Should find an allow rule for our device
+			foundAllowRule := false
+			for _, rule := range resourceDevices {
+				r := rule.(map[string]interface{})
+				if r["allow"] == true &&
+					r["type"] == "b" &&
+					r["major"].(float64) == float64(major) &&
+					r["minor"].(float64) == float64(minor) {
+					foundAllowRule = true
+					Expect(r["access"]).Should(Equal("rwm"))
+					break
+				}
+			}
+			Expect(foundAllowRule).Should(BeTrue())
 		})
 	})
 }
