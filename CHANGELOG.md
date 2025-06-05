@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.17.0](https://github.com/runfinch/finch-daemon/compare/v0.16.0...v0.17.0) (2025-06-04)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/containernetworking/cni from 1.2.3 to 1.3.0 ([#214](https://github.com/runfinch/finch-daemon/issues/214)) ([253b7eb](https://github.com/runfinch/finch-daemon/commit/253b7eb60bd4fa89cb96a1d043491a36a132b314))
+* **deps:** Bump golang.org/x/sys from 0.32.0 to 0.33.0 ([#242](https://github.com/runfinch/finch-daemon/issues/242)) ([e706101](https://github.com/runfinch/finch-daemon/commit/e70610173485d724af390c2cc01b985681dab0e5))
+
+
+### Features
+
+* Add annotations option ([#238](https://github.com/runfinch/finch-daemon/issues/238)) ([23fd05e](https://github.com/runfinch/finch-daemon/commit/23fd05e60514217f19363cc41dd9db0a187b4b2f))
+* Add Blkio related options ([#229](https://github.com/runfinch/finch-daemon/issues/229)) ([8dc97f8](https://github.com/runfinch/finch-daemon/commit/8dc97f832df7eabc68f3191a0c718bfbcfc7dde9))
+* Add cgroupnsmode option ([#237](https://github.com/runfinch/finch-daemon/issues/237)) ([831e2a2](https://github.com/runfinch/finch-daemon/commit/831e2a2fc9405ace88d272d83a91602eb323bf40))
+* Add devices option ([#236](https://github.com/runfinch/finch-daemon/issues/236)) ([4198dcc](https://github.com/runfinch/finch-daemon/commit/4198dccd88352cefef813302697b7f6606e6d869))
+* Add PidMode, Ipc mode ([dde482c](https://github.com/runfinch/finch-daemon/commit/dde482cf96fc7d4f80d094c6e35b5cffd134fb1e))
+* Add PidMode, Ipcmode and GroupAdd options ([#232](https://github.com/runfinch/finch-daemon/issues/232)) ([dde482c](https://github.com/runfinch/finch-daemon/commit/dde482cf96fc7d4f80d094c6e35b5cffd134fb1e))
+* Add ReadonlyRootfs option ([#233](https://github.com/runfinch/finch-daemon/issues/233)) ([82b0ff4](https://github.com/runfinch/finch-daemon/commit/82b0ff425d97aeb1174965b8d22f3e67b4c79fbc))
+* Add ShmSize, Sysctl and Runtime option ([#235](https://github.com/runfinch/finch-daemon/issues/235)) ([c4fc1c9](https://github.com/runfinch/finch-daemon/commit/c4fc1c951a42d22653f61e167324cc967f3d1901))
+* add signal option to containerStop ([#158](https://github.com/runfinch/finch-daemon/issues/158)) ([abfa7f7](https://github.com/runfinch/finch-daemon/commit/abfa7f726cdb7f8a4ae45ae8ba4519b14805cf03))
+* Add VolumesFrom, Tmpfs and UTSMode option ([#231](https://github.com/runfinch/finch-daemon/issues/231)) ([18434d7](https://github.com/runfinch/finch-daemon/commit/18434d7781d932efed1c937f861d7acba48f8c74))
+
+
+### Bug Fixes
+
+* handleNetworkLabels failing after nerdctl v2.0.0 upgrade ([#249](https://github.com/runfinch/finch-daemon/issues/249)) ([06bc4fd](https://github.com/runfinch/finch-daemon/commit/06bc4fdfbbf7e06361dd4449f8339db547657665))
+
 ## [0.16.0](https://github.com/runfinch/finch-daemon/compare/v0.15.0...v0.16.0) (2025-05-13)
 
 
