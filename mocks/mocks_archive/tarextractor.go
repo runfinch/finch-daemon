@@ -8,8 +8,8 @@ import (
 	io "io"
 	reflect "reflect"
 
-	archive "github.com/docker/docker/pkg/archive"
 	gomock "github.com/golang/mock/gomock"
+	archive "github.com/moby/go-archive"
 	ecc "github.com/runfinch/finch-daemon/pkg/ecc"
 )
 

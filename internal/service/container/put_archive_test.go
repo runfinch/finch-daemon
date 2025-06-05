@@ -16,9 +16,9 @@ import (
 	"github.com/containerd/containerd/v2/core/containers"
 	"github.com/containerd/containerd/v2/core/mount"
 	cerrdefs "github.com/containerd/errdefs"
-	"github.com/docker/docker/pkg/archive"
-	"github.com/docker/docker/pkg/idtools"
 	"github.com/golang/mock/gomock"
+	"github.com/moby/go-archive"
+	"github.com/moby/sys/user"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -117,7 +117,7 @@ var _ = Describe("Extract in container API", func() {
 			task.EXPECT().Pid().Return(mockPid)
 			tarExtractor.EXPECT().ExtractCompressed(mockReader, containerPath, &archive.TarOptions{
 				NoOverwriteDirNonDir: false,
-				IDMap:                idtools.IdentityMapping{},
+				IDMap:                user.IdentityMapping{},
 			}).Return(nil)
 			err = s.ExtractArchiveInContainer(ctx, putArchiveOpts, mockReader)
 			Expect(err).Should(BeNil())
@@ -239,7 +239,7 @@ var _ = Describe("Extract in container API", func() {
 			})
 			tarExtractor.EXPECT().ExtractCompressed(mockReader, gomock.Any(), &archive.TarOptions{
 				NoOverwriteDirNonDir: false,
-				IDMap:                idtools.IdentityMapping{},
+				IDMap:                user.IdentityMapping{},
 			}).Return(nil)
 			cdClient.EXPECT().Unmount(gomock.Any(), 0)
 			err = s.ExtractArchiveInContainer(ctx, putArchiveOpts, mockReader)
@@ -284,7 +284,7 @@ var _ = Describe("Extract in container API", func() {
 			})
 			tarExtractor.EXPECT().ExtractCompressed(mockReader, gomock.Any(), &archive.TarOptions{
 				NoOverwriteDirNonDir: false,
-				IDMap:                idtools.IdentityMapping{},
+				IDMap:                user.IdentityMapping{},
 			}).Return(nil)
 			cdClient.EXPECT().Unmount(gomock.Any(), 0)
 			logger.EXPECT().Errorf(gomock.Any(), gomock.Any(), gomock.Any())

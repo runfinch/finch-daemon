@@ -13,8 +13,8 @@ import (
 
 	containerd "github.com/containerd/containerd/v2/client"
 	cerrdefs "github.com/containerd/errdefs"
-	"github.com/docker/docker/pkg/archive"
-	"github.com/docker/docker/pkg/idtools"
+	"github.com/moby/go-archive"
+	"github.com/moby/sys/user"
 
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
@@ -98,7 +98,7 @@ func (s *service) ExtractArchiveInContainer(ctx context.Context, opts *types.Put
 	}
 	tarOptions := &archive.TarOptions{
 		NoOverwriteDirNonDir: opts.Overwrite,
-		IDMap:                idtools.IdentityMapping{},
+		IDMap:                user.IdentityMapping{},
 	}
 	return s.tarExtractor.ExtractCompressed(body, filePath, tarOptions)
 }
