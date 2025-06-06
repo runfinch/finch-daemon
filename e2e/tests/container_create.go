@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -26,6 +26,7 @@ import (
 
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/e2e/client"
+	"github.com/runfinch/finch-daemon/e2e/util"
 )
 
 type containerCreateResponse struct {
@@ -34,7 +35,7 @@ type containerCreateResponse struct {
 }
 
 // ContainerCreate tests the `POST containers/create` API.
-func ContainerCreate(opt *option.Option) {
+func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 	Describe("create container", func() {
 		var (
 			uClient *http.Client
@@ -801,15 +802,15 @@ func ContainerCreate(opt *option.Option) {
 			dummyDev2 := "/dev/dummy-zero2"
 
 			// Create dummy devices (major number 1 for char devices)
-			err := exec.Command("mknod", dummyDev1, "c", "1", "5").Run()
-			Expect(err).Should(BeNil())
-			err = exec.Command("mknod", dummyDev2, "c", "1", "6").Run()
-			Expect(err).Should(BeNil())
+			mknodOpt1, _ := pOpt([]string{"mknod", dummyDev1, "c", "1", "5"})
+			command.Run(mknodOpt1)
+			mknodOpt2, _ := pOpt([]string{"mknod", dummyDev2, "c", "1", "6"})
+			command.Run(mknodOpt2)
 
 			// Cleanup dummy devices after test
 			defer func() {
-				exec.Command("rm", "-f", dummyDev1).Run()
-				exec.Command("rm", "-f", dummyDev2).Run()
+				rmOpt, _ := pOpt([]string{"rm", "-f", dummyDev1, dummyDev2})
+				command.Run(rmOpt)
 			}()
 
 			// define options
@@ -875,7 +876,7 @@ func ContainerCreate(opt *option.Option) {
 			// inspect container
 			resp := command.Stdout(opt, "inspect", testContainerName)
 			var inspect []*dockercompat.Container
-			err = json.Unmarshal(resp, &inspect)
+			err := json.Unmarshal(resp, &inspect)
 			Expect(err).Should(BeNil())
 			Expect(inspect).Should(HaveLen(1))
 
@@ -1411,6 +1412,153 @@ func ContainerCreate(opt *option.Option) {
 			annotations, ok := spec["annotations"].(map[string]interface{})
 			Expect(ok).Should(BeTrue())
 			Expect(annotations["com.example.key"]).Should(Equal("test-value"))
+		})
+
+		It("should create a container with CgroupnsMode set to host", func() {
+			// Define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.CgroupnsMode = "host"
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// Start container
+			command.Run(opt, "start", testContainerName)
+
+			// Inspect using native format to verify cgroup namespace configuration
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Navigate to the namespaces section
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			linux, ok := spec["linux"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			namespaces, ok := linux["namespaces"].([]interface{})
+			Expect(ok).Should(BeTrue())
+
+			// For host mode, cgroup namespace should not be present in the namespaces list
+			foundCgroupNS := false
+			for _, ns := range namespaces {
+				namespace := ns.(map[string]interface{})
+				if namespace["type"] == "cgroup" {
+					foundCgroupNS = true
+					break
+				}
+			}
+			Expect(foundCgroupNS).Should(BeFalse())
+		})
+
+		It("should create a container with device mappings", func() {
+			// Create a temporary file to use as backing store
+			tmpFileOpt, _ := pOpt([]string{"touch", "/tmp/loopdev"})
+			command.Run(tmpFileOpt)
+			defer func() {
+				rmOpt, _ := pOpt([]string{"rm", "-f", "/tmp/loopdev"})
+				command.Run(rmOpt)
+			}()
+
+			// Write 4KB of data to the file
+			ddOpt, _ := pOpt([]string{"dd", "if=/dev/zero", "of=/tmp/loopdev", "bs=4096", "count=1"})
+			command.Run(ddOpt)
+
+			// Set up loop device
+			loopDevOpt, _ := pOpt([]string{"losetup", "-f", "--show", "/tmp/loopdev"})
+			loopDev := command.StdoutStr(loopDevOpt)
+			Expect(loopDev).ShouldNot(BeEmpty())
+			defer func() {
+				detachOpt, _ := pOpt([]string{"losetup", "-d", loopDev})
+				command.Run(detachOpt)
+			}()
+
+			// Write test content to the device
+			writeOpt, _ := pOpt([]string{"sh", "-c", "echo -n test-content > " + loopDev})
+			command.Run(writeOpt)
+
+			// Get device info to verify major/minor numbers
+			statOpt, _ := pOpt([]string{"stat", "-c", "%t,%T", loopDev})
+			devNums := command.StdoutStr(statOpt)
+			parts := strings.Split(devNums, ",")
+			major, _ := strconv.ParseUint(parts[0], 16, 64)
+			minor, _ := strconv.ParseUint(parts[1], 16, 64)
+
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.Devices = []types.DeviceMapping{
+				{
+					PathOnHost:        loopDev,
+					PathInContainer:   loopDev,
+					CgroupPermissions: "rwm",
+				},
+			}
+
+			// Create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// Start container
+			command.Run(opt, "start", testContainerName)
+
+			// Inspect using native format
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Navigate to the linux section
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			linux, ok := spec["linux"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+
+			// Verify device in linux.devices
+			devices, ok := linux["devices"].([]interface{})
+			Expect(ok).Should(BeTrue())
+
+			foundDevice := false
+			for _, device := range devices {
+				d := device.(map[string]interface{})
+				if d["path"] == loopDev {
+					foundDevice = true
+					Expect(d["type"]).Should(Equal("b")) // block device
+					Expect(d["major"].(float64)).Should(Equal(float64(major)))
+					Expect(d["minor"].(float64)).Should(Equal(float64(minor)))
+					break
+				}
+			}
+			Expect(foundDevice).Should(BeTrue())
+
+			// Verify device permissions in linux.resources.devices
+			resources, ok := linux["resources"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			resourceDevices, ok := resources["devices"].([]interface{})
+			Expect(ok).Should(BeTrue())
+
+			// First rule should be deny all
+			denyAll := resourceDevices[0].(map[string]interface{})
+			Expect(denyAll["allow"]).Should(BeFalse())
+			Expect(denyAll["access"]).Should(Equal("rwm"))
+
+			// Should find an allow rule for our device
+			foundAllowRule := false
+			for _, rule := range resourceDevices {
+				r := rule.(map[string]interface{})
+				if r["allow"] == true &&
+					r["type"] == "b" &&
+					r["major"].(float64) == float64(major) &&
+					r["minor"].(float64) == float64(minor) {
+					foundAllowRule = true
+					Expect(r["access"]).Should(Equal("rwm"))
+					break
+				}
+			}
+			Expect(foundAllowRule).Should(BeTrue())
 		})
 	})
 }
