@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -803,15 +802,15 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			dummyDev2 := "/dev/dummy-zero2"
 
 			// Create dummy devices (major number 1 for char devices)
-			err := exec.Command("mknod", dummyDev1, "c", "1", "5").Run()
-			Expect(err).Should(BeNil())
-			err = exec.Command("mknod", dummyDev2, "c", "1", "6").Run()
-			Expect(err).Should(BeNil())
+			mknodOpt1, _ := pOpt([]string{"mknod", dummyDev1, "c", "1", "5"})
+			command.Run(mknodOpt1)
+			mknodOpt2, _ := pOpt([]string{"mknod", dummyDev2, "c", "1", "6"})
+			command.Run(mknodOpt2)
 
 			// Cleanup dummy devices after test
 			defer func() {
-				exec.Command("rm", "-f", dummyDev1).Run()
-				exec.Command("rm", "-f", dummyDev2).Run()
+				rmOpt, _ := pOpt([]string{"rm", "-f", dummyDev1, dummyDev2})
+				command.Run(rmOpt)
 			}()
 
 			// define options
@@ -877,7 +876,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			// inspect container
 			resp := command.Stdout(opt, "inspect", testContainerName)
 			var inspect []*dockercompat.Container
-			err = json.Unmarshal(resp, &inspect)
+			err := json.Unmarshal(resp, &inspect)
 			Expect(err).Should(BeNil())
 			Expect(inspect).Should(HaveLen(1))
 
