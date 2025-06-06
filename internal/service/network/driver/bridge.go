@@ -10,12 +10,13 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/containerd/log"
 	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
-	"github.com/containerd/nerdctl/v2/pkg/lockutil"
 	"github.com/containerd/nerdctl/v2/pkg/netutil"
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/internal/backend"
 	"github.com/runfinch/finch-daemon/pkg/flog"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -134,7 +135,7 @@ func (bd *bridgeDriver) HandleRemove(net *netutil.NetworkConfig) error {
 // setBridgeName will override the bridge name in an existing CNI config file for a network.
 func (bd *bridgeDriver) setBridgeName(net *netutil.NetworkConfig, bridgeName string) error {
 	networkDir := bd.getDirForNetworkName("")
-	return lockutil.WithDirLock(networkDir, func() error {
+	return withDirLock(networkDir, func() error {
 		// first, make sure that the bridge name is not used by any of the existing bridge networks
 		bridgeNet, err := bd.getNetworkByBridgeName(bridgeName)
 		if err != nil {
@@ -182,7 +183,7 @@ func (bd *bridgeDriver) setBridgeName(net *netutil.NetworkConfig, bridgeName str
 
 func (bd *bridgeDriver) getBridgeName(net *netutil.NetworkConfig) (string, error) {
 	var bridgeName string
-	err := lockutil.WithDirLock(bd.getDirForNetworkName(""), func() error {
+	err := withDirLock(bd.getDirForNetworkName(""), func() error {
 		configFilename, err := bd.getConfigPathForNetworkName(net.Name)
 		if err != nil {
 			return err
@@ -334,4 +335,33 @@ func (bd *bridgeDriver) getConfigPathForNetworkName(netName string) (string, err
 	// If neither exists, return the namespaced path as the default
 	// This will be used for creating new config files
 	return "", fmt.Errorf("network config file not found for network %s", netName)
+}
+
+// Copied from https://github.com/containerd/nerdctl/blob/294cfc9d9a1a24cbce8c4ea73a82bd0e4862854c/pkg/lockutil/lockutil_unix.go#L29
+// as the withDirLock has been changed to WithLock and is now internal only.
+func withDirLock(dir string, fn func() error) error {
+	dirFile, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer dirFile.Close()
+	if err := flock(dirFile, unix.LOCK_EX); err != nil {
+		return fmt.Errorf("failed to lock %q: %w", dir, err)
+	}
+	defer func() {
+		if err := flock(dirFile, unix.LOCK_UN); err != nil {
+			log.L.WithError(err).Errorf("failed to unlock %q", dir)
+		}
+	}()
+	return fn()
+}
+
+func flock(f *os.File, flags int) error {
+	fd := int(f.Fd())
+	for {
+		err := unix.Flock(fd, flags)
+		if err == nil || err != unix.EINTR {
+			return err
+		}
+	}
 }
