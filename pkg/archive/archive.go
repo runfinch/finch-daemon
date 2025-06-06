@@ -9,7 +9,7 @@ import (
 	"path"
 
 	"github.com/containerd/nerdctl/v2/pkg/tarutil"
-	"github.com/docker/docker/pkg/archive"
+	"github.com/moby/go-archive"
 
 	"github.com/runfinch/finch-daemon/pkg/ecc"
 	"github.com/runfinch/finch-daemon/pkg/flog"
