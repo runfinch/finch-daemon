@@ -5,7 +5,6 @@
 
 ### Bug Fixes
 
-* Update blkio test to be compatible with finch CI ([1d672cd](https://github.com/runfinch/finch-daemon/commit/1d672cd606476a7a6f05112c1b0dbb55959b55ad))
 * Update blkio tests to be compatible with finch CI ([#252](https://github.com/runfinch/finch-daemon/issues/252)) ([1d672cd](https://github.com/runfinch/finch-daemon/commit/1d672cd606476a7a6f05112c1b0dbb55959b55ad))
 
 ## [0.17.0](https://github.com/runfinch/finch-daemon/compare/v0.16.0...v0.17.0) (2025-06-04)
