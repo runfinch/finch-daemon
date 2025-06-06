@@ -183,6 +183,21 @@ func (mr *MockContainerMockRecorder) NewTask(arg0, arg1 any, arg2 ...any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewTask", reflect.TypeOf((*MockContainer)(nil).NewTask), varargs...)
 }
 
+// Restore mocks base method.
+func (m *MockContainer) Restore(arg0 context.Context, arg1 cio.Creator, arg2 string) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Restore", arg0, arg1, arg2)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Restore indicates an expected call of Restore.
+func (mr *MockContainerMockRecorder) Restore(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockContainer)(nil).Restore), arg0, arg1, arg2)
+}
+
 // SetLabels mocks base method.
 func (m *MockContainer) SetLabels(arg0 context.Context, arg1 map[string]string) (map[string]string, error) {
 	m.ctrl.T.Helper()
