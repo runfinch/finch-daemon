@@ -4,7 +4,7 @@ go 1.23.8
 
 require (
 	github.com/containerd/cgroups/v3 v3.0.5
-	github.com/containerd/containerd/api v1.8.0
+	github.com/containerd/containerd/api v1.9.0
 	github.com/containerd/containerd/v2 v2.0.4
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/fifo v1.1.0
@@ -16,7 +16,7 @@ require (
 	github.com/coreos/go-iptables v0.8.0
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/distribution/reference v0.6.0
-	github.com/docker/cli v28.0.4+incompatible
+	github.com/docker/cli v28.2.2+incompatible
 	github.com/docker/docker v28.0.2+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/docker/go-units v0.5.0
