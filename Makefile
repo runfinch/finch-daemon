@@ -123,6 +123,10 @@ test-e2e-opa: linux
 	DAEMON_ROOT="$(BIN)/finch-daemon" \
 	$(GINKGO) $(GFLAGS) ./e2e/...
 
+.PHONY: gen-docs
+gen-docs:
+	openapi-generator generate -g markdown -i api/spec/api.yaml -o docs/api
+
 .PHONY: licenses
 licenses:
 	PATH=$(BIN):$(PATH) go-licenses report --template="scripts/third-party-license.tpl" --ignore github.com/runfinch ./... > THIRD_PARTY_LICENSES

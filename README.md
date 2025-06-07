@@ -1,6 +1,7 @@
 [[⬇️ **Download]**](https://github.com/runfinch/finch-daemon/releases)
 [[🚀 **All Releases]**](https://github.com/runfinch/finch-daemon/releases)
 [[📚 **Installation]**](#quickstart)
+[[📖 **Documentation]**](docs/DOCUMENTATION.md)
 [[✏️ **Contributing]**](CONTRIBUTING.md)
 
 # Finch Daemon
