@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.17.2](https://github.com/runfinch/finch-daemon/compare/v0.17.1...v0.17.2) (2025-06-06)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/containerd/containerd/api ([439fd61](https://github.com/runfinch/finch-daemon/commit/439fd6185fbc9665f848ad0e8bade35de96ed001))
+* **deps:** Bump github.com/containerd/containerd/api from 1.8.0 to 1.9.0 ([#245](https://github.com/runfinch/finch-daemon/issues/245)) ([439fd61](https://github.com/runfinch/finch-daemon/commit/439fd6185fbc9665f848ad0e8bade35de96ed001))
+* **deps:** Bump github.com/docker/cli ([350ae05](https://github.com/runfinch/finch-daemon/commit/350ae05c60e69e823dfef8b9ba305d621f8eae5f))
+* **deps:** Bump github.com/docker/cli from 28.0.4+incompatible to 28.2.2+incompatible ([#248](https://github.com/runfinch/finch-daemon/issues/248)) ([350ae05](https://github.com/runfinch/finch-daemon/commit/350ae05c60e69e823dfef8b9ba305d621f8eae5f))
+
+
+### Bug Fixes
+
+* skip blkio test in vm ([#256](https://github.com/runfinch/finch-daemon/issues/256)) ([7020f93](https://github.com/runfinch/finch-daemon/commit/7020f93040ff10ddf2d2724e439fea1fa7131381))
+
 ## [0.17.1](https://github.com/runfinch/finch-daemon/compare/v0.17.0...v0.17.1) (2025-06-06)
 
 
