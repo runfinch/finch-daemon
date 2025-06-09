@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -797,6 +798,11 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 		})
 
 		It("should create container with specified blkio settings options", func() {
+			// Skip if not running on Linux
+			if runtime.GOOS != "linux" {
+				Skip("Blkio settings are only supported on Linux")
+			}
+
 			// Create dummy device paths
 			dummyDev1 := "/dev/dummy-zero1"
 			dummyDev2 := "/dev/dummy-zero2"
