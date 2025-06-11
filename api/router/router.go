@@ -111,7 +111,7 @@ func VersionMiddleware(next http.Handler) http.Handler {
 }
 
 // CreateRegoMiddleware dynamically parses the rego file at the path specified in options
-// and allows or denies the request based on the policy.
+// and return a function that allows or denies the request based on the policy.
 // Will return a nil function and an error if the given file path is blank or invalid.
 func CreateRegoMiddleware(regoFilePath string, logger *flog.Logrus) (func(next http.Handler) http.Handler, error) {
 	if regoFilePath == "" {

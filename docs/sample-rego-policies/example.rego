@@ -1,3 +1,8 @@
+# This is an experimental preview policy example.
+# As this feature is under active development:
+# - Breaking changes may occur without notice
+# - Production use is not recommended
+
 package finch.authz
 
 import future.keywords.if

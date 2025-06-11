@@ -1,6 +1,20 @@
-# Applying OPA authz policies
+# OPA Authorization Middleware (Experimental)
 
-This guide provides instructions for setting up [OPA](https://github.com/open-policy-agent/opa) authz policies with the finch-daemon. Authz policies allow users to allowlist or deny certain resources based on policy rules.
+> ⚠️ **Experimental Feature**: The OPA authorization middleware is being introduced as an experimental feature.
+
+This guide provides instructions for setting up [OPA](https://github.com/open-policy-agent/opa) authorization policies with the finch-daemon. These policies allow users to allowlist or deny certain resources based on policy rules.
+
+## Experimental Status
+
+This feature is being released as experimental because:
+- Integration patterns and best practices are still being established
+- Performance characteristics are being evaluated
+
+As an experimental feature:
+- Breaking changes may occur in any release
+- Long-term backward compatibility is not guaranteed
+- Documentation and examples may evolve substantially
+- Production use is not recommended at this stage
 
 ## What Is OPA Authz implementation
 Open Policy Agent (OPA) is an open-source, general-purpose policy engine that enables unified, context-aware policy enforcement across the entire stack. OPA provides a high-level declarative language, Rego, for specifying policy as code and simple APIs to offload policy decision-making from your software.
@@ -34,9 +48,9 @@ Use the [Rego playground](https://play.openpolicyagent.org/) to fine tune your r
 
 ## Enable OPA Middleware
 
-Once you are ready with your policy document, use the `--enable-opa-middleware` flag to tell the finch-daemon to enable the OPA middleware. The daemon will then look for the policy document provided by the `--rego-file` flag.
+Once you are ready with your policy document, use the `--experimental` flag to enable experimental features including OPA middleware. The daemon will then look for the policy document provided by the `--rego-file` flag.
 
-Note: The `--rego-file` flag is required when `--enable-opa-middleware` is set.
+Note: Since OPA middleware is an experimental feature, the `--experimental` flag is required when using `--rego-file`.
 
 The daemon enforces strict permissions (0600 or more restrictive) on the Rego policy file to prevent unauthorized modifications. You can bypass this check using the `--skip-rego-perm-check` flag.
 
@@ -44,13 +58,15 @@ Examples:
 
 Standard secure usage:
 ```bash
-sudo bin/finch-daemon --debug --socket-owner $UID --socket-addr /run/finch-test.sock --pidfile /run/finch-test.pid --enable-opa-middleware --rego-file /path/to/policy.rego
+sudo bin/finch-daemon --debug --socket-owner $UID --socket-addr /run/finch-test.sock --pidfile /run/finch-test.pid --experimental --rego-file /path/to/policy.rego
 ```
 
 With permission check bypassed:
 ```bash
-sudo bin/finch-daemon --debug --socket-owner $UID --socket-addr /run/finch-test.sock --pidfile /run/finch-test.pid --enable-opa-middleware --rego-file /path/to/policy.rego --skip-rego-perm-check
+sudo bin/finch-daemon --debug --socket-owner $UID --socket-addr /run/finch-test.sock --pidfile /run/finch-test.pid --experimental --rego-file /path/to/policy.rego --skip-rego-perm-check
 ```
+
+Note: If you enable experimental features with `--experimental` but don't provide a `--rego-file`, the daemon will run without OPA policy evaluation.
 
 
 # Best practices for secure rego policies

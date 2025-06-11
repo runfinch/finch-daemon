@@ -126,7 +126,7 @@ func OpaMiddlewareTest(opt *option.Option) {
 				"--socket-addr", "/run/test.sock",
 				"--pidfile", "/run/test.pid",
 				"--rego-file", regoPath,
-				"--enable-opa-middleware")
+				"--experimental")
 			err = cmd.Run()
 
 			// Should fail due to permissions
@@ -137,7 +137,7 @@ func OpaMiddlewareTest(opt *option.Option) {
 				"--socket-addr", "/run/test.sock",
 				"--pidfile", "/run/test.pid",
 				"--rego-file", regoPath,
-				"--enable-opa-middleware",
+				"--experimental",
 				"--skip-rego-perm-check")
 
 			// Start the process in background
