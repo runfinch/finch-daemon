@@ -43,15 +43,15 @@ const (
 )
 
 type DaemonOptions struct {
-	debug               bool
-	socketAddr          string
-	socketOwner         int
-	debugAddress        string
-	configPath          string
-	pidFile             string
-	regoFilePath        string
-	enableOPAMiddleware bool
-	skipRegoPermCheck   bool
+	debug              bool
+	socketAddr         string
+	socketOwner        int
+	debugAddress       string
+	configPath         string
+	pidFile            string
+	regoFilePath       string
+	enableExperimental bool
+	skipRegoPermCheck  bool
 }
 
 var options = new(DaemonOptions)
@@ -70,9 +70,9 @@ func main() {
 	rootCmd.Flags().StringVar(&options.debugAddress, "debug-addr", "", "")
 	rootCmd.Flags().StringVar(&options.configPath, "config-file", defaultConfigPath, "Daemon Config Path")
 	rootCmd.Flags().StringVar(&options.pidFile, "pidfile", defaultPidFile, "pid file location")
-	rootCmd.Flags().StringVar(&options.regoFilePath, "rego-file", "", "Rego Policy Path")
-	rootCmd.Flags().BoolVar(&options.enableOPAMiddleware, "enable-opa-middleware", false, "turn on OPA middleware for allowlisting")
+	rootCmd.Flags().StringVar(&options.regoFilePath, "rego-file", "", "Rego Policy Path (requires --experimental flag)")
 	rootCmd.Flags().BoolVar(&options.skipRegoPermCheck, "skip-rego-perm-check", false, "skip the rego file permission check (allows permissions more permissive than 0600)")
+	rootCmd.Flags().BoolVar(&options.enableExperimental, "experimental", false, "enable experimental features")
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Printf("got error: %v", err)
@@ -223,11 +223,18 @@ func newRouter(options *DaemonOptions, logger *flog.Logrus) (http.Handler, error
 	}
 
 	var regoFilePath string
-	if options.enableOPAMiddleware {
+
+	if options.regoFilePath != "" {
+		if !options.enableExperimental {
+			return nil, fmt.Errorf("rego file provided without experimental flag - OPA middleware is an experimental feature, please enable it with '--experimental' flag")
+		}
 		regoFilePath, err = checkRegoFileValidity(options, logger)
 		if err != nil {
 			return nil, err
 		}
+	} else if options.enableExperimental {
+		// Only experimental flag set
+		logger.Info("experimental flag passed, but no experimental features enabled")
 	}
 
 	opts := createRouterOptions(conf, clientWrapper, ncWrapper, logger, regoFilePath)
