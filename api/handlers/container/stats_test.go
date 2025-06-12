@@ -12,7 +12,7 @@ import (
 
 	"github.com/containerd/nerdctl/v2/pkg/config"
 	dockertypes "github.com/docker/docker/api/types/container"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"github.com/gorilla/mux"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
