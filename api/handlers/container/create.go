@@ -9,13 +9,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/containerd/containerd/v2/pkg/namespaces"
 	gocni "github.com/containerd/go-cni"
 	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/containerd/nerdctl/v2/pkg/defaults"
+	"github.com/containerd/nerdctl/v2/pkg/portutil"
 	"github.com/docker/go-connections/nat"
 	"github.com/moby/moby/api/types/blkiodev"
 	"github.com/sirupsen/logrus"
@@ -320,7 +320,6 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		// #endregion
 
 	}
-
 	portMappings, err := translatePortMappings(req.HostConfig.PortBindings)
 	if err != nil {
 		logrus.Debugf("failed to parse port mappings: %s", err)
@@ -393,25 +392,30 @@ func translatePortMappings(portMappings nat.PortMap) ([]gocni.PortMapping, error
 	if portMappings == nil {
 		return ports, nil
 	}
+	seenPortMappings := make(map[string]bool)
 	for portName, portBindings := range portMappings {
 		for _, portBinding := range portBindings {
-			hostPort, err := strconv.ParseInt(portBinding.HostPort, 10, 32)
+			portStr := ""
+			if portBinding.HostIP != "" {
+				portStr += portBinding.HostIP + ":"
+			}
+
+			// Add host port (or empty string if not specified)
+			portStr += portBinding.HostPort + ":"
+
+			// Add container port and protocol
+			portStr += portName.Port() + "/" + portName.Proto()
+
+			if seenPortMappings[portStr] {
+				continue
+			}
+			seenPortMappings[portStr] = true
+
+			portMaps, err := portutil.ParseFlagP(portStr)
 			if err != nil {
-				return []gocni.PortMapping{}, fmt.Errorf("failed to parse host port (%s) to integer: %w", portBinding.HostPort, err)
+				return []gocni.PortMapping{}, fmt.Errorf("failed to parse port mapping %q: %w", portStr, err)
 			}
-			// Cannot use portName.Int() because it assumes nat.NewPort() was used
-			// for error handling.
-			containerPort, err := strconv.ParseInt(portName.Port(), 10, 32)
-			if err != nil {
-				return []gocni.PortMapping{}, fmt.Errorf("failed to parse container port (%s) to integer: %w", portName, err)
-			}
-			portMap := gocni.PortMapping{
-				HostPort:      int32(hostPort),
-				ContainerPort: int32(containerPort),
-				Protocol:      portName.Proto(),
-				HostIP:        portBinding.HostIP,
-			}
-			ports = append(ports, portMap)
+			ports = append(ports, portMaps...)
 		}
 	}
 	return ports, nil
