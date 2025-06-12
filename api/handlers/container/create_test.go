@@ -101,7 +101,7 @@ var _ = Describe("Container Create API ", func() {
 					HostPort:      8001,
 					ContainerPort: 8000,
 					Protocol:      "tcp",
-					HostIP:        "",
+					HostIP:        "0.0.0.0",
 				},
 				{
 					HostPort:      9001,
@@ -140,7 +140,7 @@ var _ = Describe("Container Create API ", func() {
 				"ExposedPorts": {"8000/tcp": {}},
 				"HostConfig": {
 					"PortBindings": {
-						"8000/tcp": [{"HostIp": "", "HostPort": ""}],
+						"8000/tcp": [{"HostIp": "", "HostPort": "invalid-port"}]
 					}
 				}
 			}`)
