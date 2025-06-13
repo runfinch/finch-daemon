@@ -114,6 +114,15 @@ test-e2e: linux
 	TEST_E2E=1 \
 	$(GINKGO) $(GFLAGS) ./e2e/...
 
+.PHONY: test-e2e-opa
+test-e2e-opa: linux
+	DOCKER_HOST="unix:///run/finch.sock" \
+	DOCKER_API_VERSION="v1.41" \
+	MIDDLEWARE_E2E=1 \
+	TEST_E2E=0 \
+	DAEMON_ROOT="$(BIN)/finch-daemon" \
+	$(GINKGO) $(GFLAGS) ./e2e/...
+
 .PHONY: licenses
 licenses:
 	PATH=$(BIN):$(PATH) go-licenses report --template="scripts/third-party-license.tpl" --ignore github.com/runfinch ./... > THIRD_PARTY_LICENSES
