@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.18.0](https://github.com/runfinch/finch-daemon/compare/v0.17.2...v0.18.0) (2025-06-13)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/docker/docker from 28.0.2+incompatible to 28.2.2+incompatible ([#251](https://github.com/runfinch/finch-daemon/issues/251)) ([097fb7e](https://github.com/runfinch/finch-daemon/commit/097fb7ee7badd55f4d4cecd671eaaad290c6e92f))
+
+
+### Features
+
+* migrate from golang gomock to uber gomock ([#264](https://github.com/runfinch/finch-daemon/issues/264)) ([bb9442a](https://github.com/runfinch/finch-daemon/commit/bb9442a022aeb392822a697f13a238b7f81b8af8))
+
 ## [0.17.2](https://github.com/runfinch/finch-daemon/compare/v0.17.1...v0.17.2) (2025-06-06)
 
 
