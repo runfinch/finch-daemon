@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	remotes "github.com/containerd/containerd/v2/core/remotes"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 

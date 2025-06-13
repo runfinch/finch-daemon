@@ -22,7 +22,6 @@ require (
 	github.com/docker/go-units v0.5.0
 	github.com/getlantern/httptest v0.0.0-20161025015934-4b40f4c7e590
 	github.com/gofrs/flock v0.12.1
-	github.com/golang/mock v1.6.0
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/moby/go-archive v0.1.0
@@ -42,6 +41,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/vishvananda/netlink v1.3.0
 	github.com/vishvananda/netns v0.0.5
+	go.uber.org/mock v0.5.2
 	golang.org/x/net v0.39.0
 	golang.org/x/sys v0.33.0
 	google.golang.org/protobuf v1.36.6
