@@ -28,7 +28,7 @@ func (h *handler) top(w http.ResponseWriter, r *http.Request) {
 	psArgs := r.URL.Query().Get("ps_args")
 	if psArgs == "" {
 		// Set default ps arguments if none provided
-		psArgs = "-ef" // or whatever default you want to use
+		psArgs = "-ef"
 	}
 
 	ctx := namespaces.WithNamespace(r.Context(), h.Config.Namespace)
@@ -42,7 +42,7 @@ func (h *handler) top(w http.ResponseWriter, r *http.Request) {
 		PsArgs:   psArgs,
 	}
 
-	fmt.Printf("calling nerdctl top with the following option : %s", options.PsArgs)
+	h.logger.Infof("calling nerdctl top with the following option : %s", options.PsArgs)
 	err := h.service.Top(ctx, cid, options)
 	if err != nil {
 		var code int
@@ -68,35 +68,10 @@ func (h *handler) top(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse titles
-	titles := strings.Fields(lines[0])
-
-	// Find the CMD/COMMAND column index
-	cmdIndex := -1
-	for i, name := range titles {
-		if name == "CMD" || name == "COMMAND" || name == "ARGS" {
-			cmdIndex = i
-			break
-		}
-	}
-
-	// Parse processes
-	processes := make([][]string, 0, len(lines)-1)
-	for _, line := range lines[1:] {
-		if len(strings.TrimSpace(line)) > 0 {
-			fields := strings.Fields(line)
-			if len(fields) == 0 {
-				continue
-			}
-
-			if cmdIndex != -1 && len(fields) > cmdIndex {
-				process := make([]string, cmdIndex)
-				copy(process, fields[:cmdIndex])
-				process = append(process, strings.Join(fields[cmdIndex:], " "))
-				processes = append(processes, process)
-			} else {
-				processes = append(processes, fields)
-			}
-		}
+	titles, processes, err := parseTopOutput(lines)
+	if err != nil {
+		response.JSON(w, http.StatusInternalServerError, response.NewErrorFromMsg("invalid top output format"))
+		return
 	}
 
 	resp := container.ContainerTopOKBody{
@@ -105,4 +80,77 @@ func (h *handler) top(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.JSON(w, http.StatusOK, resp)
+}
+
+func parseTopOutput(lines []string) ([]string, [][]string, error) {
+	if len(lines) < 2 {
+		return nil, nil, fmt.Errorf("insufficient output lines")
+	}
+
+	// Parse titles from the first line
+	titles := strings.Fields(lines[0])
+	if len(titles) == 0 {
+		return nil, nil, fmt.Errorf("no titles found")
+	}
+
+	commandIndex := -1
+	for i, name := range titles {
+		if name == "CMD" || name == "COMMAND" || name == "ARGS" {
+			commandIndex = i
+			break
+		}
+	}
+
+	// Parse processes
+	processes := make([][]string, 0, len(lines)-1)
+	for _, line := range lines[1:] {
+		line = strings.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+
+		processMap := make(map[string]string)
+
+		// Handle command field specially - join remaining fields
+		if commandIndex != -1 && len(fields) > commandIndex {
+			// Map fields before command field
+			for i := 0; i < commandIndex && i < len(fields); i++ {
+				if i < len(titles) {
+					processMap[titles[i]] = fields[i]
+				}
+			}
+
+			// Join command field and all remaining fields
+			if commandIndex < len(titles) {
+				commandValue := strings.Join(fields[commandIndex:], " ")
+				processMap[titles[commandIndex]] = commandValue
+			}
+		} else {
+			// No command field, map fields directly
+			for i, field := range fields {
+				if i < len(titles) {
+					processMap[titles[i]] = field
+				}
+			}
+		}
+
+		// Build process array in the same order as titles
+		process := make([]string, len(titles))
+		for i, title := range titles {
+			if value, exists := processMap[title]; exists {
+				process[i] = value
+			} else {
+				process[i] = ""
+			}
+		}
+
+		processes = append(processes, process)
+	}
+
+	return titles, processes, nil
 }

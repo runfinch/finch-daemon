@@ -46,6 +46,9 @@ var _ = Describe("Container Top API", func() {
 			Expect(err).Should(BeNil())
 			req = mux.SetURLVars(req, map[string]string{"id": "id1"})
 
+			// Mock logger call
+			logger.EXPECT().Infof("calling nerdctl top with the following option : %s", "-ef")
+
 			// Mock successful response with default ps output
 			defaultPsOutput := "UID PID PPID C STIME TTY TIME CMD\nroot 1 0 0 10:00 ? 00:00:00 sleep Infinity\n"
 			service.EXPECT().Top(gomock.Any(), "id1", gomock.Any()).DoAndReturn(
@@ -68,6 +71,9 @@ var _ = Describe("Container Top API", func() {
 			req, err := http.NewRequest(http.MethodGet, "/containers/id1/top?ps_args=-o pid,ppid,cmd", nil)
 			Expect(err).Should(BeNil())
 			req = mux.SetURLVars(req, map[string]string{"id": "id1"})
+
+			// Mock logger call
+			logger.EXPECT().Infof("calling nerdctl top with the following option : %s", "-o pid,ppid,cmd")
 
 			customPsOutput := "PID PPID CMD\n1 0 sleep Infinity\n"
 			service.EXPECT().Top(gomock.Any(), "id1", gomock.Any()).DoAndReturn(
@@ -101,6 +107,9 @@ var _ = Describe("Container Top API", func() {
 			Expect(err).Should(BeNil())
 			req = mux.SetURLVars(req, map[string]string{"id": "id1"})
 
+			// Mock logger call
+			logger.EXPECT().Infof("calling nerdctl top with the following option : %s", "-ef")
+
 			service.EXPECT().Top(gomock.Any(), "id1", gomock.Any()).Return(errdefs.NewNotFound(fmt.Errorf("not found")))
 
 			h.top(rr, req)
@@ -112,6 +121,9 @@ var _ = Describe("Container Top API", func() {
 			req, err := http.NewRequest(http.MethodGet, "/containers/id1/top", nil)
 			Expect(err).Should(BeNil())
 			req = mux.SetURLVars(req, map[string]string{"id": "id1"})
+
+			// Mock logger call
+			logger.EXPECT().Infof("calling nerdctl top with the following option : %s", "-ef")
 
 			service.EXPECT().Top(gomock.Any(), "id1", gomock.Any()).Return(errdefs.NewConflict(fmt.Errorf("conflict")))
 
@@ -125,6 +137,9 @@ var _ = Describe("Container Top API", func() {
 			Expect(err).Should(BeNil())
 			req = mux.SetURLVars(req, map[string]string{"id": "id1"})
 
+			// Mock logger call
+			logger.EXPECT().Infof("calling nerdctl top with the following option : %s", "--invalid")
+
 			service.EXPECT().Top(gomock.Any(), "id1", gomock.Any()).Return(fmt.Errorf("unknown argument --invalid"))
 
 			h.top(rr, req)
@@ -137,6 +152,9 @@ var _ = Describe("Container Top API", func() {
 			Expect(err).Should(BeNil())
 			req = mux.SetURLVars(req, map[string]string{"id": "id1"})
 
+			// Mock logger call
+			logger.EXPECT().Infof("calling nerdctl top with the following option : %s", "-ef")
+
 			service.EXPECT().Top(gomock.Any(), "id1", gomock.Any()).Return(fmt.Errorf("unexpected error"))
 
 			h.top(rr, req)
@@ -148,6 +166,9 @@ var _ = Describe("Container Top API", func() {
 			req, err := http.NewRequest(http.MethodGet, "/containers/id1/top", nil)
 			Expect(err).Should(BeNil())
 			req = mux.SetURLVars(req, map[string]string{"id": "id1"})
+
+			// Mock logger call
+			logger.EXPECT().Infof("calling nerdctl top with the following option : %s", "-ef")
 
 			service.EXPECT().Top(gomock.Any(), "id1", gomock.Any()).DoAndReturn(
 				func(ctx context.Context, cid string, opts ncTypes.ContainerTopOptions) error {
