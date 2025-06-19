@@ -35,6 +35,32 @@ Getting started with Finch Daemon on Linux only requires a few steps:
 5. Test any changes with `make test-unit` and `sudo make test-e2e`
 
 
+## Experimental Features
+
+Finch Daemon includes experimental features that can be enabled using the `--experimental` flag. These features are under development and may change in future releases.
+
+### Using Experimental Features
+
+To enable experimental features, use the `--experimental` flag when starting the daemon:
+
+```bash
+sudo bin/finch-daemon --debug --socket-owner $UID --experimental
+```
+
+### Current Experimental Features
+
+#### OPA Authorization Middleware
+
+The OPA (Open Policy Agent) middleware allows you to define authorization policies for API requests using Rego policy language. This feature requires both the `--experimental` flag and the `--rego-file` flag to be set.
+
+Example usage:
+```bash
+sudo bin/finch-daemon --debug --socket-owner $UID --experimental --rego-file /path/to/policy.rego
+```
+
+For detailed documentation on the OPA middleware, see [opa-middleware.md](docs/opa-middleware.md).
+
+
 ## Creating a systemd service
 If you want finch-daemon to be managed as a systemd service, for benefits like automatic
 restart if it gets killed, you can configure it as a systemd service on Linux by
