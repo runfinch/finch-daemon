@@ -114,10 +114,10 @@ jobs:
       - name: Run opa e2e tests
         run: sudo -E make test-e2e-opa
       - name: Clean up Daemon socket
-        run: sudo rm /run/finch.sock && sudo rm /run/finch.pid
+        run: sudo rm /run/finch.sock && sudo rm /run/finch.pid && sudo rm /run/finch-credential.sock
       - name: Start finch-daemon
-        run: sudo bin/finch-daemon  --debug --socket-owner $UID &
+        run: sudo cp bin/docker-credential-finch /usr/bin && sudo bin/finch-daemon  --debug --socket-owner $UID &
       - name: Run e2e test
         run: sudo make test-e2e
       - name: Clean up Daemon socket
-        run: sudo rm /var/run/finch.sock && sudo rm /run/finch.pid
+        run: sudo rm /var/run/finch.sock && sudo rm /run/finch.pid && sudo rm /var/run/finch-credential.sock

@@ -28,6 +28,7 @@ import (
 	"github.com/runfinch/finch-daemon/api/response"
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/internal/backend"
+	"github.com/runfinch/finch-daemon/pkg/credential"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 	"github.com/runfinch/finch-daemon/version"
 )
@@ -51,6 +52,7 @@ type Options struct {
 	VolumeService       volume.Service
 	ExecService         exec.Service
 	DistributionService distribution.Service
+	CredentialService   *credential.CredentialService
 	RegoFilePath        string
 
 	// NerdctlWrapper wraps the interactions with nerdctl to build
@@ -77,10 +79,11 @@ func New(opts *Options) (http.Handler, error) {
 	image.RegisterHandlers(vr, opts.ImageService, opts.Config, logger)
 	container.RegisterHandlers(vr, opts.ContainerService, opts.Config, logger)
 	network.RegisterHandlers(vr, opts.NetworkService, opts.Config, logger)
-	builder.RegisterHandlers(vr, opts.BuilderService, opts.Config, logger, opts.NerdctlWrapper)
+	builder.RegisterHandlers(vr, opts.BuilderService, opts.Config, logger, opts.NerdctlWrapper, opts.CredentialService)
 	volume.RegisterHandlers(vr, opts.VolumeService, opts.Config, logger)
 	exec.RegisterHandlers(vr, opts.ExecService, opts.Config, logger)
 	distribution.RegisterHandlers(vr, opts.DistributionService, opts.Config, logger)
+
 	return ghandlers.LoggingHandler(os.Stderr, r), nil
 }
 

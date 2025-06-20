@@ -193,7 +193,7 @@ func (m *MockContainer) Restore(arg0 context.Context, arg1 cio.Creator, arg2 str
 }
 
 // Restore indicates an expected call of Restore.
-func (mr *MockContainerMockRecorder) Restore(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockContainerMockRecorder) Restore(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockContainer)(nil).Restore), arg0, arg1, arg2)
 }

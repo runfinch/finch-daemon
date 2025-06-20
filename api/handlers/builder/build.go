@@ -12,7 +12,9 @@ import (
 
 	"github.com/containerd/containerd/v2/pkg/namespaces"
 	"github.com/containerd/nerdctl/v2/pkg/api/types"
+	dockertypes "github.com/docker/cli/cli/config/types"
 
+	"github.com/runfinch/finch-daemon/api/auth"
 	"github.com/runfinch/finch-daemon/api/response"
 	"github.com/runfinch/finch-daemon/pkg/utility/maputility"
 )
@@ -20,6 +22,45 @@ import (
 // build function is the http handler function for /build API.
 func (h *handler) build(w http.ResponseWriter, r *http.Request) {
 	streamWriter := response.NewStreamWriter(w)
+	var buildID string
+
+	registryConfig := r.Header.Get(auth.RegistryConfigHeader)
+
+	if h.credentialSvc == nil {
+		h.logger.Warnf("Credential service is not initialized")
+	} else {
+		var authConfigs map[string]dockertypes.AuthConfig
+
+		if registryConfig != "" {
+			var err error
+			authConfigs, err = auth.DecodeRegistryConfig(registryConfig)
+			if err != nil {
+				streamWriter.WriteError(http.StatusInternalServerError,
+					fmt.Errorf("failed to decode registry config: %w", err))
+				return
+			}
+		}
+
+		if len(authConfigs) > 0 {
+			var err error
+			buildID, err = h.credentialSvc.GenerateBuildID()
+			if err != nil {
+				streamWriter.WriteError(http.StatusInternalServerError,
+					fmt.Errorf("failed to generate build ID: %w", err))
+				return
+			}
+
+			defer func() {
+				h.credentialSvc.RemoveCredentials(buildID)
+			}()
+
+			if err = h.credentialSvc.StoreAuthConfigs(r.Context(), buildID, authConfigs); err != nil {
+				streamWriter.WriteError(http.StatusInternalServerError,
+					fmt.Errorf("failed to store auth configs: %w", err))
+				return
+			}
+		}
+	}
 
 	// create the build options based on passed parameter
 	buildOptions, err := h.getBuildOptions(w, r, streamWriter)
@@ -30,7 +71,7 @@ func (h *handler) build(w http.ResponseWriter, r *http.Request) {
 
 	// call the service to build
 	ctx := namespaces.WithNamespace(r.Context(), h.Config.Namespace)
-	result, err := h.service.Build(ctx, buildOptions, r.Body)
+	result, err := h.service.Build(ctx, buildOptions, r.Body, buildID)
 	if err != nil {
 		streamWriter.WriteError(http.StatusInternalServerError, err)
 		return
@@ -138,11 +179,19 @@ func getQueryParamMap(r *http.Request, paramName string, defaultValue []string) 
 		return defaultValue, nil
 	}
 
+	// First try to parse as map
 	var parsedMap map[string]string
 	err := json.Unmarshal([]byte(query), &parsedMap)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse %s query: %s", paramName, err)
+	if err == nil {
+		return maputility.Flatten(parsedMap, maputility.KeyEqualsValueFormat), nil
 	}
 
-	return maputility.Flatten(parsedMap, maputility.KeyEqualsValueFormat), nil
+	// If that fails, try to parse as array
+	var parsedArray []string
+	err = json.Unmarshal([]byte(query), &parsedArray)
+	if err == nil {
+		return parsedArray, nil
+	}
+
+	return nil, fmt.Errorf("unable to parse %s query: %s", paramName, err)
 }

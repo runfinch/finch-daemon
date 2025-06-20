@@ -22,6 +22,10 @@ import (
 // authorization credentials for registry operations (push/pull).
 const AuthHeader = "X-Registry-Auth"
 
+// RegistryConfigHeader is the name of the header used to send encoded registry
+// configuration for registry operations (build).
+const RegistryConfigHeader = "X-Registry-Config"
+
 // DecodeAuthConfig decodes base64url encoded (RFC4648, section 5) JSON
 // authentication information as sent through the X-Registry-Auth header.
 //
@@ -60,4 +64,23 @@ func decodeAuthConfigFromReader(rdr io.Reader) (*dockertypes.AuthConfig, error) 
 		return &dockertypes.AuthConfig{}, errors.Wrap(err, "invalid X-Registry-Auth header")
 	}
 	return authConfig, nil
+}
+
+// DecodeRegistryConfig decodes base64url encoded JSON registry configuration.
+func DecodeRegistryConfig(registryConfig string) (map[string]dockertypes.AuthConfig, error) {
+	if registryConfig == "" {
+		return map[string]dockertypes.AuthConfig{}, nil
+	}
+
+	decoded, err := base64.URLEncoding.DecodeString(registryConfig)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to decode registry config")
+	}
+
+	var registryConfigs map[string]dockertypes.AuthConfig
+	if err := json.Unmarshal(decoded, &registryConfigs); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal registry config")
+	}
+
+	return registryConfigs, nil
 }

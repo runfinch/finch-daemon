@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/containerd/nerdctl/v2/pkg/config"
+	finchconfig "github.com/runfinch/finch-daemon/pkg/config"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,7 +23,7 @@ func TestInitializeConfig(t *testing.T) {
 	require.NoError(t, err, "Initialization should succeed.")
 
 	assert.True(t, cfg.Debug, "Debug mode should be enabled.")
-	assert.Equal(t, "finch", defaultNamespace, "check default namespace")
+	assert.Equal(t, "finch", finchconfig.DefaultNamespace, "check default namespace")
 }
 
 func TestHandleConfigOptions_FileNotFound(t *testing.T) {

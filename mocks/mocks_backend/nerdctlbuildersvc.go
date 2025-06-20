@@ -43,17 +43,17 @@ func (m *MockNerdctlBuilderSvc) EXPECT() *MockNerdctlBuilderSvcMockRecorder {
 }
 
 // Build mocks base method.
-func (m *MockNerdctlBuilderSvc) Build(ctx context.Context, client backend.ContainerdClient, options types.BuilderBuildOptions) error {
+func (m *MockNerdctlBuilderSvc) Build(ctx context.Context, client backend.ContainerdClient, options types.BuilderBuildOptions, buildID string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Build", ctx, client, options)
+	ret := m.ctrl.Call(m, "Build", ctx, client, options, buildID)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Build indicates an expected call of Build.
-func (mr *MockNerdctlBuilderSvcMockRecorder) Build(ctx, client, options any) *gomock.Call {
+func (mr *MockNerdctlBuilderSvcMockRecorder) Build(ctx, client, options, buildID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockNerdctlBuilderSvc)(nil).Build), ctx, client, options)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockNerdctlBuilderSvc)(nil).Build), ctx, client, options, buildID)
 }
 
 // GetBuildkitHost mocks base method.

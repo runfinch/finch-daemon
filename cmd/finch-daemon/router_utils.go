@@ -15,6 +15,8 @@ import (
 	"github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/containerd/nerdctl/v2/pkg/config"
 	toml "github.com/pelletier/go-toml/v2"
+
+	finchconfig "github.com/runfinch/finch-daemon/pkg/config"
 	"github.com/runfinch/finch-daemon/api/router"
 	"github.com/runfinch/finch-daemon/internal/backend"
 	"github.com/runfinch/finch-daemon/internal/service/builder"
@@ -26,6 +28,7 @@ import (
 	"github.com/runfinch/finch-daemon/internal/service/system"
 	"github.com/runfinch/finch-daemon/internal/service/volume"
 	"github.com/runfinch/finch-daemon/pkg/archive"
+	"github.com/runfinch/finch-daemon/pkg/credential"
 	"github.com/runfinch/finch-daemon/pkg/ecc"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 	"github.com/spf13/afero"
@@ -65,7 +68,7 @@ func initializeConfig(options *DaemonOptions) (*config.Config, error) {
 		conf.Debug = options.debug
 	}
 	if conf.Namespace == "" || conf.Namespace == namespaces.Default {
-		conf.Namespace = defaultNamespace
+		conf.Namespace = finchconfig.DefaultNamespace
 	}
 
 	return conf, nil
@@ -99,6 +102,7 @@ func createRouterOptions(
 	ncWrapper *backend.NerdctlWrapper,
 	logger *flog.Logrus,
 	regoFilePath string,
+	credService *credential.CredentialService,
 ) *router.Options {
 	fs := afero.NewOsFs()
 	tarCreator := archive.NewTarCreator(ecc.NewExecCmdCreator(), logger)
@@ -110,12 +114,13 @@ func createRouterOptions(
 		ImageService:        image.NewService(clientWrapper, ncWrapper, logger),
 		NetworkService:      network.NewService(clientWrapper, ncWrapper, logger),
 		SystemService:       system.NewService(clientWrapper, ncWrapper, logger),
-		BuilderService:      builder.NewService(clientWrapper, ncWrapper, logger, tarExtractor),
+		BuilderService:      builder.NewService(clientWrapper, ncWrapper, logger, tarExtractor, credService),
 		VolumeService:       volume.NewService(ncWrapper, logger),
 		ExecService:         exec.NewService(clientWrapper, logger),
 		DistributionService: distribution.NewService(clientWrapper, ncWrapper, logger),
 		NerdctlWrapper:      ncWrapper,
 		RegoFilePath:        regoFilePath,
+		CredentialService:   credService,
 	}
 }
 
