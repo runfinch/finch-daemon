@@ -26,8 +26,10 @@ import (
 	"github.com/coreos/go-systemd/v22/daemon"
 	"github.com/gofrs/flock"
 	"github.com/moby/moby/pkg/pidfile"
+	credentialhandler "github.com/runfinch/finch-daemon/api/credential"
 	"github.com/runfinch/finch-daemon/api/router"
 	"github.com/runfinch/finch-daemon/internal/fs/passwd"
+	"github.com/runfinch/finch-daemon/pkg/credential"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 	"github.com/runfinch/finch-daemon/version"
 	"github.com/sirupsen/logrus"
@@ -36,15 +38,17 @@ import (
 
 const (
 	// Keep this value in sync with `guestSocket` in README.md.
-	defaultFinchAddr  = "/run/finch.sock"
-	defaultNamespace  = "finch"
-	defaultConfigPath = "/etc/finch/finch.toml"
-	defaultPidFile    = "/run/finch.pid"
+	defaultFinchAddr      = "/run/finch.sock"
+	defaultCredentialAddr = "/run/finch-credential.sock"
+	defaultNamespace      = "finch"
+	defaultConfigPath     = "/etc/finch/finch.toml"
+	defaultPidFile        = "/run/finch.pid"
 )
 
 type DaemonOptions struct {
 	debug              bool
 	socketAddr         string
+	credentialAddr     string
 	socketOwner        int
 	debugAddress       string
 	configPath         string
@@ -56,6 +60,8 @@ type DaemonOptions struct {
 
 var options = new(DaemonOptions)
 
+var ErrConnUnauthorized = errors.New("http: unauthorized access")
+
 func main() {
 	rootCmd := &cobra.Command{
 		Use:          "finch-daemon",
@@ -65,14 +71,20 @@ func main() {
 		SilenceUsage: true,
 	}
 	rootCmd.Flags().StringVar(&options.socketAddr, "socket-addr", defaultFinchAddr, "server listening Unix socket address")
+	rootCmd.Flags().StringVar(&options.credentialAddr, "credential-addr", defaultCredentialAddr, "credential endpoint Unix socket address")
 	rootCmd.Flags().BoolVar(&options.debug, "debug", false, "turn on debug log level")
-	rootCmd.Flags().IntVar(&options.socketOwner, "socket-owner", -1, "Uid and Gid of the server socket")
+	rootCmd.Flags().IntVar(&options.socketOwner, "socket-owner", 0, "Uid and Gid of the server socket")
 	rootCmd.Flags().StringVar(&options.debugAddress, "debug-addr", "", "")
 	rootCmd.Flags().StringVar(&options.configPath, "config-file", defaultConfigPath, "Daemon Config Path")
 	rootCmd.Flags().StringVar(&options.pidFile, "pidfile", defaultPidFile, "pid file location")
 	rootCmd.Flags().StringVar(&options.regoFilePath, "rego-file", "", "Rego Policy Path (requires --experimental flag)")
 	rootCmd.Flags().BoolVar(&options.skipRegoPermCheck, "skip-rego-perm-check", false, "skip the rego file permission check (allows permissions more permissive than 0600)")
 	rootCmd.Flags().BoolVar(&options.enableExperimental, "experimental", false, "enable experimental features")
+
+	// Set the socketOwner to -1 as the ownership in this case is controlled by .sock systemd file
+	if options.socketAddr == "fd://" {
+		options.socketOwner = -1
+	}
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Printf("got error: %v", err)
@@ -149,19 +161,68 @@ func run(options *DaemonOptions) error {
 	}
 
 	logger := flog.NewLogrus()
-	r, err := newRouter(options, logger)
+	credCache := credential.NewCredentialCache()
+	credService := credential.NewCredentialService(logger, credCache)
+
+	r, err := newRouter(options, logger, credService)
 	if err != nil {
 		return fmt.Errorf("failed to create a router: %w", err)
 	}
 
 	serverWg := &sync.WaitGroup{}
-	serverWg.Add(1)
+	serverWg.Add(2) // Add 2 for both main socket and credential socket
 
+	logger.Infof("setting docker config, socket %v", options.socketOwner)
 	if options.socketOwner >= 0 {
 		if err := defineDockerConfig(options.socketOwner); err != nil {
 			return fmt.Errorf("failed to get finch config: %w", err)
 		}
+		logger.Infof("setup done %v", os.Getenv("DOCKER_CONFIG"))
 	}
+
+	// Start of Build Credential Socket Implementation
+	// Remove existing credential socket if it exists
+	if _, err := os.Stat(options.credentialAddr); err == nil {
+		if err := os.Remove(options.credentialAddr); err != nil {
+			return fmt.Errorf("failed to remove existing credential socket: %w", err)
+		}
+	}
+
+	credListener, err := net.Listen("unix", options.credentialAddr)
+	if err != nil {
+		return fmt.Errorf("failed to listen on credential socket: %w", err)
+	}
+
+	if err := os.Chmod(options.credentialAddr, 0600); err != nil {
+		return fmt.Errorf("failed to set permissions on credential socket: %w", err)
+	}
+
+	credhandler, err := router.CreateCredentialHandler(credService, logger, credentialhandler.BuildRequestAuthMiddleware)
+	if err != nil {
+		return fmt.Errorf("failed to create credential router: %w", err)
+	}
+
+	credServer := &http.Server{
+		Handler:           credhandler,
+		ConnContext:       credentialhandler.SetConn,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	defer func() {
+		if err := credServer.Close(); err != nil {
+			logger.Warnf("Error closing credential server: %v", err)
+		}
+		os.Remove(options.credentialAddr)
+	}()
+
+	go func() {
+		defer serverWg.Done()
+		logger.Infof("Serving credential endpoint on %s...", options.credentialAddr)
+		if err := credServer.Serve(credListener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Fatal(err)
+		}
+	}()
+	// End of Build Credential Socker Implementation
 
 	listener, err := getListener(options)
 	if err != nil {
@@ -206,7 +267,7 @@ func run(options *DaemonOptions) error {
 	return nil
 }
 
-func newRouter(options *DaemonOptions, logger *flog.Logrus) (http.Handler, error) {
+func newRouter(options *DaemonOptions, logger *flog.Logrus, credService *credential.CredentialService) (http.Handler, error) {
 	conf, err := initializeConfig(options)
 	if err != nil {
 		return nil, err
@@ -237,7 +298,7 @@ func newRouter(options *DaemonOptions, logger *flog.Logrus) (http.Handler, error
 		logger.Info("experimental flag passed, but no experimental features enabled")
 	}
 
-	opts := createRouterOptions(conf, clientWrapper, ncWrapper, logger, regoFilePath)
+	opts := createRouterOptions(conf, clientWrapper, ncWrapper, logger, regoFilePath, credService)
 	newRouter, err := router.New(opts)
 	if err != nil {
 		return nil, err
@@ -277,7 +338,7 @@ func sdNotify(state string, logger *flog.Logrus) {
 }
 
 // defineDockerConfig defines the DOCKER_CONFIG environment variable for the process
-// to be $HOME/.finch. When building an image via finch-daemon, buildctl uses this variable
+// to be $HOME/.finch-daemon. When building an image via finch-daemon, buildctl uses this variable
 // to load auth configs.
 //
 // This is a hack and should be fixed by passing the actual credentials that come in
@@ -285,7 +346,32 @@ func sdNotify(state string, logger *flog.Logrus) {
 func defineDockerConfig(uid int) error {
 	return passwd.Walk(func(e passwd.Entry) bool {
 		if e.UID == uid {
-			os.Setenv("DOCKER_CONFIG", fmt.Sprintf("%s/.finch", e.Home))
+			dockerConfigDir := fmt.Sprintf("%s/.finch-daemon", e.Home)
+
+			if err := os.MkdirAll(dockerConfigDir, 0700); err != nil {
+				return false
+			}
+
+			configFilePath := filepath.Join(dockerConfigDir, "config.json")
+			var configContent []byte
+			
+			// Check if docker-credential-finch exists
+			if _, err := os.Stat("/usr/bin/docker-credential-finch"); os.IsNotExist(err) {
+				log.Printf("Warning: /usr/bin/docker-credential-finch not found, credential store will not be configured")
+				configContent = []byte(`{}`)
+			} else {
+				configContent = []byte(`{
+    "credsStore": "finch"
+}`)
+			}
+			
+			if err := os.WriteFile(configFilePath, configContent, 0600); err != nil {
+				log.Printf("failed to write docker config file: %v", err)
+				return false
+			}
+
+			// Set the DOCKER_CONFIG environment variable
+			os.Setenv("DOCKER_CONFIG", dockerConfigDir)
 			return false
 		}
 		return true

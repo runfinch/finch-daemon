@@ -8,6 +8,7 @@ import (
 	"github.com/runfinch/finch-daemon/api/handlers/builder"
 	"github.com/runfinch/finch-daemon/internal/backend"
 	"github.com/runfinch/finch-daemon/pkg/archive"
+	"github.com/runfinch/finch-daemon/pkg/credential"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 )
 
@@ -21,6 +22,7 @@ type service struct {
 	nctlBuilderSvc NerdctlService
 	logger         flog.Logger
 	tarExtractor   archive.TarExtractor
+	credentialSvc  *credential.CredentialService
 }
 
 // NewService creates a service struct for build APIs.
@@ -29,11 +31,13 @@ func NewService(
 	ncBuilderSvc NerdctlService,
 	logger flog.Logger,
 	tarExtractor archive.TarExtractor,
+	credService *credential.CredentialService,
 ) builder.Service {
 	return &service{
 		client:         client,
 		nctlBuilderSvc: ncBuilderSvc,
 		logger:         logger,
 		tarExtractor:   tarExtractor,
+		credentialSvc:  credService,
 	}
 }

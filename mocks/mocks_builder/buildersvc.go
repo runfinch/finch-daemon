@@ -44,16 +44,16 @@ func (m *MockService) EXPECT() *MockServiceMockRecorder {
 }
 
 // Build mocks base method.
-func (m *MockService) Build(ctx context.Context, options *types.BuilderBuildOptions, tarBody io.ReadCloser) ([]types0.BuildResult, error) {
+func (m *MockService) Build(ctx context.Context, options *types.BuilderBuildOptions, tarBody io.ReadCloser, buildID string) ([]types0.BuildResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Build", ctx, options, tarBody)
+	ret := m.ctrl.Call(m, "Build", ctx, options, tarBody, buildID)
 	ret0, _ := ret[0].([]types0.BuildResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Build indicates an expected call of Build.
-func (mr *MockServiceMockRecorder) Build(ctx, options, tarBody any) *gomock.Call {
+func (mr *MockServiceMockRecorder) Build(ctx, options, tarBody, buildID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockService)(nil).Build), ctx, options, tarBody)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockService)(nil).Build), ctx, options, tarBody, buildID)
 }
