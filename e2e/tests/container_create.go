@@ -210,6 +210,44 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(portMap[udpPort][0]).Should(Equal(udpPortBinding))
 		})
 
+		It("should create a container with automatic port allocation on the host", func() {
+			ctrPort := "8080"
+
+			// define options with empty host port for automatic allocation
+			tcpPort := nat.Port(fmt.Sprintf("%s/tcp", ctrPort))
+			tcpPortBinding := nat.PortBinding{HostIP: "0.0.0.0", HostPort: ""}
+
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.PortBindings = nat.PortMap{
+				tcpPort: []nat.PortBinding{tcpPortBinding},
+			}
+
+			// create and start container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+			command.Run(opt, "start", testContainerName)
+
+			// inspect container
+			resp := command.Stdout(opt, "inspect", testContainerName)
+			var inspect []*dockercompat.Container
+			err := json.Unmarshal(resp, &inspect)
+			Expect(err).Should(BeNil())
+			Expect(inspect).Should(HaveLen(1))
+
+			// verify port mappings with automatic allocation
+			Expect(inspect[0].NetworkSettings).ShouldNot(BeNil())
+			portMap := *inspect[0].NetworkSettings.Ports
+			Expect(portMap).Should(HaveLen(1))
+			Expect(portMap[tcpPort]).Should(HaveLen(1))
+			Expect(portMap[tcpPort][0].HostIP).Should(Equal("0.0.0.0"))
+			Expect(portMap[tcpPort][0].HostPort).ShouldNot(BeEmpty())
+			// Verify that a port was actually allocated (not empty string)
+			port, err := strconv.Atoi(portMap[tcpPort][0].HostPort)
+			Expect(err).Should(BeNil())
+			Expect(port).Should(BeNumerically(">", 0))
+		})
+
 		// Volume Mounts
 
 		It("should create a container with a directory mounted from the host", func() {
