@@ -478,6 +478,46 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(int64(period)).Should(Equal(int64(100000)))
 		})
 
+		It("should create a container with both CPURealtimePeriod and CPURealtimeRuntime options", func() {
+			// define options
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.CPURealtimePeriod = 1000000
+			options.HostConfig.CPURealtimeRuntime = 950000
+
+			// create container
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// start container
+			command.Run(opt, "start", testContainerName)
+
+			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
+			var nativeInspect []map[string]interface{}
+			err := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err).Should(BeNil())
+			Expect(nativeInspect).Should(HaveLen(1))
+
+			// Navigate to the CPU settings
+			spec, ok := nativeInspect[0]["Spec"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			linux, ok := spec["linux"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			resources, ok := linux["resources"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+			cpu, ok := resources["cpu"].(map[string]interface{})
+			Expect(ok).Should(BeTrue())
+
+			// Verify both CPURealtimePeriod and CPURealtimeRuntime values
+			realtimePeriod, ok := cpu["realtimePeriod"].(float64)
+			Expect(ok).Should(BeTrue())
+			Expect(int64(realtimePeriod)).Should(Equal(int64(1000000)))
+
+			realtimeRuntime, ok := cpu["realtimeRuntime"].(float64)
+			Expect(ok).Should(BeTrue())
+			Expect(int64(realtimeRuntime)).Should(Equal(int64(950000)))
+		})
+
 		It("should create a container with specified Memory qouta and PidLimits options", func() {
 			// define options
 			options.Cmd = []string{"sleep", "Infinity"}
