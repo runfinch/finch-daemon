@@ -25,7 +25,7 @@ const shortLen = 12
 var publishTagEventFunc = (*service).publishTagEvent
 
 // Build function builds an image using nerdctl function based on the BuilderBuildOptions.
-func (s *service) Build(ctx context.Context, options *ncTypes.BuilderBuildOptions, tarBody io.ReadCloser) ([]types.BuildResult, error) {
+func (s *service) Build(ctx context.Context, options *ncTypes.BuilderBuildOptions, tarBody io.ReadCloser, buildID string) ([]types.BuildResult, error) {
 	tarCmd, err := s.tarExtractor.ExtractInTemp(tarBody, "build-context")
 	if err != nil {
 		s.logger.Warnf("Failed to extract build context. Error: %v", err)
@@ -49,7 +49,7 @@ func (s *service) Build(ctx context.Context, options *ncTypes.BuilderBuildOption
 	// update the build context and the docker file path with the temp dir.
 	options.BuildContext = dir
 	options.File = fmt.Sprintf("%s/%s", dir, options.File)
-	if err = s.nctlBuilderSvc.Build(ctx, s.client, *options); err != nil {
+	if err = s.nctlBuilderSvc.Build(ctx, s.client, *options, buildID); err != nil {
 		return nil, err
 	}
 

@@ -17,6 +17,7 @@ import (
 	"github.com/moby/moby/api/types/versions"
 
 	"github.com/open-policy-agent/opa/v1/rego"
+	credentialhandler "github.com/runfinch/finch-daemon/api/credential"
 	"github.com/runfinch/finch-daemon/api/handlers/builder"
 	"github.com/runfinch/finch-daemon/api/handlers/container"
 	"github.com/runfinch/finch-daemon/api/handlers/distribution"
@@ -28,6 +29,7 @@ import (
 	"github.com/runfinch/finch-daemon/api/response"
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/internal/backend"
+	"github.com/runfinch/finch-daemon/pkg/credential"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 	"github.com/runfinch/finch-daemon/version"
 )
@@ -51,6 +53,7 @@ type Options struct {
 	VolumeService       volume.Service
 	ExecService         exec.Service
 	DistributionService distribution.Service
+	CredentialService   *credential.CredentialService
 	RegoFilePath        string
 
 	// NerdctlWrapper wraps the interactions with nerdctl to build
@@ -77,10 +80,11 @@ func New(opts *Options) (http.Handler, error) {
 	image.RegisterHandlers(vr, opts.ImageService, opts.Config, logger)
 	container.RegisterHandlers(vr, opts.ContainerService, opts.Config, logger)
 	network.RegisterHandlers(vr, opts.NetworkService, opts.Config, logger)
-	builder.RegisterHandlers(vr, opts.BuilderService, opts.Config, logger, opts.NerdctlWrapper)
+	builder.RegisterHandlers(vr, opts.BuilderService, opts.Config, logger, opts.NerdctlWrapper, opts.CredentialService)
 	volume.RegisterHandlers(vr, opts.VolumeService, opts.Config, logger)
 	exec.RegisterHandlers(vr, opts.ExecService, opts.Config, logger)
 	distribution.RegisterHandlers(vr, opts.DistributionService, opts.Config, logger)
+
 	return ghandlers.LoggingHandler(os.Stderr, r), nil
 }
 
@@ -158,4 +162,14 @@ func CreateRegoMiddleware(regoFilePath string, logger *flog.Logrus) (func(next h
 			next.ServeHTTP(w, newReq)
 		})
 	}, nil
+}
+
+// CreateCredentialHandler creates a dedicated HTTP handler for the credential socket
+func CreateCredentialHandler(credentialService *credential.CredentialService, logger flog.Logger, authMiddleware func(http.Handler) http.Handler) (http.Handler, error) {
+	r := mux.NewRouter()
+	r.Use(authMiddleware)
+
+	// Register the credential handler
+	credentialhandler.RegisterHandlers(r, credentialService, logger)
+	return ghandlers.LoggingHandler(os.Stderr, r), nil
 }

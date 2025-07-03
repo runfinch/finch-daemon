@@ -26,6 +26,7 @@ import (
 	"github.com/runfinch/finch-daemon/internal/service/system"
 	"github.com/runfinch/finch-daemon/internal/service/volume"
 	"github.com/runfinch/finch-daemon/pkg/archive"
+	"github.com/runfinch/finch-daemon/pkg/credential"
 	"github.com/runfinch/finch-daemon/pkg/ecc"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 	"github.com/spf13/afero"
@@ -99,6 +100,7 @@ func createRouterOptions(
 	ncWrapper *backend.NerdctlWrapper,
 	logger *flog.Logrus,
 	regoFilePath string,
+	credService *credential.CredentialService,
 ) *router.Options {
 	fs := afero.NewOsFs()
 	tarCreator := archive.NewTarCreator(ecc.NewExecCmdCreator(), logger)
@@ -110,12 +112,13 @@ func createRouterOptions(
 		ImageService:        image.NewService(clientWrapper, ncWrapper, logger),
 		NetworkService:      network.NewService(clientWrapper, ncWrapper, logger),
 		SystemService:       system.NewService(clientWrapper, ncWrapper, logger),
-		BuilderService:      builder.NewService(clientWrapper, ncWrapper, logger, tarExtractor),
+		BuilderService:      builder.NewService(clientWrapper, ncWrapper, logger, tarExtractor, credService),
 		VolumeService:       volume.NewService(ncWrapper, logger),
 		ExecService:         exec.NewService(clientWrapper, logger),
 		DistributionService: distribution.NewService(clientWrapper, ncWrapper, logger),
 		NerdctlWrapper:      ncWrapper,
 		RegoFilePath:        regoFilePath,
+		CredentialService:   credService,
 	}
 }
 

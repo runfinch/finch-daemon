@@ -12,9 +12,9 @@ import (
 	"os"
 
 	"github.com/containerd/nerdctl/v2/pkg/api/types"
-	"go.uber.org/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/api/events"
 	"github.com/runfinch/finch-daemon/api/handlers/builder"
@@ -59,21 +59,21 @@ var _ = Describe("Build API ", func() {
 		mockCmd.EXPECT().GetDir().Return(fmt.Sprintf("%s/%s", os.TempDir(), cid)).AnyTimes()
 		mockCmd.EXPECT().SetStderr(gomock.Any()).AnyTimes()
 
-		service = NewService(cdClient, mockNerdctlService{ncBuilderSvc, ncImgSvc}, logger, tarExtractor)
+		service = NewService(cdClient, mockNerdctlService{ncBuilderSvc, ncImgSvc}, logger, tarExtractor, nil)
 		buildOption = types.BuilderBuildOptions{}
 		req, _ = http.NewRequest(http.MethodPost, "/build", nil)
 	})
 	Context("service", func() {
 		It("should successfully build image", func() {
 			// set up the mock
-			ncBuilderSvc.EXPECT().Build(gomock.Any(), gomock.Any(), gomock.Any())
+			ncBuilderSvc.EXPECT().Build(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
 			tarExtractor.EXPECT().ExtractInTemp(gomock.Any(), gomock.Any()).
 				Return(mockCmd, nil)
 			tarExtractor.EXPECT().Cleanup(gomock.Any())
 			mockCmd.EXPECT().Run().Return(nil)
 
 			// service should not return any error
-			_, err := service.Build(ctx, &buildOption, req.Body)
+			_, err := service.Build(ctx, &buildOption, req.Body, "test-build-id")
 			Expect(err).Should(BeNil())
 		})
 		It("should fail building image due to temp folder creation failure", func() {
@@ -82,7 +82,7 @@ var _ = Describe("Build API ", func() {
 			tarExtractor.EXPECT().ExtractInTemp(gomock.Any(), gomock.Any()).Return(nil, mockErr)
 			logger.EXPECT().Warnf("Failed to extract build context. Error: %v", mockErr)
 			// service should return error
-			_, err := service.Build(ctx, &buildOption, req.Body)
+			_, err := service.Build(ctx, &buildOption, req.Body, "test-build-id")
 			Expect(err).Should(Equal(mockErr))
 		})
 		It("should fail building image due to tar extraction failure", func() {
@@ -93,7 +93,7 @@ var _ = Describe("Build API ", func() {
 			logger.EXPECT().Warnf("Failed to extract build context in temp folder. Dir: %s, Error: %s, Stderr: %s",
 				gomock.Any(), gomock.Any(), gomock.Any())
 			// service should return error
-			_, err := service.Build(ctx, &buildOption, req.Body)
+			_, err := service.Build(ctx, &buildOption, req.Body, "test-build-id")
 			Expect(err).Should(Not(BeNil()))
 			Expect(err.Error()).Should(Equal("failed to extract build context in temp folder"))
 		})
@@ -105,18 +105,18 @@ var _ = Describe("Build API ", func() {
 			logger.EXPECT().Warnf("Failed to extract build context in temp folder. Dir: %s, Error: %s, Stderr: %s",
 				gomock.Any(), gomock.Any(), gomock.Any())
 			// service should return error
-			_, err := service.Build(ctx, &buildOption, req.Body)
+			_, err := service.Build(ctx, &buildOption, req.Body, "test-build-id")
 			Expect(err.Error()).Should(Equal("failed to extract build context in temp folder"))
 		})
 		It("should fail building image due build error from nerdctl", func() {
 			// set up the mock
 			mockCmd.EXPECT().Run().Return(nil)
 			errExpected := fmt.Errorf("nerdctl error")
-			ncBuilderSvc.EXPECT().Build(gomock.Any(), gomock.Any(), gomock.Any()).Return(errExpected)
+			ncBuilderSvc.EXPECT().Build(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errExpected)
 			tarExtractor.EXPECT().ExtractInTemp(gomock.Any(), gomock.Any()).Return(mockCmd, nil)
 			tarExtractor.EXPECT().Cleanup(gomock.Any())
 			// service should return err
-			_, err := service.Build(ctx, &buildOption, req.Body)
+			_, err := service.Build(ctx, &buildOption, req.Body, "test-build-id")
 			Expect(err).Should(Equal(errExpected))
 		})
 		It("should successfully tag image after build", func() {
@@ -126,7 +126,7 @@ var _ = Describe("Build API ", func() {
 			buildOption.Stdout = rr
 
 			// set up mocks
-			ncBuilderSvc.EXPECT().Build(gomock.Any(), gomock.Any(), gomock.Any())
+			ncBuilderSvc.EXPECT().Build(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
 			expectPublishTagEvent(mockCtrl, tag).Return(&events.Event{ID: imageId}, nil)
 			tarExtractor.EXPECT().ExtractInTemp(gomock.Any(), gomock.Any()).
 				Return(mockCmd, nil)
@@ -134,7 +134,7 @@ var _ = Describe("Build API ", func() {
 			mockCmd.EXPECT().Run().Return(nil)
 
 			// service should not return any error
-			result, err := service.Build(ctx, &buildOption, req.Body)
+			result, err := service.Build(ctx, &buildOption, req.Body, "test-build-id")
 			Expect(err).Should(BeNil())
 			Expect(result).Should(HaveLen(1))
 			Expect(result[0].ID).Should(Equal(imageId))
