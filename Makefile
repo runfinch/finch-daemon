@@ -163,3 +163,25 @@ coverage: linux
 release: linux
 	@echo "$@"
 	@$(FINCH_DAEMON_PROJECT_ROOT)/scripts/create-releases.sh $(RELEASE_TAG)
+
+.PHONY: macos
+macos:
+ifeq ($(shell uname), Darwin)
+	@echo "Running on macOS"
+else
+	$(error This target can only be run on macOS!)
+endif
+	
+
+DAEMON_DOCKER_HOST := "unix:///Applications/Finch/lima/data/finch/sock/finch.sock"
+# DAEMON_ROOT
+
+.PHONY: test-e2e-inside-vm
+test-e2e-inside-vm: macos
+	DOCKER_HOST=$(DAEMON_DOCKER_HOST) \
+	DOCKER_API_VERSION="v1.41" \
+	TEST_E2E=1 \
+	go test ./e2e -test.v -ginkgo.v -ginkgo.randomize-all \
+	--subject="finch" \
+	--daemon-context-subject-prefix="/Applications/Finch/lima/bin/limactl shell finch sudo" \
+	--daemon-context-subject-env="LIMA_HOME=/Applications/Finch/lima/data"
