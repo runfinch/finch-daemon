@@ -274,6 +274,20 @@ func (mr *MockServiceMockRecorder) Stop(ctx, cid, option any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockService)(nil).Stop), ctx, cid, option)
 }
 
+// Top mocks base method.
+func (m *MockService) Top(ctx context.Context, cid string, options types.ContainerTopOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Top", ctx, cid, options)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Top indicates an expected call of Top.
+func (mr *MockServiceMockRecorder) Top(ctx, cid, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Top", reflect.TypeOf((*MockService)(nil).Top), ctx, cid, options)
+}
+
 // Unpause mocks base method.
 func (m *MockService) Unpause(ctx context.Context, cid string, options types.ContainerUnpauseOptions) error {
 	m.ctrl.T.Helper()
