@@ -5,18 +5,10 @@ package container
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
-
-	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
-	"github.com/containerd/nerdctl/v2/pkg/labels"
 
 	"github.com/runfinch/finch-daemon/api/types"
 )
-
-const networkPrefix = "unknown-eth"
 
 func (s *service) Inspect(ctx context.Context, cid string, sizeFlag bool) (*types.Container, error) {
 	c, err := s.getContainer(ctx, cid)
@@ -66,12 +58,6 @@ func (s *service) Inspect(ctx context.Context, cid string, sizeFlag bool) (*type
 		Labels:       inspect.Config.Labels,
 	}
 
-	l, err := c.Labels(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get container labels: %s", err)
-	}
-	updateNetworkSettings(ctx, cont.NetworkSettings, l)
-
 	// make sure it passes the default time value for time fields otherwise the goclient fails.
 	if inspect.Created == "" {
 		cont.Created = "0001-01-01T00:00:00Z"
@@ -82,47 +68,4 @@ func (s *service) Inspect(ctx context.Context, cid string, sizeFlag bool) (*type
 	}
 
 	return &cont, nil
-}
-
-// updateNetworkSettings updates the settings in the network to match that
-// of docker as docker identifies networks by their name in "NetworkSettings",
-// but nerdctl uses a sequential ordering "unknown-eth0", "unknown-eth1",...
-// we use container labels to find corresponding name for each network in "NetworkSettings".
-func updateNetworkSettings(ctx context.Context, ns *dockercompat.NetworkSettings, labels map[string]string) error {
-	if ns != nil && ns.Networks != nil {
-		networks := map[string]*dockercompat.NetworkEndpointSettings{}
-
-		for network, settings := range ns.Networks {
-			networkName := getNetworkName(labels, network)
-			networks[networkName] = settings
-		}
-		ns.Networks = networks
-	}
-	return nil
-}
-
-// getNetworkName gets network name from container labels using the index specified by the network prefix.
-// returns the default prefix if network name was not found.
-func getNetworkName(lab map[string]string, network string) string {
-	namesJSON, ok := lab[labels.Networks]
-	if !ok {
-		return network
-	}
-	var names []string
-	if err := json.Unmarshal([]byte(namesJSON), &names); err != nil {
-		return network
-	}
-
-	if strings.HasPrefix(network, networkPrefix) {
-		prefixLen := len(networkPrefix)
-		index, err := strconv.ParseUint(network[prefixLen:], 10, 64)
-		if err != nil {
-			return network
-		}
-		if int(index) < len(names) {
-			return names[index]
-		}
-	}
-
-	return network
 }

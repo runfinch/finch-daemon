@@ -87,8 +87,6 @@ var _ = Describe("Container Inspect API ", func() {
 			ncClient.EXPECT().InspectContainer(gomock.Any(), con, sizeFlag).Return(
 				&inspect, nil)
 
-			con.EXPECT().Labels(gomock.Any()).Return(nil, nil)
-
 			result, err := service.Inspect(ctx, cid, sizeFlag)
 			Expect(*result).Should(Equal(ret))
 			Expect(err).Should(BeNil())
@@ -156,8 +154,6 @@ var _ = Describe("Container Inspect API ", func() {
 			ncClient.EXPECT().InspectContainer(gomock.Any(), con, sizeFlag).Return(
 				&inspectWithSize, nil)
 
-			con.EXPECT().Labels(gomock.Any()).Return(nil, nil)
-
 			result, err := service.Inspect(ctx, cid, sizeFlag)
 			Expect(err).Should(BeNil())
 			Expect(result.SizeRw).ShouldNot(BeNil())
@@ -175,7 +171,6 @@ var _ = Describe("Container Inspect API ", func() {
 			ncClient.EXPECT().InspectContainer(gomock.Any(), con, sizeFlag).Return(
 				&inspect, nil)
 
-			con.EXPECT().Labels(gomock.Any()).Return(nil, nil)
 			result, err := service.Inspect(ctx, cid, sizeFlag)
 			Expect(err).Should(BeNil())
 			Expect(result.SizeRw).Should(BeZero())
