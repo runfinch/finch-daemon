@@ -14,13 +14,13 @@ import (
 	"github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
+	"github.com/runfinch/finch-daemon/pkg/config"
 
 	"github.com/runfinch/finch-daemon/e2e/tests"
 	"github.com/runfinch/finch-daemon/e2e/util"
 )
 
 const (
-	defaultNamespace   = "finch"
 	testE2EEnv         = "TEST_E2E"
 	middlewareE2EEnv   = "MIDDLEWARE_E2E"
 	opaTestDescription = "Finch Daemon OPA E2E Tests"
@@ -45,7 +45,7 @@ func TestRun(t *testing.T) {
 }
 
 func createTestOption() (*option.Option, error) {
-	return option.New([]string{*Subject, "--namespace", defaultNamespace})
+	return option.New([]string{*Subject, "--namespace", config.DefaultNamespace})
 }
 
 func setupTestSuite(opt *option.Option) {
@@ -100,6 +100,7 @@ func runE2ETests(t *testing.T) {
 		runImageTests(opt)
 		runSystemTests(opt)
 		runDistributionTests(opt)
+		runCredentialTests(opt, pOpt)
 	})
 
 	runTests(t, e2eTestDescription)
@@ -171,6 +172,11 @@ func runSystemTests(opt *option.Option) {
 // functional test for distribution api.
 func runDistributionTests(opt *option.Option) {
 	tests.DistributionInspect(opt)
+}
+
+// functional test for credential helper.
+func runCredentialTests(opt *option.Option, pOpt func([]string, ...option.Modifier) (*option.Option, error)) {
+	tests.CredentialHelper(opt, pOpt)
 }
 
 // parseTestFlags parses go test flags because pflag package ignores flags with '-test.' prefix
