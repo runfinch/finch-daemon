@@ -16,11 +16,7 @@
 * Add credential management for container build ([#275](https://github.com/runfinch/finch-daemon/issues/275)) ([47d2a65](https://github.com/runfinch/finch-daemon/commit/47d2a6560e6f5864b6aa4f4030e5ad8ebf977c5e))
 * migrate from golang gomock to uber gomock ([#264](https://github.com/runfinch/finch-daemon/issues/264)) ([bb9442a](https://github.com/runfinch/finch-daemon/commit/bb9442a022aeb392822a697f13a238b7f81b8af8))
 * Opa middleware support (Experimental) ([#156](https://github.com/runfinch/finch-daemon/issues/156)) ([91b9ac6](https://github.com/runfinch/finch-daemon/commit/91b9ac673ff13bcbe2a948d953481f5505245c4c))
-
-
-### Bug Fixes
-
-* Add credential management for container build ([47d2a65](https://github.com/runfinch/finch-daemon/commit/47d2a6560e6f5864b6aa4f4030e5ad8ebf977c5e))
+  
 
 ## [0.17.2](https://github.com/runfinch/finch-daemon/compare/v0.17.1...v0.17.2) (2025-06-06)
 
