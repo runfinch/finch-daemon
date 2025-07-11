@@ -68,12 +68,10 @@ func (w *NerdctlWrapper) CreateContainer(ctx context.Context, args []string, net
 func (w *NerdctlWrapper) InspectContainer(ctx context.Context, c containerd.Container, sizeFlag bool) (*dockercompat.Container, error) {
 	var buf bytes.Buffer
 	options := types.ContainerInspectOptions{
-		Mode:   "dockercompat",
-		Stdout: &buf,
-		Size:   sizeFlag,
-		GOptions: types.GlobalCommandOptions{
-			Snapshotter: w.globalOptions.Snapshotter,
-		},
+		Mode:     "dockercompat",
+		Stdout:   &buf,
+		Size:     sizeFlag,
+		GOptions: *w.globalOptions,
 	}
 
 	results, err := container.Inspect(ctx, w.clientWrapper.client, []string{c.ID()}, options)
