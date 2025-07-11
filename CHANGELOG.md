@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.18.1](https://github.com/runfinch/finch-daemon/compare/v0.18.0...v0.18.1) (2025-07-11)
+
+
+### Bug Fixes
+
+* verify release artifact ([20dc067](https://github.com/runfinch/finch-daemon/commit/20dc0677673c88f2bacbe7b7f94d307899918108))
+* verify release artifact docker-credential-finch ([#284](https://github.com/runfinch/finch-daemon/issues/284)) ([20dc067](https://github.com/runfinch/finch-daemon/commit/20dc0677673c88f2bacbe7b7f94d307899918108))
+
 ## [0.18.0](https://github.com/runfinch/finch-daemon/compare/v0.17.2...v0.18.0) (2025-07-11)
 
 
