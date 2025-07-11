@@ -45,7 +45,7 @@ release_version=${release_tag/v/}
 
 pushd "$release_dir" || exit 1
 tarballs=("finch-daemon-${release_version}-linux-${arch}.tar.gz" "finch-daemon-${release_version}-linux-${arch}-static.tar.gz")
-expected_contents=("finch-daemon" "THIRD_PARTY_LICENSES")
+expected_contents=("finch-daemon" "THIRD_PARTY_LICENSES" "docker-credential-finch")
 release_is_valid=true
 
 for t in "${tarballs[@]}"; do
