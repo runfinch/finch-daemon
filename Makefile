@@ -11,7 +11,11 @@ FINCH_DAEMON_PROJECT_ROOT ?= $(shell pwd)
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 
+CRED_HELPER_PREFIX ?= /usr
+CRED_HELPER_BINDIR ?= $(CRED_HELPER_PREFIX)/bin
+
 BINARY = $(addprefix bin/,finch-daemon)
+CREDENTIAL_HELPER = $(addprefix bin/,docker-credential-finch)
 
 PACKAGE := github.com/runfinch/finch-daemon
 VERSION ?= $(shell git describe --match 'v[0-9]*' --dirty='.modified' --always --tags)
@@ -24,7 +28,10 @@ endif
 LDFLAGS_BASE := -X $(PACKAGE)/version.Version=$(VERSION) -X $(PACKAGE)/version.GitCommit=$(GITCOMMIT) $(EXTRA_LDFLAGS)
 
 .PHONY: build
-build:
+build: build-daemon build-credential-helper
+
+.PHONY: build-daemon
+build-daemon:
 ifeq ($(STATIC),)
 	@echo "Building Dynamic Binary"
 	CGO_ENABLED=1 GOOS=linux go build \
@@ -36,6 +43,21 @@ else
 		-tags netgo \
 		-ldflags "$(LDFLAGS_BASE) -extldflags '-static'" \
 		-v -o $(BINARY) $(PACKAGE)/cmd/finch-daemon
+endif
+
+.PHONY: build-credential-helper
+build-credential-helper:
+ifeq ($(STATIC),)
+	@echo "Building Dynamic Credential Helper"
+	CGO_ENABLED=1 GOOS=linux go build \
+		-ldflags "$(LDFLAGS_BASE)" \
+		-v -o $(CREDENTIAL_HELPER) $(PACKAGE)/cmd/finch-credential-helper
+else
+	@echo "Building Static Credential Helper"
+	CGO_ENABLED=0 GOOS=linux go build \
+		-tags netgo \
+		-ldflags "$(LDFLAGS_BASE) -extldflags '-static'" \
+		-v -o $(CREDENTIAL_HELPER) $(PACKAGE)/cmd/finch-credential-helper
 endif
 
 clean:
@@ -63,9 +85,11 @@ start-debug: linux build $(DLV) unlink
 install: linux
 	install -d $(DESTDIR)$(BINDIR)
 	install $(BINARY) $(DESTDIR)$(BINDIR)
+	install $(CREDENTIAL_HELPER) $(DESTDIR)$(CRED_HELPER_BINDIR)
 
 uninstall:
 	@rm -f $(addprefix $(DESTDIR)$(BINDIR)/,$(notdir $(BINARY)))
+	@rm -f $(addprefix $(DESTDIR)$(CRED_HELPER_BINDIR)/,$(notdir $(CREDENTIAL_HELPER)))
 
 # Unlink the unix socket if the link does not get cleaned up properly (or if finch-daemon is already running)
 .PHONY: unlink
@@ -73,11 +97,14 @@ unlink: linux
 ifneq ("$(wildcard /run/finch.sock)","")
 	sudo unlink /run/finch.sock
 endif
+ifneq ("$(wildcard /run/finch/credential.sock)","")
+	sudo unlink /run/finch/credential.sock
+endif
 
 .PHONY:  gen-code
  gen-code: linux
 	rm -rf ./pkg/mocks
-	GOBIN=$(BIN) go install github.com/golang/mock/mockgen@v1.6.0
+	GOBIN=$(BIN) go install go.uber.org/mock/mockgen@v0.5.2
 	GOBIN=$(BIN) go install golang.org/x/tools/cmd/stringer@v0.31.0
 	PATH=$(BIN):$(PATH) go generate ./...
 	PATH=$(BIN):$(PATH) mockgen --destination=./mocks/mocks_container/container.go -package=mocks_container github.com/containerd/containerd/v2/client Container
@@ -112,6 +139,15 @@ test-e2e: linux
 	DOCKER_HOST="unix:///run/finch.sock" \
 	DOCKER_API_VERSION="v1.41" \
 	TEST_E2E=1 \
+	$(GINKGO) $(GFLAGS) ./e2e/...
+
+.PHONY: test-e2e-opa
+test-e2e-opa: linux
+	DOCKER_HOST="unix:///run/finch.sock" \
+	DOCKER_API_VERSION="v1.41" \
+	MIDDLEWARE_E2E=1 \
+	TEST_E2E=0 \
+	DAEMON_ROOT="$(BIN)/finch-daemon" \
 	$(GINKGO) $(GFLAGS) ./e2e/...
 
 .PHONY: licenses

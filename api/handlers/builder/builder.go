@@ -14,6 +14,7 @@ import (
 
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/internal/backend"
+	"github.com/runfinch/finch-daemon/pkg/credential"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 )
 
@@ -23,8 +24,9 @@ func RegisterHandlers(r types.VersionedRouter,
 	conf *config.Config,
 	logger flog.Logger,
 	ncBuildSvc backend.NerdctlBuilderSvc,
+	credService *credential.CredentialService,
 ) {
-	h := newHandler(service, conf, logger, ncBuildSvc)
+	h := newHandler(service, conf, logger, ncBuildSvc, credService)
 	r.HandleFunc("/build", h.build, http.MethodPost)
 }
 
@@ -32,22 +34,24 @@ func RegisterHandlers(r types.VersionedRouter,
 //
 //go:generate mockgen --destination=../../../mocks/mocks_builder/buildersvc.go -package=mocks_builder github.com/runfinch/finch-daemon/api/handlers/builder Service
 type Service interface {
-	Build(ctx context.Context, options *ncTypes.BuilderBuildOptions, tarBody io.ReadCloser) ([]types.BuildResult, error)
+	Build(ctx context.Context, options *ncTypes.BuilderBuildOptions, tarBody io.ReadCloser, buildID string) ([]types.BuildResult, error)
 }
 
 // newHandler creates the handler that serves all the container related APIs.
-func newHandler(service Service, conf *config.Config, logger flog.Logger, ncBuildSvc backend.NerdctlBuilderSvc) *handler {
+func newHandler(service Service, conf *config.Config, logger flog.Logger, ncBuildSvc backend.NerdctlBuilderSvc, credService *credential.CredentialService) *handler {
 	return &handler{
-		service:    service,
-		Config:     conf,
-		logger:     logger,
-		ncBuildSvc: ncBuildSvc,
+		service:       service,
+		Config:        conf,
+		logger:        logger,
+		ncBuildSvc:    ncBuildSvc,
+		credentialSvc: credService,
 	}
 }
 
 type handler struct {
-	service    Service
-	Config     *config.Config
-	logger     flog.Logger
-	ncBuildSvc backend.NerdctlBuilderSvc
+	service       Service
+	Config        *config.Config
+	logger        flog.Logger
+	ncBuildSvc    backend.NerdctlBuilderSvc
+	credentialSvc *credential.CredentialService
 }

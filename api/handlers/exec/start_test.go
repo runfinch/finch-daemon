@@ -16,7 +16,7 @@ import (
 
 	"github.com/containerd/nerdctl/v2/pkg/config"
 	hj "github.com/getlantern/httptest"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"github.com/gorilla/mux"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

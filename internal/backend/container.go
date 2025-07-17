@@ -6,7 +6,6 @@ package backend
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -69,30 +68,27 @@ func (w *NerdctlWrapper) CreateContainer(ctx context.Context, args []string, net
 func (w *NerdctlWrapper) InspectContainer(ctx context.Context, c containerd.Container, sizeFlag bool) (*dockercompat.Container, error) {
 	var buf bytes.Buffer
 	options := types.ContainerInspectOptions{
-		Mode:   "dockercompat",
-		Stdout: &buf,
-		Size:   sizeFlag,
-		GOptions: types.GlobalCommandOptions{
-			Snapshotter: w.globalOptions.Snapshotter,
-		},
+		Mode:     "dockercompat",
+		Stdout:   &buf,
+		Size:     sizeFlag,
+		GOptions: *w.globalOptions,
 	}
 
-	err := container.Inspect(ctx, w.clientWrapper.client, []string{c.ID()}, options)
+	results, err := container.Inspect(ctx, w.clientWrapper.client, []string{c.ID()}, options)
 	if err != nil {
 		return nil, err
 	}
 
-	// Parse the JSON response
-	var containers []*dockercompat.Container
-	if err := json.Unmarshal(buf.Bytes(), &containers); err != nil {
-		return nil, err
+	if len(results) != 1 {
+		return nil, fmt.Errorf("expected 1 container, got %d", len(results))
 	}
 
-	if len(containers) != 1 {
-		return nil, fmt.Errorf("expected 1 container, got %d", len(containers))
+	container, ok := results[0].(*dockercompat.Container)
+	if !ok {
+		return nil, fmt.Errorf("unexpected inspect result type: %T", results[0])
 	}
 
-	return containers[0], nil
+	return container, nil
 }
 
 func (w *NerdctlWrapper) InspectNetNS(ctx context.Context, pid int) (*native.NetNS, error) {

@@ -10,10 +10,10 @@ import (
 	"testing"
 
 	"github.com/containerd/nerdctl/v2/pkg/config"
-	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/mocks/mocks_backend"
@@ -45,15 +45,16 @@ var _ = Describe("Build API ", func() {
 		service = mocks_builder.NewMockService(mockCtrl)
 		router = mux.NewRouter()
 		ncBuildSvc := mocks_backend.NewMockNerdctlBuilderSvc(mockCtrl)
-		RegisterHandlers(types.VersionedRouter{Router: router}, service, &conf, logger, ncBuildSvc)
+		RegisterHandlers(types.VersionedRouter{Router: router}, service, &conf, logger, ncBuildSvc, nil)
 		rr = httptest.NewRecorder()
 		ncBuildSvc.EXPECT().GetBuildkitHost().Return("", nil).AnyTimes()
 	})
 	Context("handler", func() {
 		It("should call build method", func() {
 			// setup mocks
-			service.EXPECT().Build(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error from build api"))
+			service.EXPECT().Build(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error from build api"))
 			req, _ = http.NewRequest(http.MethodPost, "/build", nil)
+			logger.EXPECT().Warnf(gomock.Any()).Times(1)
 			// call the API to check if it returns the error generated from the build method
 			router.ServeHTTP(rr, req)
 			Expect(rr).Should(HaveHTTPStatus(http.StatusInternalServerError))

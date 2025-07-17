@@ -8,7 +8,7 @@ import (
 
 	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/coreos/go-iptables/iptables"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/runfinch/finch-daemon/api/types"

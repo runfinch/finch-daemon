@@ -42,12 +42,6 @@ func (s *service) List(ctx context.Context, listOpts ncTypes.ContainerListOption
 			Mounts:          ci.Mounts,
 		}
 
-		l, err := c.Labels(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get container labels: %s", err)
-		}
-		updateNetworkSettings(ctx, cli.NetworkSettings, l)
-
 		containers = append(containers, cli)
 	}
 	return containers, nil

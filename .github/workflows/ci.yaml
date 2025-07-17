@@ -78,7 +78,7 @@ jobs:
     needs: [build]
     strategy:
       matrix:
-        containerd: ["1.7.27", "2.0.4"]
+        containerd: ["1.7.27", "2.1.3"]
       fail-fast: false
     timeout-minutes: 10
     env:
@@ -105,7 +105,19 @@ jobs:
         run: |
           sudo ls /etc/cni/net.d
           sudo rm /etc/cni/net.d/87-podman-bridge.conflist
+      - name: Verify Rego file presence
+        run: ls -l ${{ github.workspace }}/docs/sample-rego-policies/example.rego
+      - name: Set Rego file path
+        run: echo "REGO_FILE_PATH=${{ github.workspace }}/docs/sample-rego-policies/example.rego" >> $GITHUB_ENV
+      - name: Start finch-daemon with opa Authz
+        run: sudo bin/finch-daemon --debug --experimental --rego-file ${{ github.workspace }}/docs/sample-rego-policies/example.rego --skip-rego-perm-check --socket-owner $UID --socket-addr /run/finch.sock --pidfile /run/finch.pid &
+      - name: Run opa e2e tests
+        run: sudo -E make test-e2e-opa
+      - name: Clean up Daemon socket
+        run: sudo rm /run/finch.sock && sudo rm /run/finch.pid && sudo rm /run/finch-credential.sock
       - name: Start finch-daemon
-        run: sudo bin/finch-daemon  --debug --socket-owner $UID &
+        run: sudo cp bin/docker-credential-finch /usr/bin && sudo bin/finch-daemon  --debug --socket-owner $UID &
       - name: Run e2e test
         run: sudo make test-e2e
+      - name: Clean up Daemon socket
+        run: sudo rm /var/run/finch.sock && sudo rm /run/finch.pid && sudo rm /var/run/finch-credential.sock
