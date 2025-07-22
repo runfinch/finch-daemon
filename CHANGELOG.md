@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.19.0](https://github.com/runfinch/finch-daemon/compare/v0.18.1...v0.19.0) (2025-07-17)
+
+
+### Features
+
+* Use nerdctl parsing logic for port publishing ([#265](https://github.com/runfinch/finch-daemon/issues/265)) ([1aec7ce](https://github.com/runfinch/finch-daemon/commit/1aec7cefe590a9f7d7857615f6ebebacd887545a))
+
+
+### Bug Fixes
+
+* restore update network settings for dockercompat ([#286](https://github.com/runfinch/finch-daemon/issues/286)) ([8fc3a1e](https://github.com/runfinch/finch-daemon/commit/8fc3a1eccf2ac5bc880dd184d8c13f58996836e7))
+
 ## [0.18.1](https://github.com/runfinch/finch-daemon/compare/v0.18.0...v0.18.1) (2025-07-11)
 
 
