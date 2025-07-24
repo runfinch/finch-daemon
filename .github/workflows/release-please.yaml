@@ -1,8 +1,8 @@
 # When a third-party action is added (i.e., `uses`), please also add it to `download-licenses` in Makefile.
-on:
-  push:
-    branches:
-      - main
+# on:
+#   push:
+#     branches:
+#       - main
 name: release-please
 jobs:
   release-please:

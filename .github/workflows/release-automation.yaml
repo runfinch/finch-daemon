@@ -1,7 +1,7 @@
 name: Release Finch Daemon
-on:
-  workflow_dispatch:
-  workflow_call:
+# on:
+#   workflow_dispatch:
+#   workflow_call:
 env:
   GO_VERSION: '1.23.8'
 permissions:
