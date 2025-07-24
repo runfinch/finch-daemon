@@ -33,7 +33,7 @@ on:
 env:
   GO_VERSION: '1.23.8'
   GOLANGCI_LINT_VERSION: '1.64.8'
-  CONTAINERD_VERSION: "1.7.27" # picking one version; 2.1.3 validated through ci.yaml 
+  CONTAINERD_VERSION: "1.7.27" # picking one version; 2.1.3 validated through ci.yaml
 
 permissions:
   # This is required for configure-aws-credentials to request an OIDC JWT ID token to access AWS resources later on.
@@ -158,7 +158,7 @@ jobs:
       - name: Clean up Daemon socket
         run: |
           sudo rm -f /run/finch.sock
-          sudo rm -f /run/finch.pid 
+          sudo rm -f /run/finch.pid
           sudo rm -f /run/finch-credential.sock
 
       - name: Start finch-daemon
@@ -166,7 +166,7 @@ jobs:
           sudo cp bin/docker-credential-finch /usr/bin
           sudo bin/finch-daemon --debug --socket-owner $UID &
           sleep 5  # Give daemon time to start
-          curl --unix-socket /run/finch.sock http://localhost/_ping    
+          curl --unix-socket /run/finch.sock http://localhost/_ping
           echo "finch-daemon is ready"
 
       - name: Verify Docker environment
@@ -175,7 +175,7 @@ jobs:
           echo "DOCKER_CONFIG: $DOCKER_CONFIG"
           ls -la $DOCKER_CONFIG/
           curl --unix-socket ${DOCKER_HOST#unix://} http://localhost/_ping
-      
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
@@ -195,9 +195,9 @@ jobs:
           samdev --version
 
       # TESTING STARTS HERE
-      
+
       - name: Run unit tests
-        working-directory: aws-sam-cli  
+        working-directory: aws-sam-cli
         run: |
 
           # Fix ulimit ahead of time (not unlimited)
@@ -311,12 +311,12 @@ jobs:
             exit 1
           else
             echo "All sync tests passed!"
-          fi  
+          fi
 
-      - name: Run package test 
+      - name: Run package test
         timeout-minutes: 7
         working-directory: aws-sam-cli
-        run: |  
+        run: |
           # Run the tests
           python -m pytest tests/integration/package/test_package_command_image.py > package_test.txt 2>&1 || true
           cat package_test.txt
@@ -363,7 +363,7 @@ jobs:
 
       - name: Run build test
         working-directory: aws-sam-cli
-        run: |  
+        run: |
           # Run the tests
           python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' > build_test.txt 2>&1 || true
           cat build_test.txt
