@@ -74,13 +74,6 @@ jobs:
           echo "Docker config created at: $DOCKER_CONFIG"
           echo "Docker host set to: $DOCKER_HOST"
 
-      - name: Verify Docker environment
-        run: |
-          echo "DOCKER_HOST: $DOCKER_HOST"
-          echo "DOCKER_CONFIG: $DOCKER_CONFIG"
-          ls -la $DOCKER_CONFIG/
-          curl --unix-socket ${DOCKER_HOST#unix://} http://localhost/_ping
-
         # Version verification (from Q)
       - name: Verify required tools (strict)
         run: |
@@ -175,6 +168,13 @@ jobs:
           sleep 5  # Give daemon time to start
           curl --unix-socket /run/finch.sock http://localhost/_ping    
           echo "finch-daemon is ready"
+
+      - name: Verify Docker environment
+        run: |
+          echo "DOCKER_HOST: $DOCKER_HOST"
+          echo "DOCKER_CONFIG: $DOCKER_CONFIG"
+          ls -la $DOCKER_CONFIG/
+          curl --unix-socket ${DOCKER_HOST#unix://} http://localhost/_ping
       
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
@@ -412,4 +412,3 @@ jobs:
           else
             echo "All test failures were expected. Test passed!"
           fi
-          
