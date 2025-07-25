@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.19.0](https://github.com/runfinch/finch-daemon/compare/v0.18.1...v0.19.0) (2025-07-17)
+
+
+### Features
+
+* Use nerdctl parsing logic for port publishing ([#265](https://github.com/runfinch/finch-daemon/issues/265)) ([1aec7ce](https://github.com/runfinch/finch-daemon/commit/1aec7cefe590a9f7d7857615f6ebebacd887545a))
+
+
+### Bug Fixes
+
+* restore update network settings for dockercompat ([#286](https://github.com/runfinch/finch-daemon/issues/286)) ([8fc3a1e](https://github.com/runfinch/finch-daemon/commit/8fc3a1eccf2ac5bc880dd184d8c13f58996836e7))
+
+## [0.18.1](https://github.com/runfinch/finch-daemon/compare/v0.18.0...v0.18.1) (2025-07-11)
+
+
+### Bug Fixes
+
+* verify release artifact ([20dc067](https://github.com/runfinch/finch-daemon/commit/20dc0677673c88f2bacbe7b7f94d307899918108))
+* verify release artifact docker-credential-finch ([#284](https://github.com/runfinch/finch-daemon/issues/284)) ([20dc067](https://github.com/runfinch/finch-daemon/commit/20dc0677673c88f2bacbe7b7f94d307899918108))
+
+## [0.18.0](https://github.com/runfinch/finch-daemon/compare/v0.17.2...v0.18.0) (2025-07-11)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/docker/docker from 28.0.2+incompatible to 28.2.2+incompatible ([#251](https://github.com/runfinch/finch-daemon/issues/251)) ([097fb7e](https://github.com/runfinch/finch-daemon/commit/097fb7ee7badd55f4d4cecd671eaaad290c6e92f))
+* **deps:** Bump github.com/go-viper/mapstructure/v2 ([0e28455](https://github.com/runfinch/finch-daemon/commit/0e2845588b0b5d922e539359f968c73fd271ac14))
+* **deps:** Bump github.com/go-viper/mapstructure/v2 from 2.2.1 to 2.3.0 ([#273](https://github.com/runfinch/finch-daemon/issues/273)) ([0e28455](https://github.com/runfinch/finch-daemon/commit/0e2845588b0b5d922e539359f968c73fd271ac14))
+* **deps:** Bump github.com/open-policy-agent/opa from 1.1.0 to 1.4.0 ([#268](https://github.com/runfinch/finch-daemon/issues/268)) ([7ec7d02](https://github.com/runfinch/finch-daemon/commit/7ec7d025266aa4cca0e137ee91390a16d1a21330))
+
+
+### Features
+
+* Add credential management for container build ([#275](https://github.com/runfinch/finch-daemon/issues/275)) ([47d2a65](https://github.com/runfinch/finch-daemon/commit/47d2a6560e6f5864b6aa4f4030e5ad8ebf977c5e))
+* migrate from golang gomock to uber gomock ([#264](https://github.com/runfinch/finch-daemon/issues/264)) ([bb9442a](https://github.com/runfinch/finch-daemon/commit/bb9442a022aeb392822a697f13a238b7f81b8af8))
+* Opa middleware support (Experimental) ([#156](https://github.com/runfinch/finch-daemon/issues/156)) ([91b9ac6](https://github.com/runfinch/finch-daemon/commit/91b9ac673ff13bcbe2a948d953481f5505245c4c))
+  
+
 ## [0.17.2](https://github.com/runfinch/finch-daemon/compare/v0.17.1...v0.17.2) (2025-06-06)
 
 
