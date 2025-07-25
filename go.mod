@@ -10,7 +10,7 @@ require (
 	github.com/containerd/fifo v1.1.0
 	github.com/containerd/go-cni v1.1.12
 	github.com/containerd/log v0.1.0
-	github.com/containerd/nerdctl/v2 v2.1.2
+	github.com/containerd/nerdctl/v2 v2.1.3
 	github.com/containerd/platforms v1.0.0-rc.1
 	github.com/containerd/typeurl/v2 v2.2.3
 	github.com/containernetworking/cni v1.3.0
@@ -53,6 +53,7 @@ require (
 	github.com/agnivade/levenshtein v1.2.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/containerd/nerdctl/mod/tigron v0.0.0-20250720235051-d775a8c42fbb // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
@@ -185,3 +186,5 @@ require (
 	tags.cncf.io/container-device-interface v1.0.1 // indirect
 	tags.cncf.io/container-device-interface/specs-go v1.0.0 // indirect
 )
+
+exclude github.com/containerd/nerdctl/mod/tigron v0.0.0

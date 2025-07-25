@@ -5,6 +5,7 @@ package container
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	containerd "github.com/containerd/containerd/v2/client"
@@ -65,11 +66,7 @@ func (s *service) Create(ctx context.Context, image string, cmd []string, create
 		}
 	}
 
-	// NOTE: this is a temporary workaround to fix logging issue described in https://github.com/containerd/nerdctl/issues/2264.
-	// The refactored create method in nerdctl uses self exe (finch-daemon) binary for logging instead of nerdctl binary path.
-	// The following workaround resets this logging binary in the OCI spec.
-	// TODO: remove this workaround when the issue is resolved upstream.
-	resetLogURI(ctx, createOpt, cont)
+	updateContainerMetadata(ctx, createOpt, netOpt, cont)
 
 	return cont.ID(), nil
 }
@@ -98,15 +95,31 @@ func (s *service) translateNetworkIds(netOpt *types.NetworkOptions) error {
 	return nil
 }
 
-func resetLogURI(ctx context.Context, createOpt types.ContainerCreateOptions, cont containerd.Container) error {
-	// get data store directory for logging
+func updateContainerMetadata(ctx context.Context, createOpt types.ContainerCreateOptions, netOpt types.NetworkOptions, cont containerd.Container) error {
+	// get container labels
+	opts, err := cont.Labels(ctx)
+	if err != nil {
+		logrus.Errorf("failed to get container labels: %s", err)
+		return err
+	}
+	// get oci spec
+	spec, err := cont.Spec(ctx)
+	if err != nil {
+		logrus.Errorf("failed to get container OCI spec: %s", err)
+		return err
+	}
+
+	// Handle log URI reset
+	// NOTE: this is a temporary workaround to fix logging issue described in https://github.com/containerd/nerdctl/issues/2264.
+	// The refactored create method in nerdctl uses self exe (finch-daemon) binary for logging instead of nerdctl binary path.
+	// The following workaround resets this logging binary in the OCI spec and handles port labels for backward compatibility.
+	// TODO: remove this workaround when the issue is resolved upstream.
 	dataStore, err := clientutil.DataStore(createOpt.GOptions.DataRoot, createOpt.GOptions.Address)
 	if err != nil {
 		logrus.Errorf("failed to get nerdctl data store: %s", err)
 		return err
 	}
 
-	// create a log URI using nerdctl binary path
 	args := map[string]string{
 		logging.MagicArgv1: dataStore,
 	}
@@ -116,23 +129,22 @@ func resetLogURI(ctx context.Context, createOpt types.ContainerCreateOptions, co
 		return err
 	}
 
-	// reset container label with new log URI
-	opts, err := cont.Labels(ctx)
-	if err != nil {
-		logrus.Errorf("failed to get container labels: %s", err)
-		return err
-	}
 	opts[labels.LogURI] = logURI.String()
-
-	// reset OCI spec with new log URI
-	spec, err := cont.Spec(ctx)
-	if err != nil {
-		logrus.Errorf("failed to get container OCI spec: %s", err)
-		return err
-	}
 	spec.Annotations[labels.LogURI] = logURI.String()
 
-	// update container
+	// Handle port labels for backward compatibility with nerdctl 2.1.2.
+	// nerdctl 2.1.3 changed the port publishing logic to use a dedicated portstore instead of container labels.
+	// Though nerdctl itself is backward compatible, newer library versions will no longer create the port labels,
+	// which is not compatible with older nerdctl executables needed to run the OCI hooks for setting up the network.
+	if len(netOpt.PortMappings) > 0 {
+		portsJSON, err := json.Marshal(netOpt.PortMappings)
+		if err != nil {
+			return err
+		}
+		opts[labels.Ports] = string(portsJSON)
+		spec.Annotations[labels.Ports] = string(portsJSON)
+	}
+
 	err = cont.Update(ctx,
 		containerd.UpdateContainerOpts(containerd.WithContainerLabels(opts)),
 		containerd.UpdateContainerOpts(containerd.WithSpec(spec)),
