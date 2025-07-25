@@ -176,9 +176,8 @@ jobs:
           ls -la $DOCKER_CONFIG/
           curl --unix-socket ${DOCKER_HOST#unix://} http://localhost/_ping
           
-          # Configure buildx to use finch-daemon after daemon is running
-          docker buildx create --name finch-builder --driver docker --use || true
-          docker buildx use finch-builder || true
+          # Configure buildx to connect to existing buildkit daemon
+          docker buildx create --name finch-builder --driver remote unix:///run/buildkit/buildkitd.sock --use
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
