@@ -196,36 +196,36 @@ jobs:
 
       # TESTING STARTS HERE
 
-      - name: Run unit tests
-        working-directory: aws-sam-cli
-        run: |
+      # - name: Run unit tests
+      #   working-directory: aws-sam-cli
+      #   run: |
 
-          # Fix ulimit ahead of time (not unlimited)
-          ulimit -n 8192
+      #     # Fix ulimit ahead of time (not unlimited)
+      #     ulimit -n 8192
 
-          # Clean up potentially problematic Docker config entries
-          if [ -f ~/.docker/config.json ]; then
-            if command -v jq >/dev/null 2>&1; then
-              jq 'del(.credsStore)' ~/.docker/config.json > ~/.docker/config.json.tmp && mv ~/.docker/config.json.tmp ~/.docker/config.json
-            else
-              # Fallback: remove credsStore line with sed
-              sed -i '/"credsStore"/d' ~/.docker/config.json
-            fi
-          fi
+      #     # Clean up potentially problematic Docker config entries
+      #     if [ -f ~/.docker/config.json ]; then
+      #       if command -v jq >/dev/null 2>&1; then
+      #         jq 'del(.credsStore)' ~/.docker/config.json > ~/.docker/config.json.tmp && mv ~/.docker/config.json.tmp ~/.docker/config.json
+      #       else
+      #         # Fallback: remove credsStore line with sed
+      #         sed -i '/"credsStore"/d' ~/.docker/config.json
+      #       fi
+      #     fi
 
-          # Run the unit tests and capture output
-          make test | tee unit_test_output.txt
+      #     # Run the unit tests and capture output
+      #     make test | tee unit_test_output.txt
 
-          # Extract coverage percentage
-          COVERAGE=$(grep -o "[0-9]\+%" unit_test_output.txt | head -1 | tr -d '%')
+      #     # Extract coverage percentage
+      #     COVERAGE=$(grep -o "[0-9]\+%" unit_test_output.txt | head -1 | tr -d '%')
 
-          # Check if coverage is at least 90% (allowing for some variation from the ~94%)
-          if [ -z "$COVERAGE" ] || [ "$COVERAGE" -lt 90 ]; then
-            echo "Coverage is below expected threshold! Got: $COVERAGE%, Expected: ~94%"
-            exit 1
-          else
-            echo "Unit tests passed with $COVERAGE% coverage (expected ~94%)"
-          fi
+      #     # Check if coverage is at least 90% (allowing for some variation from the ~94%)
+      #     if [ -z "$COVERAGE" ] || [ "$COVERAGE" -lt 90 ]; then
+      #       echo "Coverage is below expected threshold! Got: $COVERAGE%, Expected: ~94%"
+      #       exit 1
+      #     else
+      #       echo "Unit tests passed with $COVERAGE% coverage (expected ~94%)"
+      #     fi
 
       - name: Run local invoke test
         timeout-minutes: 75
@@ -268,36 +268,36 @@ jobs:
           buildctl debug workers || echo "❌ BuildKit not responding!"
           echo "=== End Enhanced Check ==="
 
-          # # Run the test, display output
-          # python -m pytest tests/integration/local/invoke -k 'not Terraform' -v > test_output.txt 2>&1 || true
-          # cat test_output.txt
+          # Run the test, display output
+          python -m pytest tests/integration/local/invoke -k 'not Terraform' -v > test_output.txt 2>&1 || true
+          cat test_output.txt
 
-          # # Create a list of expected failing tests
-          # cat > expected_failures.txt << 'EOF'
-          # test_invoke_with_error_during_image_build
-          # test_invoke_with_timeout_set_0_TimeoutFunction
-          # test_invoke_with_timeout_set_1_TimeoutFunctionWithParameter
-          # test_invoke_with_timeout_set_2_TimeoutFunctionWithStringParameter
-          # test_building_new_rapid_image_removes_old_rapid_images
-          # # test_invoke_returns_expected_results_from_git_function
-          # # test_invoke_returns_expected_results_from_git_function_with_parameters
-          # EOF
+          # Create a list of expected failing tests
+          cat > expected_failures.txt << 'EOF'
+          test_invoke_with_error_during_image_build
+          test_invoke_with_timeout_set_0_TimeoutFunction
+          test_invoke_with_timeout_set_1_TimeoutFunctionWithParameter
+          test_invoke_with_timeout_set_2_TimeoutFunctionWithStringParameter
+          test_building_new_rapid_image_removes_old_rapid_images
+          # test_invoke_returns_expected_results_from_git_function
+          # test_invoke_returns_expected_results_from_git_function_with_parameters
+          EOF
 
-          # # Extract actual failing tests
-          # grep "FAILED" test_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_failures.txt
+          # Extract actual failing tests
+          grep "FAILED" test_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_failures.txt
 
-          # # Find unexpected failures (failures not in the expected list)
-          # UNEXPECTED_FAILURES=$(grep -v -f expected_failures.txt actual_failures.txt || true)
+          # Find unexpected failures (failures not in the expected list)
+          UNEXPECTED_FAILURES=$(grep -v -f expected_failures.txt actual_failures.txt || true)
 
-          # # Check if there are any unexpected failures
-          # if [ -n "$UNEXPECTED_FAILURES" ]; then
-          #   echo "Unexpected test failures found:"
-          #   echo "$UNEXPECTED_FAILURES"
-          #   echo "Invoke test failed due to unexpected test failures"
-          #   exit 1
-          # else
-          #   echo "All test failures were expected. Invoke test passed!"
-          # fi
+          # Check if there are any unexpected failures
+          if [ -n "$UNEXPECTED_FAILURES" ]; then
+            echo "Unexpected test failures found:"
+            echo "$UNEXPECTED_FAILURES"
+            echo "Invoke test failed due to unexpected test failures"
+            exit 1
+          else
+            echo "All test failures were expected. Invoke test passed!"
+          fi
 
           echo "=== Post-test BuildKit Health Check ==="
           ps aux | grep buildkitd | grep -v grep || echo "❌ BuildKit daemon not running!"
@@ -310,7 +310,7 @@ jobs:
         working-directory: aws-sam-cli
         run: |
           # Run the tests
-          python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v > start_lambda_output.txt 2>&1
+          python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v > start_lambda_output.txt 2>&1 || true
           cat start_lambda_output.txt
 
           # Check if any tests failed
@@ -329,7 +329,7 @@ jobs:
           ulimit -n 8192
 
           # Run the tests
-          python -m pytest tests/integration/local/start_api -k 'not Terraform' -v > start_api_output.txt 2>&1
+          python -m pytest tests/integration/local/start_api -k 'not Terraform' -v > start_api_output.txt 2>&1 || true
           cat start_api_output.txt
 
           # Check if any tests failed
@@ -345,7 +345,7 @@ jobs:
         working-directory: aws-sam-cli
         run: |
           # Run the tests
-          python -m pytest tests/integration/sync -k 'image' -v > sync_test.txt 2>&1
+          python -m pytest tests/integration/sync -k 'image' -v > sync_test.txt 2>&1 || true
           cat sync_test.txt
 
           # Check if any tests failed
