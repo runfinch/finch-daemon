@@ -77,6 +77,10 @@ for i in {1..60}; do
   sleep 1
 done
 
+# Fix buildkit socket permissions
+echo "Fixing buildkit socket permissions..."
+sudo chmod 666 /run/buildkit/buildkitd.sock 2>/dev/null || echo "Buildkit socket not found at expected location"
+
 # Extra conservative wait for full initialization
 sleep 5
 
