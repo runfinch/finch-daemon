@@ -231,16 +231,37 @@ jobs:
         timeout-minutes: 75
         working-directory: aws-sam-cli
         run: |
-          echo "=== Pre-test BuildKit Health Check ==="
+          echo "=== Enhanced BuildKit Health Check ==="
           # Check if BuildKit daemon is running
           ps aux | grep buildkitd | grep -v grep || echo "❌ BuildKit daemon not running!"
           
-          # Find actual buildkit socket
-          find /run /var/run -name "*buildkit*" 2>/dev/null || echo "No buildkit sockets found"
+          # Find ALL socket files on the system
+          echo "=== Finding ALL BuildKit Sockets ==="
+          find /run -name "*.sock" 2>/dev/null | grep -i buildkit || echo "No buildkit sockets in /run"
+          find /var/lib/buildkit -name "*.sock" 2>/dev/null || echo "No buildkit sockets in /var/lib/buildkit"
+          find /tmp -name "*buildkit*" 2>/dev/null || echo "No buildkit files in /tmp"
+          
+          # Check what's actually in the buildkit directory
+          echo "=== Contents of /run/buildkit ==="
+          ls -la /run/buildkit/ 2>/dev/null || echo "/run/buildkit directory empty or inaccessible"
+          
+          # Find what sockets the buildkitd process is actually using
+          echo "=== BuildKit Process Socket Usage ==="
+          BUILDKIT_PID=$(pgrep buildkitd)
+          if [ -n "$BUILDKIT_PID" ]; then
+            echo "BuildKit PID: $BUILDKIT_PID"
+            sudo lsof -p $BUILDKIT_PID | grep sock || echo "No sockets found for buildkitd process"
+          else
+            echo "BuildKit process not found"
+          fi
+          
+          # Try to find the actual socket location
+          echo "=== Searching for BuildKit Socket Everywhere ==="
+          find / -name "*buildkit*.sock" 2>/dev/null | head -5 || echo "No buildkit sockets found anywhere"
           
           # Test BuildKit connectivity (uses default socket)
           buildctl debug workers || echo "❌ BuildKit not responding!"
-          echo "=== End Pre-test Check ==="
+          echo "=== End Enhanced Check ==="
 
           # Run the test, display output
           python -m pytest tests/integration/local/invoke -k 'not Terraform' -v > test_output.txt 2>&1 || true

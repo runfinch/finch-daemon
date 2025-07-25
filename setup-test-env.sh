@@ -77,9 +77,19 @@ for i in {1..60}; do
   sleep 1
 done
 
-# Fix buildkit socket permissions
-echo "Fixing buildkit socket permissions..."
-sudo chmod 666 /run/buildkit/buildkitd.sock 2>/dev/null || echo "Buildkit socket not found at expected location"
+# Find and fix buildkit socket permissions
+echo "Finding buildkit socket..."
+for i in {1..10}; do
+  SOCKET=$(find /run /var/run /tmp -name "buildkitd.sock" 2>/dev/null | head -1)
+  if [ -n "$SOCKET" ]; then
+    echo "Found buildkit socket: $SOCKET"
+    sudo chmod 666 "$SOCKET"
+    echo "Fixed permissions on $SOCKET"
+    break
+  fi
+  echo "Socket not found, waiting... (attempt $i/10)"
+  sleep 2
+done
 
 # Extra conservative wait for full initialization
 sleep 5
