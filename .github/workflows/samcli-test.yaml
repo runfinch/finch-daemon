@@ -161,19 +161,11 @@ jobs:
           sudo rm -f /run/finch.pid
           sudo rm -f /run/finch-credential.sock
 
-      - name: Verify buildkit is ready
-        run: |
-          echo "Verifying buildkit connectivity..."
-          sudo buildctl debug workers || (echo "ERROR: buildkit not ready" && exit 1)
-          echo "Buildkit is ready"
-          
       - name: Start finch-daemon
         run: |
           sudo cp bin/docker-credential-finch /usr/bin
-          echo "Starting finch-daemon..."
           sudo bin/finch-daemon --debug --socket-owner $UID &
           sleep 10  # Conservative wait for daemon startup
-          echo "Checking finch-daemon health..."
           curl --unix-socket /run/finch.sock http://localhost/_ping
           echo "finch-daemon is ready"
 
@@ -239,6 +231,17 @@ jobs:
         timeout-minutes: 75
         working-directory: aws-sam-cli
         run: |
+          echo "=== Pre-test BuildKit Health Check ==="
+          # Check if BuildKit daemon is running
+          ps aux | grep buildkitd | grep -v grep || echo "❌ BuildKit daemon not running!"
+          
+          # Find actual buildkit socket
+          find /run /var/run -name "*buildkit*" 2>/dev/null || echo "No buildkit sockets found"
+          
+          # Test BuildKit connectivity (uses default socket)
+          buildctl debug workers || echo "❌ BuildKit not responding!"
+          echo "=== End Pre-test Check ==="
+
           # Run the test, display output
           python -m pytest tests/integration/local/invoke -k 'not Terraform' -v > test_output.txt 2>&1 || true
           cat test_output.txt
@@ -269,6 +272,12 @@ jobs:
           else
             echo "All test failures were expected. Invoke test passed!"
           fi
+
+          echo "=== Post-test BuildKit Health Check ==="
+          ps aux | grep buildkitd | grep -v grep || echo "❌ BuildKit daemon not running!"
+          buildctl debug workers || echo "❌ BuildKit not responding!"
+          echo "=== End Post-test Check ==="
+
 
       - name: Run start-lambda test
         timeout-minutes: 30
@@ -420,3 +429,18 @@ jobs:
           else
             echo "All test failures were expected. Test passed!"
           fi
+
+      - name: Capture finch-daemon logs
+        if: always()  # Run even if previous steps failed
+        run: |
+          echo "=== Finch-Daemon System Logs ==="
+          sudo journalctl --since "60 minutes ago" | grep -i finch || echo "No finch logs found"
+          
+          echo "=== Containerd Logs ==="
+          sudo journalctl --since "60 minutes ago" | grep -i containerd | tail -50 || echo "No containerd logs found"
+          
+          echo "=== BuildKit Logs ==="
+          sudo journalctl --since "60 minutes ago" | grep -i buildkit | tail -50 || echo "No buildkit logs found"
+          
+          echo "=== Process Status ==="
+          ps aux | grep -E "(finch-daemon|containerd|buildkit)" | grep -v grep || echo "No relevant processes found"
