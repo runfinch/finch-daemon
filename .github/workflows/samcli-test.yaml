@@ -161,11 +161,19 @@ jobs:
           sudo rm -f /run/finch.pid
           sudo rm -f /run/finch-credential.sock
 
+      - name: Verify buildkit is ready
+        run: |
+          echo "Verifying buildkit connectivity..."
+          sudo buildctl debug workers || (echo "ERROR: buildkit not ready" && exit 1)
+          echo "Buildkit is ready"
+          
       - name: Start finch-daemon
         run: |
           sudo cp bin/docker-credential-finch /usr/bin
+          echo "Starting finch-daemon..."
           sudo bin/finch-daemon --debug --socket-owner $UID &
-          sleep 5  # Give daemon time to start
+          sleep 10  # Conservative wait for daemon startup
+          echo "Checking finch-daemon health..."
           curl --unix-socket /run/finch.sock http://localhost/_ping
           echo "finch-daemon is ready"
 

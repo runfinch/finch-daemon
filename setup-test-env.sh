@@ -36,7 +36,48 @@ sudo tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v${CNI_VERSION}.tgz
 
 export PATH=$PATH:/usr/local/bin
 
+echo "Starting containerd..."
 sudo containerd &
-sudo buildkitd &
+CONTAINERD_PID=$!
+echo "Containerd started with PID: $CONTAINERD_PID"
 
-sleep 2
+# Wait for containerd to be ready (up to 60 seconds)
+echo "Waiting for containerd to be ready..."
+for i in {1..60}; do
+  if sudo ctr version >/dev/null 2>&1; then
+    echo "containerd is ready after ${i} seconds"
+    break
+  fi
+  if [ $i -eq 60 ]; then
+    echo "ERROR: containerd failed to start after 60 seconds"
+    exit 1
+  fi
+  sleep 1
+done
+
+# Extra conservative wait
+sleep 3
+
+echo "Starting buildkitd..."
+sudo buildkitd &
+BUILDKIT_PID=$!
+echo "Buildkitd started with PID: $BUILDKIT_PID"
+
+# Wait for buildkitd to be ready (up to 60 seconds)
+echo "Waiting for buildkitd to be ready..."
+for i in {1..60}; do
+  if sudo buildctl debug workers >/dev/null 2>&1; then
+    echo "buildkitd is ready after ${i} seconds"
+    break
+  fi
+  if [ $i -eq 60 ]; then
+    echo "ERROR: buildkitd failed to start after 60 seconds"
+    exit 1
+  fi
+  sleep 1
+done
+
+# Extra conservative wait for full initialization
+sleep 5
+
+echo "All daemons are ready. PIDs: containerd=$CONTAINERD_PID, buildkitd=$BUILDKIT_PID"

@@ -80,18 +80,25 @@ func createNerdctlWrapper(clientWrapper *backend.ContainerdClientWrapper, conf *
 	// https://github.com/containerd/nerdctl/blob/9f8655f7722d6e6851755123730436bf1a6c9995/pkg/api/types/global.go#L21
 	globalOptions := (*types.GlobalCommandOptions)(conf)
 	ncWrapper := backend.NewNerdctlWrapper(clientWrapper, globalOptions)
-	if _, err := ncWrapper.GetNerdctlExe(); err != nil {
+	fmt.Printf("Checking for nerdctl binary...\n")
+	nerdctlPath, err := ncWrapper.GetNerdctlExe()
+	if err != nil {
+		fmt.Printf("ERROR: Failed to find nerdctl binary: %v\n", err)
 		return nil, fmt.Errorf("failed to find nerdctl binary: %w", err)
 	}
+	fmt.Printf("Found nerdctl binary at: %s\n", nerdctlPath)
 	return ncWrapper, nil
 }
 
 // createContainerdClient creates and wraps the containerd client.
 func createContainerdClient(conf *config.Config) (*backend.ContainerdClientWrapper, error) {
+	fmt.Printf("Creating containerd client with address=%s, namespace=%s\n", conf.Address, conf.Namespace)
 	client, err := containerd.New(conf.Address, containerd.WithDefaultNamespace(conf.Namespace))
 	if err != nil {
+		fmt.Printf("ERROR: Failed to create containerd client: %v\n", err)
 		return nil, fmt.Errorf("failed to create containerd client: %w", err)
 	}
+	fmt.Printf("Successfully created containerd client\n")
 	return backend.NewContainerdClientWrapper(client), nil
 }
 
