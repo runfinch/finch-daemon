@@ -266,11 +266,38 @@ jobs:
           
           # Test BuildKit connectivity (uses default socket)
           buildctl debug workers || echo "❌ BuildKit not responding!"
+          
+          # Test Docker daemon connectivity
+          echo "=== Docker Daemon Check ==="
+          docker version || echo "❌ Docker daemon not responding!"
+          docker info | grep -E "(Server Version|Storage Driver|Logging Driver)" || echo "❌ Docker info failed!"
+          
+          # Test basic Docker build functionality
+          echo "=== Docker Build Test ==="
+          echo 'FROM alpine:latest' > /tmp/test.dockerfile
+          echo 'RUN echo "test build"' >> /tmp/test.dockerfile
+          docker build -f /tmp/test.dockerfile -t test-build . || echo "❌ Basic Docker build failed!"
+          docker images | grep test-build || echo "❌ Test image not found!"
+          docker rmi test-build 2>/dev/null || echo "❌ Failed to remove test image"
+          
           echo "=== End Enhanced Check ==="
 
-          # Run the test, display output
-          python -m pytest tests/integration/local/invoke -k 'not Terraform' -v > test_output.txt 2>&1 || true
+          # Run the test with enhanced error capture
+          echo "=== Running Invoke Tests with Enhanced Debugging ==="
+          python -m pytest tests/integration/local/invoke -k 'not Terraform' -v -s --tb=long > test_output.txt 2>&1 || true
+          
+          # Show test output
           cat test_output.txt
+          
+          # Extract and analyze specific build errors
+          echo "=== Analyzing Build Errors ==="
+          grep -A 5 -B 5 "Failed to build Docker Image" test_output.txt || echo "No 'Failed to build Docker Image' errors found"
+          grep -A 5 -B 5 "NoneType: None" test_output.txt || echo "No 'NoneType: None' errors found"
+          grep -A 5 -B 5 "no image was built" test_output.txt || echo "No 'no image was built' errors found"
+          
+          # Check for any Docker-related errors in the test output
+          echo "=== Docker-related Errors in Tests ==="
+          grep -i "docker" test_output.txt | grep -i "error\|fail\|exception" || echo "No Docker errors found in test output"
 
           # Create a list of expected failing tests
           cat > expected_failures.txt << 'EOF'
