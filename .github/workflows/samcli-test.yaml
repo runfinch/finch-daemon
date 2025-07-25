@@ -73,6 +73,13 @@ jobs:
           echo '{"auths":{"docker.io":{},"public.ecr.aws":{}}}' > $DOCKER_CONFIG/config.json
           echo "Docker config created at: $DOCKER_CONFIG"
           echo "Docker host set to: $DOCKER_HOST"
+          
+          # Remove default buildx builder to force use of finch-daemon
+          docker buildx rm default || true
+          
+          # Create buildx builder that uses finch-daemon socket directly
+          docker buildx create --name finch-builder --driver docker --use
+          docker buildx inspect --bootstrap
 
         # Version verification (from Q)
       - name: Verify required tools (strict)
@@ -276,7 +283,13 @@ jobs:
           echo "=== Docker Build Test ==="
           echo 'FROM alpine:latest' > /tmp/test.dockerfile
           echo 'RUN echo "test build"' >> /tmp/test.dockerfile
-          docker build -f /tmp/test.dockerfile -t test-build . || echo "❌ Basic Docker build failed!"
+          
+          # Verify buildx driver
+          echo "Current buildx driver:"
+          docker buildx ls
+          
+          # Build with explicit load to ensure image goes to finch-daemon
+          docker buildx build -f /tmp/test.dockerfile -t test-build --load . || echo "❌ Basic Docker build failed!"
           docker images | grep test-build || echo "❌ Test image not found!"
           docker rmi test-build 2>/dev/null || echo "❌ Failed to remove test image"
           
