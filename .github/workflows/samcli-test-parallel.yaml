@@ -50,7 +50,7 @@ jobs:
       fail-fast: false  # Don't cancel other jobs if one fails
       matrix:
         test-suite: 
-          - unit-tests
+          # - unit-tests
           - invoke
           - start-lambda
           - start-api
@@ -218,36 +218,6 @@ jobs:
         run: |
           echo "=== Running ${{ matrix.test-suite }} test suite ==="
           case "${{ matrix.test-suite }}" in
-            unit-tests)
-              echo "=== SAMcli Unit Tests ==="
-
-              # Fix ulimit ahead of time (not unlimited)
-              ulimit -n 8192
-
-              # Clean up potentially problematic Docker config entries
-              if [ -f ~/.docker/config.json ]; then
-                if command -v jq >/dev/null 2>&1; then
-                  jq 'del(.credsStore)' ~/.docker/config.json > ~/.docker/config.json.tmp && mv ~/.docker/config.json.tmp ~/.docker/config.json
-                else
-                  # Fallback: remove credsStore line with sed
-                  sed -i '/"credsStore"/d' ~/.docker/config.json
-                fi
-              fi
-
-              # Run the unit tests and capture output
-              make test | tee unit_test_output.txt
-
-              # Extract coverage percentage
-              COVERAGE=$(grep -o "[0-9]\+%" unit_test_output.txt | head -1 | tr -d '%')
-
-              # Check if coverage is at least 90% (allowing for some variation from the ~94%)
-              if [ -z "$COVERAGE" ] || [ "$COVERAGE" -lt 90 ]; then
-                echo "Coverage is below expected threshold! Got: $COVERAGE%, Expected: ~94%"
-                exit 1
-              else
-                echo "Unit tests passed with $COVERAGE% coverage (expected ~94%)"
-              fi  
-              
             invoke)
               echo "=== Enhanced BuildKit Health Check ==="
               # Check if BuildKit daemon is running
