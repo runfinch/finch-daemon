@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.1](https://github.com/runfinch/finch-daemon/compare/v0.19.0...v0.19.1) (2025-07-28)
+
+
+### Bug Fixes
+
+* downgrade nerdctl from v2.1.3 to v2.1.2 ([#289](https://github.com/runfinch/finch-daemon/issues/289)) ([a7487bf](https://github.com/runfinch/finch-daemon/commit/a7487bfd915424f7e643426f3e60614e347162f6))
+
 ## [0.19.0](https://github.com/runfinch/finch-daemon/compare/v0.18.1...v0.19.0) (2025-07-17)
 
 
