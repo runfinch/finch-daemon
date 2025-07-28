@@ -45,7 +45,7 @@ permissions:
 jobs:
   samcli-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 120 # allows 30+ min buffer (decrease for parallel)
+    timeout-minutes: 70 # allows 30+ min buffer (decrease for parallel)
     strategy:
       fail-fast: false  # Don't cancel other jobs if one fails
       matrix:
@@ -190,8 +190,8 @@ jobs:
           ls -la $DOCKER_CONFIG/
           curl --unix-socket ${DOCKER_HOST#unix://} http://localhost/_ping
           
-          # Configure buildx to connect to existing buildkit daemon
-          docker buildx create --name finch-builder --driver remote unix:///run/buildkit/buildkitd.sock --use
+          # Configure buildx to use docker driver (routes through finch-daemon)
+          docker buildx create --name finch-builder --driver docker --use
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
@@ -219,42 +219,6 @@ jobs:
           echo "=== Running ${{ matrix.test-suite }} test suite ==="
           case "${{ matrix.test-suite }}" in
             invoke)
-              echo "=== Enhanced BuildKit Health Check ==="
-              # Check if BuildKit daemon is running
-              ps aux | grep buildkitd | grep -v grep || echo "❌ BuildKit daemon not running!"
-              
-              # Find ALL socket files on the system
-              echo "=== Finding ALL BuildKit Sockets ==="
-              find /run -name "*.sock" 2>/dev/null | grep -i buildkit || echo "No buildkit sockets in /run"
-              find /var/lib/buildkit -name "*.sock" 2>/dev/null || echo "No buildkit sockets in /var/lib/buildkit"
-              find /tmp -name "*buildkit*" 2>/dev/null || echo "No buildkit files in /tmp"
-              
-              # Check what's actually in the buildkit directory
-              echo "=== Contents of /run/buildkit ==="
-              ls -la /run/buildkit/ 2>/dev/null || echo "/run/buildkit directory empty or inaccessible"
-              
-              # Find what sockets the buildkitd process is actually using
-              echo "=== BuildKit Process Socket Usage ==="
-              BUILDKIT_PID=$(pgrep buildkitd)
-              if [ -n "$BUILDKIT_PID" ]; then
-                echo "BuildKit PID: $BUILDKIT_PID"
-                sudo lsof -p $BUILDKIT_PID | grep sock || echo "No sockets found for buildkitd process"
-              else
-                echo "BuildKit process not found"
-              fi
-              
-              # Try to find the actual socket location
-              echo "=== Searching for BuildKit Socket Everywhere ==="
-              find / -name "*buildkit*.sock" 2>/dev/null | head -5 || echo "No buildkit sockets found anywhere"
-              
-              # Fix BuildKit permissions based on discovery
-              echo "=== Applying BuildKit Permission Fix ==="
-              sudo chmod 755 /run/buildkit/ 2>/dev/null || echo "Could not fix directory permissions"
-              sudo chmod 666 /run/buildkit/buildkitd.sock 2>/dev/null || echo "Could not fix socket permissions"
-              
-              # Test BuildKit connectivity (uses default socket)
-              buildctl debug workers || echo "❌ BuildKit not responding!"
-              
               # Test Docker daemon connectivity
               echo "=== Docker Daemon Check ==="
               docker version || echo "❌ Docker daemon not responding!"
@@ -319,11 +283,6 @@ jobs:
               else
                 echo "All test failures were expected. Invoke test passed!"
               fi
-
-              echo "=== Post-test BuildKit Health Check ==="
-              ps aux | grep buildkitd | grep -v grep || echo "❌ BuildKit daemon not running!"
-              buildctl debug workers || echo "❌ BuildKit not responding!"
-              echo "=== End Post-test Check ==="
               ;;
               
             start-lambda)
@@ -481,8 +440,5 @@ jobs:
           echo "=== Containerd Logs ==="
           sudo journalctl --since "60 minutes ago" | grep -i containerd | tail -50 || echo "No containerd logs found"
           
-          echo "=== BuildKit Logs ==="
-          sudo journalctl --since "60 minutes ago" | grep -i buildkit | tail -50 || echo "No buildkit logs found"
-          
           echo "=== Process Status ==="
-          ps aux | grep -E "(finch-daemon|containerd|buildkit)" | grep -v grep || echo "No relevant processes found"
+          ps aux | grep -E "(finch-daemon|containerd)" | grep -v grep || echo "No relevant processes found"

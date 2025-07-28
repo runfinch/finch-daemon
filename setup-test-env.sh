@@ -58,40 +58,4 @@ done
 # Extra conservative wait
 sleep 3
 
-echo "Starting buildkitd..."
-sudo buildkitd &
-BUILDKIT_PID=$!
-echo "Buildkitd started with PID: $BUILDKIT_PID"
-
-# Wait for buildkitd to be ready (up to 60 seconds)
-echo "Waiting for buildkitd to be ready..."
-for i in {1..60}; do
-  if sudo buildctl debug workers >/dev/null 2>&1; then
-    echo "buildkitd is ready after ${i} seconds"
-    break
-  fi
-  if [ $i -eq 60 ]; then
-    echo "ERROR: buildkitd failed to start after 60 seconds"
-    exit 1
-  fi
-  sleep 1
-done
-
-# Find and fix buildkit socket permissions
-echo "Finding buildkit socket..."
-for i in {1..10}; do
-  SOCKET=$(find /run /var/run /tmp -name "buildkitd.sock" 2>/dev/null | head -1)
-  if [ -n "$SOCKET" ]; then
-    echo "Found buildkit socket: $SOCKET"
-    sudo chmod 666 "$SOCKET"
-    echo "Fixed permissions on $SOCKET"
-    break
-  fi
-  echo "Socket not found, waiting... (attempt $i/10)"
-  sleep 2
-done
-
-# Extra conservative wait for full initialization
-sleep 5
-
-echo "All daemons are ready. PIDs: containerd=$CONTAINERD_PID, buildkitd=$BUILDKIT_PID"
+echo "Setup complete. Containerd PID: $CONTAINERD_PID"
