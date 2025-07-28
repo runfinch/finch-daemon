@@ -218,7 +218,7 @@ jobs:
         run: |
           echo "=== Running ${{ matrix.test-suite }} test suite ==="
           case "${{ matrix.test-suite }}" in
-            unit-test)
+            unit-tests)
               echo "=== SAMcli Unit Tests ==="
 
               # Fix ulimit ahead of time (not unlimited)
@@ -247,7 +247,7 @@ jobs:
               else
                 echo "Unit tests passed with $COVERAGE% coverage (expected ~94%)"
               fi  
-
+              
             invoke)
               echo "=== Enhanced BuildKit Health Check ==="
               # Check if BuildKit daemon is running
