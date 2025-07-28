@@ -46,7 +46,6 @@ jobs:
     timeout-minutes: 250 # allows 30+ min buffer
     env:
       AWS_DEFAULT_REGION: ${{ secrets.REGION }}
-      SAM_CLI_DEV: 1
       BY_CANARY: true
       DOCKER_HOST: unix:///run/finch.sock
       DOCKER_CONFIG: /home/runner/.docker # finch-daemon supports Docker API
@@ -62,7 +61,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9' # aws-sam-cli/setup.py -> python_requires=">=3.9, <=4.0, !=4.0"
+          python-version: '3.11.12' # aws-sam-cli/setup.py -> python_requires=">=3.9, <=4.0, !=4.0" -> actually, align wuth doc
 
       - name: Checkout finch-daemon repo
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -293,7 +292,7 @@ jobs:
 
           # Run the test with enhanced error capture
           echo "=== Running Invoke Tests with Enhanced Debugging ==="
-          python -m pytest tests/integration/local/invoke -k 'not Terraform' -v -s --tb=long > test_output.txt 2>&1 || true
+          SAM_CLI_DEV=1 python -m pytest tests/integration/local/invoke -k 'not Terraform' -v -s --tb=long > test_output.txt 2>&1 || true
           
           # Show test output
           cat test_output.txt
@@ -346,7 +345,7 @@ jobs:
         working-directory: aws-sam-cli
         run: |
           # Run the tests
-          python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v > start_lambda_output.txt 2>&1 || true
+          SAM_CLI_DEV=1 python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v > start_lambda_output.txt 2>&1 || true
           cat start_lambda_output.txt
 
           # Check if any tests failed
@@ -365,7 +364,7 @@ jobs:
           ulimit -n 8192
 
           # Run the tests
-          python -m pytest tests/integration/local/start_api -k 'not Terraform' -v > start_api_output.txt 2>&1 || true
+          SAM_CLI_DEV=1 python -m pytest tests/integration/local/start_api -k 'not Terraform' -v > start_api_output.txt 2>&1 || true
           cat start_api_output.txt
 
           # Check if any tests failed
@@ -381,7 +380,7 @@ jobs:
         working-directory: aws-sam-cli
         run: |
           # Run the tests
-          python -m pytest tests/integration/sync -k 'image' -v > sync_test.txt 2>&1 || true
+          SAM_CLI_DEV=1 python -m pytest tests/integration/sync -k 'image' -v > sync_test.txt 2>&1 || true
           cat sync_test.txt
 
           # Check if any tests failed
@@ -397,7 +396,7 @@ jobs:
         working-directory: aws-sam-cli
         run: |
           # Run the tests
-          python -m pytest tests/integration/package/test_package_command_image.py > package_test.txt 2>&1 || true
+          SAM_CLI_DEV=1 python -m pytest tests/integration/package/test_package_command_image.py > package_test.txt 2>&1 || true
           cat package_test.txt
 
           # Create a list of expected failing tests
@@ -428,7 +427,7 @@ jobs:
         working-directory: aws-sam-cli
         run: |
           # Run the tests
-          python -m pytest tests/integration/deploy -k 'image' > deploy_test.txt 2>&1 || true
+          SAM_CLI_DEV=1 python -m pytest tests/integration/deploy -k 'image' > deploy_test.txt 2>&1 || true
           cat deploy_test.txt
 
           # Check if any tests failed
@@ -444,7 +443,7 @@ jobs:
         working-directory: aws-sam-cli
         run: |
           # Run the tests
-          python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' > build_test.txt 2>&1 || true
+          SAM_CLI_DEV=1 python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' > build_test.txt 2>&1 || true
           cat build_test.txt
 
           # Create a list of expected failing tests
