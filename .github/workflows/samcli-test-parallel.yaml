@@ -45,7 +45,7 @@ permissions:
 jobs:
   samcli-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 250 # allows 30+ min buffer
+    timeout-minutes: 120 # allows 30+ min buffer (decrease for parallel)
     strategy:
       fail-fast: false  # Don't cancel other jobs if one fails
       matrix:
@@ -62,6 +62,7 @@ jobs:
       BY_CANARY: true
       DOCKER_HOST: unix:///run/finch.sock
       DOCKER_CONFIG: /home/runner/.docker # finch-daemon supports Docker API
+      SAM_CLI_DEV: 1  # Add this line
     steps:
 
       # Setup steps inspired by e2e-test in ci.yaml
@@ -277,7 +278,7 @@ jobs:
 
               # Run the test with enhanced error capture
               echo "=== Running Invoke Tests with Enhanced Debugging ==="
-              timeout 75m SAM_CLI_DEV=1 python -m pytest tests/integration/local/invoke -k 'not Terraform' -v -s --tb=long > test_output.txt 2>&1 || true
+              timeout 75m python -m pytest tests/integration/local/invoke -k 'not Terraform' -v -s --tb=long > test_output.txt 2>&1 || true
               
               # Show test output
               cat test_output.txt
@@ -327,7 +328,7 @@ jobs:
               
             start-lambda)
               echo "=== Running start-lambda tests ==="
-              timeout 30m SAM_CLI_DEV=1 python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v > start_lambda_output.txt 2>&1 || true
+              timeout 30m  python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v > start_lambda_output.txt 2>&1 || true
               cat start_lambda_output.txt
 
               # Check if any tests failed
@@ -344,7 +345,7 @@ jobs:
               # Increase file limit to prevent "too many files open" error
               ulimit -n 8192
 
-              timeout 75m SAM_CLI_DEV=1 python -m pytest tests/integration/local/start_api -k 'not Terraform' -v > start_api_output.txt 2>&1 || true
+              timeout 75m  python -m pytest tests/integration/local/start_api -k 'not Terraform' -v > start_api_output.txt 2>&1 || true
               cat start_api_output.txt
 
               # Check if any tests failed
@@ -358,7 +359,7 @@ jobs:
               
             sync)
               echo "=== Running sync tests ==="
-              timeout 20m SAM_CLI_DEV=1 python -m pytest tests/integration/sync -k 'image' -v > sync_test.txt 2>&1 || true
+              timeout 20m  python -m pytest tests/integration/sync -k 'image' -v > sync_test.txt 2>&1 || true
               cat sync_test.txt
 
               # Check if any tests failed
@@ -372,7 +373,7 @@ jobs:
               
             package)
               echo "=== Running package tests ==="
-              timeout 7m SAM_CLI_DEV=1 python -m pytest tests/integration/package/test_package_command_image.py > package_test.txt 2>&1 || true
+              timeout 7m  python -m pytest tests/integration/package/test_package_command_image.py > package_test.txt 2>&1 || true
               cat package_test.txt
 
               # Create a list of expected failing tests
@@ -401,7 +402,7 @@ jobs:
               
             deploy)
               echo "=== Running deploy tests ==="
-              timeout 30m SAM_CLI_DEV=1 python -m pytest tests/integration/deploy -k 'image' > deploy_test.txt 2>&1 || true
+              timeout 30m  python -m pytest tests/integration/deploy -k 'image' > deploy_test.txt 2>&1 || true
               cat deploy_test.txt
 
               # Check if any tests failed
@@ -416,7 +417,7 @@ jobs:
               
             build)
               echo "=== Running build tests ==="
-              SAM_CLI_DEV=1 python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' > build_test.txt 2>&1 || true
+              python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' > build_test.txt 2>&1 || true
               cat build_test.txt
 
               # Create a list of expected failing tests
@@ -481,7 +482,7 @@ jobs:
           sudo journalctl --since "60 minutes ago" | grep -i containerd | tail -50 || echo "No containerd logs found"
           
           echo "=== BuildKit Logs ==="
-          sudo journalctl --since "60 minutes ago" | grep -i buildkit | tail-50 || echo "No buildkit logs found"
+          sudo journalctl --since "60 minutes ago" | grep -i buildkit | tail -50 || echo "No buildkit logs found"
           
           echo "=== Process Status ==="
           ps aux | grep -E "(finch-daemon|containerd|buildkit)" | grep -v grep || echo "No relevant processes found"
