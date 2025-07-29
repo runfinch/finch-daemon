@@ -28,11 +28,56 @@ tar zxvf /tmp/buildkit.tgz -C /usr/local/bin/
 sudo mv /usr/local/bin/bin/* /usr/local/bin/
 rm /tmp/buildkit.tgz
 
-#Download and install cni-plugins
+#Download and install cni-plugins with retry logic
+echo "Installing CNI plugins..."
 sudo rm -rf /opt/cni/bin/*
-cd && wget https://github.com/containernetworking/plugins/releases/download/v${CNI_VERSION}/cni-plugins-linux-amd64-v${CNI_VERSION}.tgz
 sudo mkdir -p /opt/cni/bin
-sudo tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v${CNI_VERSION}.tgz
+
+# Retry logic for CNI download
+CNI_SUCCESS=false
+for attempt in 1 2 3; do
+  echo "CNI download attempt $attempt/3..."
+  cd /tmp
+  rm -f cni-plugins-linux-amd64-v${CNI_VERSION}.tgz
+  
+  if wget --timeout=30 --tries=3 https://github.com/containernetworking/plugins/releases/download/v${CNI_VERSION}/cni-plugins-linux-amd64-v${CNI_VERSION}.tgz; then
+    if [ -f "cni-plugins-linux-amd64-v${CNI_VERSION}.tgz" ]; then
+      echo "CNI download successful, extracting..."
+      if sudo tar -xzf cni-plugins-linux-amd64-v${CNI_VERSION}.tgz -C /opt/cni/bin/; then
+        # Verify critical plugins exist
+        if [ -f "/opt/cni/bin/bridge" ] && [ -f "/opt/cni/bin/loopback" ] && [ -f "/opt/cni/bin/host-local" ]; then
+          echo "CNI plugins installed successfully"
+          CNI_SUCCESS=true
+          break
+        else
+          echo "CNI extraction failed - missing critical plugins"
+        fi
+      else
+        echo "CNI extraction failed"
+      fi
+    else
+      echo "CNI download failed - file not found"
+    fi
+  else
+    echo "CNI download failed - network error"
+  fi
+  
+  if [ $attempt -lt 3 ]; then
+    echo "Retrying in 10 seconds..."
+    sleep 10
+  fi
+done
+
+if [ "$CNI_SUCCESS" = false ]; then
+  echo "ERROR: Failed to install CNI plugins after 3 attempts"
+  echo "Listing /opt/cni/bin contents:"
+  ls -la /opt/cni/bin/ || echo "Directory does not exist"
+  exit 1
+fi
+
+# Verify installation
+echo "Verifying CNI installation:"
+ls -la /opt/cni/bin/bridge /opt/cni/bin/loopback /opt/cni/bin/host-local
 
 export PATH=$PATH:/usr/local/bin
 

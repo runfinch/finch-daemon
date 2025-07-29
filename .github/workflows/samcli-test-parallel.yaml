@@ -169,6 +169,18 @@ jobs:
           sudo ls /etc/cni/net.d
           sudo rm /etc/cni/net.d/87-podman-bridge.conflist
 
+      - name: Verify CNI plugins installed
+        run: |
+          echo "=== CNI Plugin Verification ==="
+          echo "Checking critical CNI plugins..."
+          ls -la /opt/cni/bin/bridge || { echo "❌ Bridge plugin missing"; exit 1; }
+          ls -la /opt/cni/bin/loopback || { echo "❌ Loopback plugin missing"; exit 1; }
+          ls -la /opt/cni/bin/host-local || { echo "❌ Host-local plugin missing"; exit 1; }
+          echo "✅ All critical CNI plugins present"
+          
+          echo "All CNI plugins:"
+          ls -la /opt/cni/bin/
+
       - name: Clean up Daemon socket
         run: |
           sudo rm -f /run/finch.sock
@@ -216,29 +228,8 @@ jobs:
           echo "=== Running ${{ matrix.test-suite }} test suite ==="
           case "${{ matrix.test-suite }}" in
             invoke)
-              # Test Docker daemon connectivity
-              echo "=== Docker Daemon Check ==="
-              docker version || echo "❌ Docker daemon not responding!"
-              docker info | grep -E "(Server Version|Storage Driver|Logging Driver)" || echo "❌ Docker info failed!"
-              
-              # Test basic Docker build functionality
-              echo "=== Docker Build Test ==="
-              echo 'FROM alpine:latest' > /tmp/test.dockerfile
-              echo 'RUN echo "test build"' >> /tmp/test.dockerfile
-              
-              # Verify buildx driver
-              echo "Current buildx driver:"
-              docker buildx ls
-              
-              # Build with explicit load to ensure image goes to finch-daemon
-              docker buildx build -f /tmp/test.dockerfile -t test-build --load . || echo "❌ Basic Docker build failed!"
-              docker images | grep test-build || echo "❌ Test image not found!"
-              docker rmi test-build 2>/dev/null || echo "❌ Failed to remove test image"
-              
-              echo "=== End Enhanced Check ==="
-
               # Run the test with enhanced error capture
-              echo "=== Running Invoke Tests with Enhanced Debugging ==="
+              echo "=== Running Invoke Tests ==="
               timeout 75m python -m pytest tests/integration/local/invoke -k 'not Terraform' -v -s --tb=long > test_output.txt 2>&1 || true
               
               # Show test output
