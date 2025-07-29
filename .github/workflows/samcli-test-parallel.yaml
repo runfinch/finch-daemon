@@ -207,7 +207,7 @@ jobs:
           docker buildx inspect --bootstrap
 
           # Test that builds actually work through finch-daemon
-          echo "FROM alpine:latest" | docker build -t test-build -
+          echo "FROM alpine:latest" | docker buildx build --load -t test-build -
           docker rmi test-build
 
       - name: Configure AWS credentials
