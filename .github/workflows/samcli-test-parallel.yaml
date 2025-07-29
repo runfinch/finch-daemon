@@ -318,10 +318,12 @@ jobs:
               
             sync)
 
-              echo "=== Debug SAM CLI Environment ==="
-              env | grep -i sam || echo "No SAM env vars"
-              env | grep -i stack || echo "No STACK env vars"
-              samdev --help | grep -i stack || echo "No stack options in help"
+              echo "=== SAM CLI Command Help ==="
+              samdev deploy --help | grep -A5 -B5 stack
+              samdev package --help | grep -A5 -B5 stack
+              samdev sync --help | grep -A5 -B5 stack
+              echo "=== SAM CLI Environment Variables ==="
+              samdev --help | grep -i env || echo "No environment variable info"
 
               echo "=== Running sync tests ==="
               export SAM_CLI_STACK_NAME="sync-${UNIQUE_TEST_ID}"
@@ -343,7 +345,7 @@ jobs:
               env | grep -i sam || echo "No SAM env vars"
               env | grep -i stack || echo "No STACK env vars"
               samdev --help | grep -i stack || echo "No stack options in help"
-              
+
               echo "=== Running package tests ==="
               export SAM_CLI_STACK_NAME="package-${UNIQUE_TEST_ID}"
               timeout 7m  python -m pytest tests/integration/package/test_package_command_image.py > package_test.txt 2>&1 || true
