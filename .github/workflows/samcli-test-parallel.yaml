@@ -195,12 +195,19 @@ jobs:
           curl --unix-socket /run/finch.sock http://localhost/_ping
           echo "finch-daemon is ready"
 
-      - name: Verify Docker environment
+      - name: Verify and configure Docker environment
         run: |
           echo "DOCKER_HOST: $DOCKER_HOST"
           echo "DOCKER_CONFIG: $DOCKER_CONFIG"
           ls -la $DOCKER_CONFIG/
           curl --unix-socket ${DOCKER_HOST#unix://} http://localhost/_ping
+                
+          # Configure buildx to use docker driver (routes through finch-daemon)
+          docker buildx create --name finch-builder --driver docker --use
+
+          # Test that builds actually work through finch-daemon
+          echo "FROM alpine:latest" | docker build -t test-build -
+          docker rmi test-build
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
