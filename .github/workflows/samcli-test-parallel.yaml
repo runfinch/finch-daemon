@@ -368,8 +368,13 @@ jobs:
               else
                 echo "All deploy tests failed as expected!"
               fi
+
+              # Show which specific tests passed to understand if they should pass
+              echo "=== Deploy Test Results ==="
+              grep -E "(PASSED|FAILED|ERROR)" deploy_test.txt
+              echo "=== End Results ==="
               ;;
-              
+                            
             build)
               echo "=== Running build tests ==="
               python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' > build_test.txt 2>&1 || true
