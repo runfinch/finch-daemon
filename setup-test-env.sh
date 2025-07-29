@@ -103,4 +103,24 @@ done
 # Extra conservative wait
 sleep 3
 
-echo "Setup complete. Containerd PID: $CONTAINERD_PID"
+echo "Starting BuildKit daemon..."
+sudo mkdir -p /run/buildkit
+sudo buildkitd --addr unix:///run/buildkit/buildkitd.sock --group $(id -gn) &
+BUILDKIT_PID=$!
+echo "BuildKit daemon started with PID: $BUILDKIT_PID"
+
+# Wait for BuildKit to be ready
+echo "Waiting for BuildKit to be ready..."
+for i in {1..30}; do
+  if buildctl --addr unix:///run/buildkit/buildkitd.sock debug info >/dev/null 2>&1; then
+    echo "BuildKit is ready after ${i} seconds"
+    break
+  fi
+  if [ $i -eq 30 ]; then
+    echo "ERROR: BuildKit failed to start after 30 seconds"
+    exit 1
+  fi
+  sleep 1
+done
+
+echo "Setup complete. Containerd PID: $CONTAINERD_PID, BuildKit PID: $BUILDKIT_PID"

@@ -202,16 +202,13 @@ jobs:
           ls -la $DOCKER_CONFIG/
           curl --unix-socket ${DOCKER_HOST#unix://} http://localhost/_ping
 
-          # # Use the default builder and set it to use docker driver
-          # docker buildx use default
-          # docker buildx inspect --bootstrap
+          # Use the default builder and set it to use docker driver
+          docker buildx use default
+          docker buildx inspect --bootstrap 
 
-          docker buildx create --name finch-builder --driver remote unix:///run/buildkit/buildkitd.sock --use
-          docker buildx inspect --bootstrap
-
-          # # Test that builds actually work through finch-daemon
-          # echo "FROM alpine:latest" | docker buildx build --load -t test-build -
-          # docker rmi test-build
+          # Test that builds actually work through finch-daemon
+          echo "FROM alpine:latest" | docker buildx build --load -t test-build -
+          docker rmi test-build
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
