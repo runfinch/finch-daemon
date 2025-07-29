@@ -63,7 +63,8 @@ jobs:
       BY_CANARY: true
       DOCKER_HOST: unix:///run/finch.sock
       DOCKER_CONFIG: /home/runner/.docker # finch-daemon supports Docker API
-      SAM_CLI_DEV: 1  # Add this line
+      SAM_CLI_DEV: 1 
+      UNIQUE_TEST_ID: ${{ github.run_id }}-${{ matrix.test-suite }}-${{ strategy.job-index }}
     steps:
 
       # Setup steps inspired by e2e-test in ci.yaml
@@ -238,6 +239,7 @@ jobs:
             invoke)
               # Run the test with enhanced error capture
               echo "=== Running Invoke Tests ==="
+              export SAM_CLI_STACK_NAME="invoke-${UNIQUE_TEST_ID}"
               timeout 75m python -m pytest tests/integration/local/invoke -k 'not Terraform' -v -s --tb=long > test_output.txt 2>&1 || true
               
               # Show test output
@@ -283,6 +285,7 @@ jobs:
               
             start-lambda)
               echo "=== Running start-lambda tests ==="
+              export SAM_CLI_STACK_NAME="start-lambda-${UNIQUE_TEST_ID}"
               timeout 30m  python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v > start_lambda_output.txt 2>&1 || true
               cat start_lambda_output.txt
 
@@ -297,6 +300,7 @@ jobs:
               
             start-api)
               echo "=== Running start-api tests ==="
+              export SAM_CLI_STACK_NAME="start-api-${UNIQUE_TEST_ID}"
               # Increase file limit to prevent "too many files open" error
               ulimit -n 8192
 
@@ -314,6 +318,7 @@ jobs:
               
             sync)
               echo "=== Running sync tests ==="
+              export SAM_CLI_STACK_NAME="sync-${UNIQUE_TEST_ID}"
               timeout 20m  python -m pytest tests/integration/sync -k 'image' -v > sync_test.txt 2>&1 || true
               cat sync_test.txt
 
@@ -328,6 +333,7 @@ jobs:
               
             package)
               echo "=== Running package tests ==="
+              export SAM_CLI_STACK_NAME="package-${UNIQUE_TEST_ID}"
               timeout 7m  python -m pytest tests/integration/package/test_package_command_image.py > package_test.txt 2>&1 || true
               cat package_test.txt
 
@@ -357,6 +363,7 @@ jobs:
               
             deploy)
               echo "=== Running deploy tests ==="
+              export SAM_CLI_STACK_NAME="deploy-${UNIQUE_TEST_ID}"
               timeout 30m  python -m pytest tests/integration/deploy -k 'image' > deploy_test.txt 2>&1 || true
               cat deploy_test.txt
 
@@ -377,6 +384,7 @@ jobs:
                             
             build)
               echo "=== Running build tests ==="
+              export SAM_CLI_STACK_NAME="build-${UNIQUE_TEST_ID}"
               python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' > build_test.txt 2>&1 || true
               cat build_test.txt
 
@@ -431,6 +439,16 @@ jobs:
               exit 1
               ;;
           esac
+
+      - name: Cleanup CloudFormation stacks
+        if: always()  # Run even if tests failed
+        run: |
+          echo "=== Cleaning up CloudFormation stacks for ${{ matrix.test-suite }} ==="
+          # Clean up any stacks that might have been created
+          aws cloudformation delete-stack --stack-name "sync-${UNIQUE_TEST_ID}" || true
+          aws cloudformation delete-stack --stack-name "package-${UNIQUE_TEST_ID}" || true
+          aws cloudformation delete-stack --stack-name "deploy-${UNIQUE_TEST_ID}" || true
+          echo "Cleanup commands issued (stacks will delete asynchronously)"
 
       - name: Capture finch-daemon logs
         if: always()  # Run even if previous steps failed
