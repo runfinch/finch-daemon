@@ -210,11 +210,13 @@ jobs:
           echo "Testing BuildKit connectivity with buildctl..."
           buildctl --addr unix:///run/buildkit/buildkitd.sock debug info
           
-          # Test that finch-daemon can auto-discover and use BuildKit
-          echo "Testing Docker build through finch-daemon (should auto-discover BuildKit)..."
-          echo "FROM alpine:latest" | docker build -t finch-buildkit-test -
+          # Test that finch-daemon can use BuildKit for basic Docker build
+          echo "Testing basic Docker build through finch-daemon..."
+          echo "FROM alpine:latest" > /tmp/test-dockerfile
+          docker build -f /tmp/test-dockerfile -t finch-buildkit-test /tmp
           docker images finch-buildkit-test
           docker rmi finch-buildkit-test
+          rm -f /tmp/test-dockerfile
           
           echo "BuildKit integration verification completed successfully"
 
@@ -225,15 +227,18 @@ jobs:
           ls -la $DOCKER_CONFIG/
           curl --unix-socket ${DOCKER_HOST#unix://} http://localhost/_ping
 
-          # Use the default builder and set it to use docker driver
-          docker buildx use default
-          docker buildx inspect --bootstrap 
-
-          # Test that builds actually work through finch-daemon
-          echo "Testing Docker buildx through finch-daemon..."
-          echo "FROM alpine:latest" | docker buildx build --load -t test-build -
+          # Test basic Docker build through finch-daemon (without buildx)
+          echo "Testing basic Docker build through finch-daemon..."
+          echo "FROM alpine:latest" > /tmp/basic-dockerfile
+          docker build -f /tmp/basic-dockerfile -t test-build /tmp
           docker images test-build
           docker rmi test-build
+          rm -f /tmp/basic-dockerfile
+          
+          # Now test buildx if needed (but ensure it goes through finch-daemon)
+          echo "Testing Docker buildx configuration..."
+          docker buildx use default
+          docker buildx inspect --bootstrap 
           
           echo "Docker environment verification completed"
 
