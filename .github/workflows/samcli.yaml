@@ -100,8 +100,9 @@ jobs:
       - name: Install and validate finch-daemon dependencies
         run: |
           ./setup-test-env.sh
-          while ! sudo ctr version >/dev/null 2>&1; do sleep 1; done
-          while ! buildctl debug info >/dev/null 2>&1; do sleep 1; done
+          sleep 10
+          /usr/local/bin/ctr version || echo "❌ containerd not ready"
+          /usr/local/bin/buildctl --addr unix:///run/buildkit/buildkitd.sock debug info || echo "❌ buildkit not ready"
           sudo chmod 666 /run/buildkit/buildkitd.sock # buildkit permissions
 
       - name: Build and verify finch-daemon
