@@ -191,10 +191,32 @@ jobs:
       - name: Start finch-daemon
         run: |
           sudo cp bin/docker-credential-finch /usr/bin
+          
+          # Start finch-daemon (should auto-discover BuildKit at /run/buildkit/buildkitd.sock)
           sudo bin/finch-daemon --debug --socket-owner $UID &
           sleep 10  # Conservative wait for daemon startup
           curl --unix-socket /run/finch.sock http://localhost/_ping
           echo "finch-daemon is ready"
+
+      - name: Verify BuildKit integration with finch-daemon
+        run: |
+          echo "=== Verifying BuildKit Integration with finch-daemon ==="
+          
+          # Check BuildKit socket exists and is accessible
+          echo "BuildKit socket status:"
+          ls -la /run/buildkit/buildkitd.sock
+          
+          # Test BuildKit connectivity using buildctl (same method finch-daemon uses)
+          echo "Testing BuildKit connectivity with buildctl..."
+          buildctl --addr unix:///run/buildkit/buildkitd.sock debug info
+          
+          # Test that finch-daemon can auto-discover and use BuildKit
+          echo "Testing Docker build through finch-daemon (should auto-discover BuildKit)..."
+          echo "FROM alpine:latest" | docker build -t finch-buildkit-test -
+          docker images finch-buildkit-test
+          docker rmi finch-buildkit-test
+          
+          echo "BuildKit integration verification completed successfully"
 
       - name: Verify and configure Docker environment
         run: |
@@ -208,8 +230,12 @@ jobs:
           docker buildx inspect --bootstrap 
 
           # Test that builds actually work through finch-daemon
+          echo "Testing Docker buildx through finch-daemon..."
           echo "FROM alpine:latest" | docker buildx build --load -t test-build -
+          docker images test-build
           docker rmi test-build
+          
+          echo "Docker environment verification completed"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1

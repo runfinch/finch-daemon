@@ -124,3 +124,40 @@ for i in {1..30}; do
 done
 
 echo "Setup complete. Containerd PID: $CONTAINERD_PID, BuildKit PID: $BUILDKIT_PID"
+
+echo "Configuring BuildKit for finch-daemon integration..."
+
+# Set proper permissions on BuildKit socket for finch-daemon access
+sudo chmod 666 /run/buildkit/buildkitd.sock
+
+# Verify socket permissions
+echo "BuildKit socket permissions:"
+ls -la /run/buildkit/buildkitd.sock
+
+# Test BuildKit connectivity using buildctl (same as finch-daemon does)
+echo "Testing BuildKit connectivity with buildctl..."
+if buildctl --addr unix:///run/buildkit/buildkitd.sock debug info; then
+    echo "BuildKit connectivity test passed"
+else
+    echo "ERROR: BuildKit connectivity test failed"
+    exit 1
+fi
+
+# Test basic image building capability using buildctl directly
+echo "Testing BuildKit image building capability with buildctl..."
+cat > /tmp/test-dockerfile << EOF
+FROM alpine:latest
+RUN echo "BuildKit test successful"
+EOF
+
+if buildctl --addr unix:///run/buildkit/buildkitd.sock build --frontend dockerfile.v0 --local context=/tmp --local dockerfile=/tmp --opt filename=test-dockerfile --output type=image,name=buildkit-test,unpack=true; then
+    echo "BuildKit image building test passed"
+    # Clean up test image
+    nerdctl rmi buildkit-test || true
+else
+    echo "WARNING: BuildKit image building test failed"
+fi
+
+rm -f /tmp/test-dockerfile
+
+echo "BuildKit configuration for finch-daemon complete (auto-discovery should work)"
