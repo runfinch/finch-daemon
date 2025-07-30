@@ -65,7 +65,7 @@ jobs:
       DOCKER_CONFIG: /home/runner/.docker # finch-daemon supports Docker API
       SAM_CLI_DEV: 1 
       UNIQUE_TEST_ID: ${{ github.run_id }}-${{ matrix.test-suite }}-${{ strategy.job-index }}
-      DOCKER_BUILDKIT: 0  # Disable buildx to force legacy Docker build through finch-daemon
+      BUILDKIT_HOST: unix:///run/buildkit/buildkitd.sock  # Point Docker to our BuildKit
     steps:
 
       # Setup steps inspired by e2e-test in ci.yaml
@@ -206,7 +206,7 @@ jobs:
           # 1. Verify containerd integration
           echo "1. Verifying containerd integration..."
           echo "Containerd socket status:"
-          ls -la /run/containerd/containerd.sock || ls -la /var/run/containerd/containerd.sock || echo "Containerd socket not found at standard locations"
+          ls -la /run/containerd/containerd.sock 2>/dev/null || ls -la /var/run/containerd/containerd.sock 2>/dev/null || echo "Containerd socket not found at standard locations"
           
           echo "Testing containerd connectivity:"
           sudo ctr version
@@ -228,18 +228,27 @@ jobs:
           echo "4. Testing finch-daemon integration with all components..."
           
           # Test Docker API connectivity
+          echo "Testing Docker API connectivity:"
           curl --unix-socket /run/finch.sock http://localhost/_ping
-          curl --unix-socket /run/finch.sock http://localhost/version
+          echo ""
+          curl --unix-socket /run/finch.sock http://localhost/version | jq '.Version' || echo "Version check completed"
           
-          # Test image operations (uses containerd)
+          # Test image operations (uses containerd) - with actual content
           echo "Testing image operations through finch-daemon..."
-          docker images || echo "Image listing failed"
+          docker images
+          echo "Image operations: $(docker images | wc -l) images found (including header)"
           
-          # Test network operations (uses CNI)
+          # Test network operations (uses CNI) - with actual content  
           echo "Testing network operations through finch-daemon..."
-          docker network ls || echo "Network listing failed"
+          docker network ls
+          echo "Network operations: $(docker network ls | wc -l) networks found (including header)"
           
-          echo "=== Integration verification completed ==="
+          # Test basic container operations
+          echo "Testing container operations through finch-daemon..."
+          docker ps -a
+          echo "Container operations: $(docker ps -a | wc -l) containers found (including header)"
+          
+          echo "=== Integration verification completed successfully ==="
 
       - name: Verify BuildKit integration with finch-daemon
         run: |
@@ -253,12 +262,12 @@ jobs:
           echo "Testing BuildKit connectivity with buildctl..."
           buildctl --addr unix:///run/buildkit/buildkitd.sock debug info
           
-          # Disable buildx to force legacy Docker build through finch-daemon (like finch does)
-          echo "Disabling Docker buildx to force legacy build through finch-daemon..."
-          export DOCKER_BUILDKIT=0
+          # Configure Docker to use our BuildKit instance (modern approach)
+          echo "Configuring Docker to use our BuildKit instance..."
+          export BUILDKIT_HOST=unix:///run/buildkit/buildkitd.sock
           
-          # Test that finch-daemon can handle Docker build requests
-          echo "Testing legacy Docker build through finch-daemon..."
+          # Test that finch-daemon can handle modern Docker build requests
+          echo "Testing modern Docker build through finch-daemon with our BuildKit..."
           echo "FROM alpine:latest" > /tmp/test-dockerfile
           docker build -f /tmp/test-dockerfile -t finch-buildkit-test /tmp
           docker images finch-buildkit-test
@@ -274,20 +283,16 @@ jobs:
           ls -la $DOCKER_CONFIG/
           curl --unix-socket ${DOCKER_HOST#unix://} http://localhost/_ping
 
-          # Disable buildx to ensure Docker commands go through finch-daemon
-          export DOCKER_BUILDKIT=0
+          # Configure Docker to use our BuildKit instance
+          export BUILDKIT_HOST=unix:///run/buildkit/buildkitd.sock
           
-          # Test basic Docker build through finch-daemon (legacy build)
-          echo "Testing legacy Docker build through finch-daemon..."
+          # Test basic Docker build through finch-daemon (modern BuildKit)
+          echo "Testing modern Docker build through finch-daemon..."
           echo "FROM alpine:latest" > /tmp/basic-dockerfile
           docker build -f /tmp/basic-dockerfile -t test-build /tmp
           docker images test-build
           docker rmi test-build
           rm -f /tmp/basic-dockerfile
-          
-          # Test buildx configuration (but don't use it for actual builds)
-          echo "Testing Docker buildx configuration (for compatibility)..."
-          docker buildx version || echo "buildx not available (expected with DOCKER_BUILDKIT=0)"
           
           echo "Docker environment verification completed"
 
