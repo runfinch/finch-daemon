@@ -1,35 +1,35 @@
 name: samcli-test-parallel
 
-on:
-  push:
-    branches:
-      - main
-    paths:
-      - '**.go'
-      - 'go.mod'
-      - 'go.sum'
-      - '.github/workflows/samcli-test-parallel.yaml'
-      - 'Makefile*'
-      - 'cmd/**'
-      - 'pkg/**'
-      - 'internal/**'
-      - 'api/**'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - '**.go'
-      - 'go.mod'
-      - 'go.sum'
-      - '.github/workflows/samcli-test-parallel.yaml'
-      - 'Makefile*'
-      - 'cmd/**'
-      - 'pkg/**'
-      - 'internal/**'
-      - 'api/**'
-  # schedule:
-  #   - cron: '0 9 * * *' # midnight
-  workflow_dispatch:    # manual trigger
+# on:
+#   push:
+#     branches:
+#       - main
+#     paths:
+#       - '**.go'
+#       - 'go.mod'
+#       - 'go.sum'
+#       - '.github/workflows/samcli-test-parallel.yaml'
+#       - 'Makefile*'
+#       - 'cmd/**'
+#       - 'pkg/**'
+#       - 'internal/**'
+#       - 'api/**'
+#   pull_request:
+#     branches:
+#       - main
+#     paths:
+#       - '**.go'
+#       - 'go.mod'
+#       - 'go.sum'
+#       - '.github/workflows/samcli-test-parallel.yaml'
+#       - 'Makefile*'
+#       - 'cmd/**'
+#       - 'pkg/**'
+#       - 'internal/**'
+#       - 'api/**'
+#   # schedule:
+#   #   - cron: '0 9 * * *' # midnight
+#   workflow_dispatch:    # manual trigger
 
 env:
   GO_VERSION: '1.23.8'
@@ -86,8 +86,6 @@ jobs:
         run: |
           mkdir -p $DOCKER_CONFIG
           echo '{"auths":{"docker.io":{},"public.ecr.aws":{}}}' > $DOCKER_CONFIG/config.json
-          echo "Docker config created at: $DOCKER_CONFIG"
-          echo "Docker host set to: $DOCKER_HOST"
 
         # Version verification (from Q)
       - name: Verify required tools (strict)
@@ -248,6 +246,37 @@ jobs:
           echo "Container operations: $(docker ps -a | wc -l) containers found (including header)"
           
           echo "=== Integration verification completed successfully ==="
+
+      - name: Debug BuildKit discovery for finch-daemon
+        run: |
+          echo "=== Debugging BuildKit Discovery ==="
+          
+          # Test what buildkitutil.GetBuildkitHost() would find
+          echo "Testing BuildKit discovery methods..."
+          
+          # Check environment variables that buildkitutil might look for
+          echo "BUILDKIT_HOST environment: ${BUILDKIT_HOST:-not set}"
+          echo "DOCKER_HOST environment: ${DOCKER_HOST:-not set}"
+          
+          # Check standard BuildKit socket locations
+          echo "Standard BuildKit socket locations:"
+          ls -la /run/buildkit/buildkitd.sock 2>/dev/null || echo "/run/buildkit/buildkitd.sock not found"
+          ls -la /var/run/buildkit/buildkitd.sock 2>/dev/null || echo "/var/run/buildkit/buildkitd.sock not found"
+          ls -la /tmp/buildkitd.sock 2>/dev/null || echo "/tmp/buildkitd.sock not found"
+          
+          # Check if buildctl can find BuildKit without explicit address
+          echo "Testing buildctl auto-discovery:"
+          buildctl debug info 2>&1 || echo "buildctl auto-discovery failed"
+          
+          # Test with explicit address (what we know works)
+          echo "Testing buildctl with explicit address:"
+          buildctl --addr unix:///run/buildkit/buildkitd.sock debug info
+          
+          # Check containerd namespaces (buildkitutil uses namespace parameter)
+          echo "Containerd namespaces:"
+          sudo ctr namespaces list
+          
+          echo "=== BuildKit discovery debug completed ==="
 
       - name: Verify BuildKit integration with finch-daemon
         run: |

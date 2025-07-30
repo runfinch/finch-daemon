@@ -1,0 +1,377 @@
+name: samcli-test-refactored
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/samcli-test-parallel.yaml'
+      - 'Makefile*'
+      - 'cmd/**'
+      - 'pkg/**'
+      - 'internal/**'
+      - 'api/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/samcli-test-parallel.yaml'
+      - 'Makefile*'
+      - 'cmd/**'
+      - 'pkg/**'
+      - 'internal/**'
+      - 'api/**'
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.23.8'
+  GOLANGCI_LINT_VERSION: '1.64.8'
+  CONTAINERD_VERSION: "1.7.27"
+permissions:
+  # This is required for configure-aws-credentials to request an OIDC JWT ID token to access AWS resources later on.
+  # More info: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect#adding-permissions-settings
+  id-token: write
+  contents: read    # This is required for actions/checkout
+
+jobs:
+  samcli-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    env:
+      AWS_DEFAULT_REGION: ${{ secrets.REGION }}
+      DOCKER_HOST: unix:///run/finch.sock
+      DOCKER_CONFIG: /home/runner/.docker
+      BY_CANARY: true
+      SAM_CLI_DEV: 1 
+    strategy:
+      fail-fast: false
+      matrix:
+        test-suite: 
+          - invoke
+          - start-lambda
+          - start-api
+          - sync
+          - package
+          - deploy
+          - build
+    steps:
+
+      # SETUP
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Set up Python # no pyenv (ephemeral runner)
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11.12' # from test guide
+
+      - name: Checkout finch-daemon repo
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Setup Docker config for finch-daemon
+        run: |
+          mkdir -p $DOCKER_CONFIG
+          echo '{"auths":{"docker.io":{},"public.ecr.aws":{}}}' > $DOCKER_CONFIG/config.json
+
+      - name: Stop pre-existing containerd and docker services
+        run: |
+          sudo systemctl stop docker
+          sudo systemctl stop containerd
+
+      - name: Remove default podman network config
+        run: |
+          sudo ls /etc/cni/net.d || echo "CNI directory not found"
+          sudo rm -f /etc/cni/net.d/87-podman-bridge.conflist
+
+      - name: Clean up Daemon socket
+        run: |
+          sudo rm -f /run/finch.sock
+          sudo rm -f /run/finch.pid
+          sudo rm -f /run/finch-credential.sock
+
+      - name: Install and validate finch-daemon dependencies
+        run: |
+          ./setup-test-env.sh
+          while ! sudo ctr version >/dev/null 2>&1; do sleep 1; done
+          while ! buildctl debug info >/dev/null 2>&1; do sleep 1; done
+          sudo chmod 666 /run/buildkit/buildkitd.sock # buildkit permissions
+
+      - name: Build and verify finch-daemon
+        run: make build && ls -la bin/finch-daemon
+
+      - name: Start finch-daemon
+        run: |
+          sudo cp bin/docker-credential-finch /usr/bin
+          sudo bin/finch-daemon --debug --socket-owner $UID &
+          sleep 10
+          curl --unix-socket /run/finch.sock http://localhost/_ping
+          echo "finch-daemon is ready"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        with:
+          role-to-assume: ${{ secrets.ROLE }}
+          role-session-name: samcli-integration-test-${{ matrix.test-suite }}
+          aws-region: ${{ secrets.REGION }}
+
+      - name: Verify AWS credentials
+        run: |
+          echo "=== Verifying AWS Connection ==="
+          if aws sts get-caller-identity >/dev/null 2>&1; then
+            echo "✅ AWS credentials are valid"
+          else
+            echo "❌ AWS credentials failed"
+            exit 1
+          fi
+
+          # Test S3
+          if aws s3 ls >/dev/null 2>&1; then
+            echo "✅ AWS account access confirmed - can list S3 buckets"
+          else
+            echo "❌ AWS account access failed - cannot access S3"
+            exit 1
+          fi
+
+          # Test CloudFormation
+          if aws cloudformation list-stacks --max-items 1 >/dev/null 2>&1; then
+            echo "✅ CloudFormation access confirmed"
+          else
+            echo "❌ CloudFormation access failed"
+            exit 1
+          fi
+
+          echo "AWS Region: $(aws configure get region)"
+          echo "AWS credentials configured successfully"
+
+      - name: Set up SAM CLI from source
+        run: |
+          git clone https://github.com/aws/aws-sam-cli.git
+          cd aws-sam-cli
+          git checkout v1.142.1
+          git submodule update --init --recursive
+          python -m pip install --upgrade pip
+          make init
+          which samdev 
+          samdev --version
+
+      # Testing starts here
+
+      - name: Run ${{ matrix.test-suite }} tests
+        working-directory: aws-sam-cli
+        run: |
+          case "${{ matrix.test-suite }}" in
+
+            invoke)
+              timeout 75m python -m pytest tests/integration/local/invoke -k 'not Terraform' -v -s --tb=long > test_output.txt 2>&1 || true
+              echo "Test summary:"
+              grep -E "(PASSED|FAILED|ERROR)" test_output.txt | tail -10 || echo "No test summary available"
+
+              # Expected failing tests (from the guide)
+              cat > expected_failures.txt << 'EOF'
+              test_invoke_with_error_during_image_build
+              test_invoke_with_timeout_set_0_TimeoutFunction
+              test_invoke_with_timeout_set_1_TimeoutFunctionWithParameter
+              test_invoke_with_timeout_set_2_TimeoutFunctionWithStringParameter
+              test_building_new_rapid_image_removes_old_rapid_images
+              test_invoke_returns_expected_results_from_git_function
+              test_invoke_returns_expected_results_from_git_function_with_parameters
+              EOF
+
+              # Extract actual failing tests and check unexpected
+              grep "FAILED" test_output.txt | sed 's/.*::\([^[:space:]]*\).*/\1/' > actual_failures.txt || touch actual_failures.txt
+              UNEXPECTED_FAILURES=$(grep -v -f expected_failures.txt actual_failures.txt 2>/dev/null || true)
+
+              if [ -n "$UNEXPECTED_FAILURES" ]; then
+                echo "❌ Unexpected test failures found:"
+                echo "$UNEXPECTED_FAILURES"
+                echo "Full test output:"
+                cat test_output.txt
+                exit 1
+              else
+                echo "✅ All test failures were expected. Tests passed!"
+              fi
+              ;;
+
+            start-lambda)
+              timeout 30m  python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v > test_output.txt 2>&1 || true
+              echo "Test summary:"
+              grep -E "(PASSED|FAILED|ERROR)" test_output.txt | tail -10 || echo "No test summary available"
+
+              # Check if any tests failed
+              if grep -q "FAILED" test_output.txt; then
+                echo "❌ Unexpected test failures found:"
+                grep "FAILED" test_output.txt
+                echo "Full test output:"
+                cat test_output.txt
+                exit 1
+              else
+                echo "All tests passed!"
+              fi
+              ;;
+
+            start-api)
+              ulimit -n 8192
+              timeout 75m  python -m pytest tests/integration/local/start_api -k 'not Terraform' -v > test_output.txt 2>&1 || true
+              echo "Test summary:"
+              grep -E "(PASSED|FAILED|ERROR)" test_output.txt | tail -10 || echo "No test summary available"
+
+              # Check if any tests failed
+              if grep -q "FAILED" test_output.txt; then
+                echo "❌ Unexpected test failures found:"
+                grep "FAILED" test_output.txt
+                echo "Full test output:"
+                cat test_output.txt
+                exit 1
+              else
+                echo "All tests passed!"
+              fi
+              ;;
+
+            sync)
+              timeout 20m  python -m pytest tests/integration/sync -k 'image' -v > test_output.txt 2>&1 || true
+              echo "Test summary:"
+              grep -E "(PASSED|FAILED|ERROR)" test_output.txt | tail -10 || echo "No test summary available"
+              
+              # Check if any tests failed
+              if grep -q "FAILED" test_output.txt; then
+                echo "❌ Unexpected test failures found:"
+                grep "FAILED" test_output.txt
+                echo "Full test output:"
+                cat test_output.txt
+                exit 1
+              else
+                echo "All tests passed!"
+              fi
+              ;;
+
+            package)
+              timeout 7m  python -m pytest tests/integration/package/test_package_command_image.py > test_output.txt 2>&1 || true
+              echo "Test summary:"
+              grep -E "(PASSED|FAILED|ERROR)" test_output.txt | tail -10 || echo "No test summary available"
+
+              # Create a list of expected failing tests
+              cat > expected_failures.txt << 'EOF'
+              test_package_with_deep_nested_template_image
+              test_package_template_with_image_repositories_nested_stack
+              test_package_with_loadable_image_archive_0_template_image_load_yaml
+              EOF
+
+              # Extract actual failing tests and check unexpected
+              grep "FAILED" test_output.txt | sed 's/.*::\([^[:space:]]*\).*/\1/' > actual_failures.txt || touch actual_failures.txt
+              UNEXPECTED_FAILURES=$(grep -v -f expected_failures.txt actual_failures.txt || true)
+
+              if [ -n "$UNEXPECTED_FAILURES" ]; then
+                echo "❌ Unexpected test failures found:"
+                echo "$UNEXPECTED_FAILURES"
+                echo "Full test output:"
+                cat test_output.txt
+                exit 1
+              else
+                echo "✅ All test failures were expected. Tests passed!"
+              fi
+              ;;
+
+            deploy)
+              timeout 30m  python -m pytest tests/integration/deploy -k 'image' > test_output.txt 2>&1 || true
+              echo "Test summary:"
+              grep -E "(PASSED|FAILED|ERROR)" test_output.txt | tail -10 || echo "No test summary available"
+              
+              # Check if any tests PASSED
+              if grep -q "PASSED" test_output.txt; then
+                echo "❌ Unexpected test passed:"
+                grep "PASSED" test_output.txt
+                echo "Full test output:"
+                cat test_output.txt
+                exit 1
+              else
+                echo "✅ All tests failed as expected!"
+              fi
+              ;;
+
+            build)
+              timeout 70m python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' > test_output.txt 2>&1 || true
+              echo "Test summary:"
+              grep -E "(PASSED|FAILED|ERROR)" test_output.txt | tail -10 || echo "No test summary available"
+
+              # Create a list of expected failing tests
+              cat > expected_failures.txt << 'EOF'
+              test_with_invalid_dockerfile_definition
+              test_with_invalid_dockerfile_location
+              test_load_success
+              test_building_ruby_3_2_1_use_container
+              test_with_makefile_builder_specified_python_runtime_1_use_container
+              test_with_native_builder_specified_python_runtime_1_use_container
+              test_inline_not_built_1_use_container
+              test_json_env_vars_passed_0_use_container
+              test_json_env_vars_passed_1_use_container
+              test_inline_env_vars_passed_0_use_container
+              test_inline_env_vars_passed_1_use_container
+              test_custom_build_image_succeeds_0_use_container
+              test_custom_build_image_succeeds_1_use_container
+              test_building_ruby_in_container_with_specified_architecture_0_ruby3_2
+              test_building_java_in_container_with_arm64_architecture_00_java8_al2
+              test_building_java_in_container_with_arm64_architecture_03_java8_al2
+              test_building_java_in_container_with_arm64_architecture_04_java11
+              test_building_java_in_container_with_arm64_architecture_07_java11
+              test_building_java_in_container_with_arm64_architecture_08_java17
+              test_building_java_in_container_with_arm64_architecture_11_java17
+              test_building_java_in_container_with_arm64_architecture_al2023_0_java21
+              test_building_java_in_container_with_arm64_architecture_al2023_1_java21
+              test_building_java_in_container_with_arm64_architecture_al2023_2_java21
+              test_building_java_in_container_with_arm64_architecture_al2023_3_java21
+              test_building_java_in_container_00_java8_al2
+              EOF
+
+              # Extract actual failing tests and check unexpected
+              grep "FAILED" test_output.txt | sed 's/.*::\([^[:space:]]*\).*/\1/' > actual_failures.txt || touch actual_failures.txt
+              UNEXPECTED_FAILURES=$(grep -v -f expected_failures.txt actual_failures.txt || true)
+
+              if [ -n "$UNEXPECTED_FAILURES" ]; then
+                echo "❌ Unexpected test failures found:"
+                echo "$UNEXPECTED_FAILURES"
+                echo "Full test output:"
+                cat test_output.txt
+                exit 1
+              else
+                echo "✅ All test failures were expected. Tests passed!"
+              fi
+              ;;
+            esac
+
+      - name: Verify finch-daemon was actually used
+        run: |
+          echo "=== finch-daemon Usage Verification ==="
+
+          # Check if finch-daemon process is still running
+          echo "finch-daemon process status:"
+          ps aux | grep finch-daemon | grep -v grep || echo "finch-daemon process not found"
+
+          # Check finch-daemon logs for actual API calls
+          echo "Recent finch-daemon activity (last 50 lines):"
+          sudo journalctl -u finch-daemon --no-pager -n 50 2>/dev/null || echo "No systemd logs found"
+
+          # Check for Docker API calls in system logs
+          echo "Docker API calls made to finch-daemon:"
+          sudo dmesg | grep -i "finch\|docker" | tail -10 || echo "No kernel logs found"
+
+          # Verify finch-daemon socket was accessed
+          echo "finch-daemon socket access:"
+          sudo lsof /run/finch.sock 2>/dev/null || echo "No active connections to finch.sock"
+
+          # Check if any images were built/pulled through finch-daemon
+          echo "Images managed by finch-daemon:"
+          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}" | head -10
+
+          # Show finch-daemon version and components (proves it was responding)
+          echo "finch-daemon version info:"
+          curl --unix-socket /run/finch.sock http://localhost/version 2>/dev/null | jq '.Components[]' || echo "Could not get version info"
+
+          echo "=== Verification completed ==="

@@ -28,136 +28,15 @@ tar zxvf /tmp/buildkit.tgz -C /usr/local/bin/
 sudo mv /usr/local/bin/bin/* /usr/local/bin/
 rm /tmp/buildkit.tgz
 
-#Download and install cni-plugins with retry logic
-echo "Installing CNI plugins..."
+#Download and install cni-plugins
 sudo rm -rf /opt/cni/bin/*
+cd && wget https://github.com/containernetworking/plugins/releases/download/v${CNI_VERSION}/cni-plugins-linux-amd64-v${CNI_VERSION}.tgz
 sudo mkdir -p /opt/cni/bin
-
-# Retry logic for CNI download
-CNI_SUCCESS=false
-for attempt in 1 2 3; do
-  echo "CNI download attempt $attempt/3..."
-  cd /tmp
-  rm -f cni-plugins-linux-amd64-v${CNI_VERSION}.tgz
-  
-  if wget --timeout=30 --tries=3 https://github.com/containernetworking/plugins/releases/download/v${CNI_VERSION}/cni-plugins-linux-amd64-v${CNI_VERSION}.tgz; then
-    if [ -f "cni-plugins-linux-amd64-v${CNI_VERSION}.tgz" ]; then
-      echo "CNI download successful, extracting..."
-      if sudo tar -xzf cni-plugins-linux-amd64-v${CNI_VERSION}.tgz -C /opt/cni/bin/; then
-        # Verify critical plugins exist
-        if [ -f "/opt/cni/bin/bridge" ] && [ -f "/opt/cni/bin/loopback" ] && [ -f "/opt/cni/bin/host-local" ]; then
-          echo "CNI plugins installed successfully"
-          CNI_SUCCESS=true
-          break
-        else
-          echo "CNI extraction failed - missing critical plugins"
-        fi
-      else
-        echo "CNI extraction failed"
-      fi
-    else
-      echo "CNI download failed - file not found"
-    fi
-  else
-    echo "CNI download failed - network error"
-  fi
-  
-  if [ $attempt -lt 3 ]; then
-    echo "Retrying in 10 seconds..."
-    sleep 10
-  fi
-done
-
-if [ "$CNI_SUCCESS" = false ]; then
-  echo "ERROR: Failed to install CNI plugins after 3 attempts"
-  echo "Listing /opt/cni/bin contents:"
-  ls -la /opt/cni/bin/ || echo "Directory does not exist"
-  exit 1
-fi
-
-# Verify installation
-echo "Verifying CNI installation:"
-ls -la /opt/cni/bin/bridge /opt/cni/bin/loopback /opt/cni/bin/host-local
+sudo tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v${CNI_VERSION}.tgz
 
 export PATH=$PATH:/usr/local/bin
 
-echo "Starting containerd..."
 sudo containerd &
-CONTAINERD_PID=$!
-echo "Containerd started with PID: $CONTAINERD_PID"
+sudo buildkitd &
 
-# Wait for containerd to be ready (up to 60 seconds)
-echo "Waiting for containerd to be ready..."
-for i in {1..60}; do
-  if sudo ctr version >/dev/null 2>&1; then
-    echo "containerd is ready after ${i} seconds"
-    break
-  fi
-  if [ $i -eq 60 ]; then
-    echo "ERROR: containerd failed to start after 60 seconds"
-    exit 1
-  fi
-  sleep 1
-done
-
-# Extra conservative wait
-sleep 3
-
-echo "Starting BuildKit daemon..."
-sudo mkdir -p /run/buildkit
-sudo buildkitd --addr unix:///run/buildkit/buildkitd.sock --group $(id -gn) &
-BUILDKIT_PID=$!
-echo "BuildKit daemon started with PID: $BUILDKIT_PID"
-
-# Wait for BuildKit to be ready
-echo "Waiting for BuildKit to be ready..."
-for i in {1..30}; do
-  if buildctl --addr unix:///run/buildkit/buildkitd.sock debug info >/dev/null 2>&1; then
-    echo "BuildKit is ready after ${i} seconds"
-    break
-  fi
-  if [ $i -eq 30 ]; then
-    echo "ERROR: BuildKit failed to start after 30 seconds"
-    exit 1
-  fi
-  sleep 1
-done
-
-echo "Setup complete. Containerd PID: $CONTAINERD_PID, BuildKit PID: $BUILDKIT_PID"
-
-echo "Configuring BuildKit for finch-daemon integration..."
-
-# Set proper permissions on BuildKit socket for finch-daemon access
-sudo chmod 666 /run/buildkit/buildkitd.sock
-
-# Verify socket permissions
-echo "BuildKit socket permissions:"
-ls -la /run/buildkit/buildkitd.sock
-
-# Test BuildKit connectivity using buildctl (same as finch-daemon does)
-echo "Testing BuildKit connectivity with buildctl..."
-if buildctl --addr unix:///run/buildkit/buildkitd.sock debug info; then
-    echo "BuildKit connectivity test passed"
-else
-    echo "ERROR: BuildKit connectivity test failed"
-    exit 1
-fi
-
-# Test basic image building capability using buildctl directly
-echo "Testing BuildKit image building capability with buildctl..."
-cat > /tmp/test-dockerfile << EOF
-FROM alpine:latest
-RUN echo "BuildKit test successful"
-EOF
-
-if buildctl --addr unix:///run/buildkit/buildkitd.sock build --frontend dockerfile.v0 --local context=/tmp --local dockerfile=/tmp --opt filename=test-dockerfile --output type=image,name=buildkit-test,unpack=true; then
-    echo "BuildKit image building test passed"
-    # Clean up test image
-    nerdctl rmi buildkit-test || true
-else
-    echo "WARNING: BuildKit image building test failed"
-fi
-
-rm -f /tmp/test-dockerfile
-
-echo "BuildKit configuration for finch-daemon complete (auto-discovery should work)"
+sleep 2
