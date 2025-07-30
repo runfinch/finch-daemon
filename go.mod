@@ -26,7 +26,7 @@ require (
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/moby/go-archive v0.1.0
-	github.com/moby/moby v28.3.2+incompatible
+	github.com/moby/moby v28.3.3+incompatible
 	github.com/moby/sys/user v0.4.0
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
