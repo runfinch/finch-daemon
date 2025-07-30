@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.20.0](https://github.com/runfinch/finch-daemon/compare/v0.19.1...v0.20.0) (2025-07-30)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/docker/docker ([d781e7a](https://github.com/runfinch/finch-daemon/commit/d781e7a3119a373af1da88d31b4448479612e60e))
+* **deps:** Bump github.com/docker/docker from 28.3.2+incompatible to 28.3.3+incompatible ([#291](https://github.com/runfinch/finch-daemon/issues/291)) ([d781e7a](https://github.com/runfinch/finch-daemon/commit/d781e7a3119a373af1da88d31b4448479612e60e))
+
+
+### Features
+
+* add finch vm testing ([4cbe576](https://github.com/runfinch/finch-daemon/commit/4cbe5769d3b29e7b68d89be5479705c7aef6d287))
+
 ## [0.19.1](https://github.com/runfinch/finch-daemon/compare/v0.19.0...v0.19.1) (2025-07-28)
 
 
