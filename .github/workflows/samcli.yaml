@@ -134,20 +134,6 @@ jobs:
             exit 1
           fi
 
-          # Test S3
-          if aws s3 ls >/dev/null 2>&1; then
-            echo "✅ AWS account access confirmed - can list S3 buckets"
-          else
-            echo "❌ S3 access failed"
-          fi
-
-          # Test CloudFormation
-          if aws cloudformation list-stacks --max-items 1 >/dev/null 2>&1; then
-            echo "✅ CloudFormation access confirmed"
-          else
-            echo "❌ CloudFormation access failed"
-          fi
-
           echo "AWS Region: $(aws configure get region)"
           echo "AWS credentials configured successfully"
 
@@ -176,14 +162,14 @@ jobs:
 
               # Expected failing tests (from the guide)
               cat > expected_failures.txt << 'EOF'
-              test_invoke_with_error_during_image_build
-              test_invoke_with_timeout_set_0_TimeoutFunction
-              test_invoke_with_timeout_set_1_TimeoutFunctionWithParameter
-              test_invoke_with_timeout_set_2_TimeoutFunctionWithStringParameter
-              test_building_new_rapid_image_removes_old_rapid_images
-              test_invoke_returns_expected_results_from_git_function
-              test_invoke_returns_expected_results_from_git_function_with_parameters
-              EOF
+            test_invoke_with_error_during_image_build
+            test_invoke_with_timeout_set_0_TimeoutFunction
+            test_invoke_with_timeout_set_1_TimeoutFunctionWithParameter
+            test_invoke_with_timeout_set_2_TimeoutFunctionWithStringParameter
+            test_building_new_rapid_image_removes_old_rapid_images
+            test_invoke_returns_expected_results_from_git_function
+            test_invoke_returns_expected_results_from_git_function_with_parameters
+            EOF
 
               # Extract actual failing tests and check unexpected
               grep "FAILED" test_output.txt | sed 's/.*::\([^[:space:]]*\).*/\1/' > actual_failures.txt || touch actual_failures.txt
@@ -259,10 +245,10 @@ jobs:
 
               # Create a list of expected failing tests
               cat > expected_failures.txt << 'EOF'
-              test_package_with_deep_nested_template_image
-              test_package_template_with_image_repositories_nested_stack
-              test_package_with_loadable_image_archive_0_template_image_load_yaml
-              EOF
+            test_package_with_deep_nested_template_image
+            test_package_template_with_image_repositories_nested_stack
+            test_package_with_loadable_image_archive_0_template_image_load_yaml
+            EOF
 
               # Extract actual failing tests and check unexpected
               grep "FAILED" test_output.txt | sed 's/.*::\([^[:space:]]*\).*/\1/' > actual_failures.txt || touch actual_failures.txt
@@ -303,32 +289,32 @@ jobs:
 
               # Create a list of expected failing tests
               cat > expected_failures.txt << 'EOF'
-              test_with_invalid_dockerfile_definition
-              test_with_invalid_dockerfile_location
-              test_load_success
-              test_building_ruby_3_2_1_use_container
-              test_with_makefile_builder_specified_python_runtime_1_use_container
-              test_with_native_builder_specified_python_runtime_1_use_container
-              test_inline_not_built_1_use_container
-              test_json_env_vars_passed_0_use_container
-              test_json_env_vars_passed_1_use_container
-              test_inline_env_vars_passed_0_use_container
-              test_inline_env_vars_passed_1_use_container
-              test_custom_build_image_succeeds_0_use_container
-              test_custom_build_image_succeeds_1_use_container
-              test_building_ruby_in_container_with_specified_architecture_0_ruby3_2
-              test_building_java_in_container_with_arm64_architecture_00_java8_al2
-              test_building_java_in_container_with_arm64_architecture_03_java8_al2
-              test_building_java_in_container_with_arm64_architecture_04_java11
-              test_building_java_in_container_with_arm64_architecture_07_java11
-              test_building_java_in_container_with_arm64_architecture_08_java17
-              test_building_java_in_container_with_arm64_architecture_11_java17
-              test_building_java_in_container_with_arm64_architecture_al2023_0_java21
-              test_building_java_in_container_with_arm64_architecture_al2023_1_java21
-              test_building_java_in_container_with_arm64_architecture_al2023_2_java21
-              test_building_java_in_container_with_arm64_architecture_al2023_3_java21
-              test_building_java_in_container_00_java8_al2
-              EOF
+test_with_invalid_dockerfile_definition
+test_with_invalid_dockerfile_location
+test_load_success
+test_building_ruby_3_2_1_use_container
+test_with_makefile_builder_specified_python_runtime_1_use_container
+test_with_native_builder_specified_python_runtime_1_use_container
+test_inline_not_built_1_use_container
+test_json_env_vars_passed_0_use_container
+test_json_env_vars_passed_1_use_container
+test_inline_env_vars_passed_0_use_container
+test_inline_env_vars_passed_1_use_container
+test_custom_build_image_succeeds_0_use_container
+test_custom_build_image_succeeds_1_use_container
+test_building_ruby_in_container_with_specified_architecture_0_ruby3_2
+test_building_java_in_container_with_arm64_architecture_00_java8_al2
+test_building_java_in_container_with_arm64_architecture_03_java8_al2
+test_building_java_in_container_with_arm64_architecture_04_java11
+test_building_java_in_container_with_arm64_architecture_07_java11
+test_building_java_in_container_with_arm64_architecture_08_java17
+test_building_java_in_container_with_arm64_architecture_11_java17
+test_building_java_in_container_with_arm64_architecture_al2023_0_java21
+test_building_java_in_container_with_arm64_architecture_al2023_1_java21
+test_building_java_in_container_with_arm64_architecture_al2023_2_java21
+test_building_java_in_container_with_arm64_architecture_al2023_3_java21
+test_building_java_in_container_00_java8_al2
+EOF
 
               # Extract actual failing tests and check unexpected
               grep "FAILED" test_output.txt | sed 's/.*::\([^[:space:]]*\).*/\1/' > actual_failures.txt || touch actual_failures.txt
