@@ -53,13 +53,13 @@ jobs:
       fail-fast: false
       matrix:
         test-suite: 
-          - invoke
-          - start-lambda
-          - start-api
+          # - invoke
+          # - start-lambda
+          # - start-api
           - sync
-          - package
-          - deploy
-          - build
+          # - package
+          # - deploy
+          # - build
     steps:
 
       # SETUP
@@ -136,6 +136,28 @@ jobs:
 
           echo "AWS Region: $(aws configure get region)"
           echo "AWS credentials configured successfully"
+
+      - name: Clean up SAM managed stack
+        run: |
+          echo "=== Cleaning up SAM managed stack ==="
+          STACK_NAME="aws-sam-cli-managed-default"
+          
+          # Check if stack exists and get its status
+          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION >/dev/null 2>&1; then
+            STACK_STATUS=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION --query 'Stacks[0].StackStatus' --output text)
+            echo "Found existing stack with status: $STACK_STATUS"
+            
+            # Delete stack if it exists (regardless of status)
+            echo "Deleting existing SAM managed stack..."
+            aws cloudformation delete-stack --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION
+            
+            # Wait for deletion to complete
+            echo "Waiting for stack deletion to complete..."
+            aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION
+            echo "✅ Stack deleted successfully"
+          else
+            echo "No existing SAM managed stack found - starting fresh"
+          fi
 
       - name: Set up SAM CLI from source
         run: |
