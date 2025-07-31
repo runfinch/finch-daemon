@@ -147,6 +147,32 @@ jobs:
             STACK_STATUS=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION --query 'Stacks[0].StackStatus' --output text)
             echo "Found existing stack with status: $STACK_STATUS"
             
+            # Get the S3 bucket name from stack outputs
+            BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION --query 'Stacks[0].Outputs[?OutputKey==`SourceBucket`].OutputValue' --output text 2>/dev/null || echo "")
+            
+            if [ -n "$BUCKET_NAME" ]; then
+              echo "Found S3 bucket: $BUCKET_NAME"
+              echo "Emptying S3 bucket before stack deletion..."
+              
+              # Delete all object versions and delete markers
+              aws s3api list-object-versions --bucket "$BUCKET_NAME" --query 'Versions[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
+                if [ -n "$key" ] && [ -n "$version" ]; then
+                  aws s3api delete-object --bucket "$BUCKET_NAME" --key "$key" --version-id "$version" || true
+                fi
+              done
+              
+              # Delete any delete markers
+              aws s3api list-object-versions --bucket "$BUCKET_NAME" --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
+                if [ -n "$key" ] && [ -n "$version" ]; then
+                  aws s3api delete-object --bucket "$BUCKET_NAME" --key "$key" --version-id "$version" || true
+                fi
+              done
+              
+              echo "S3 bucket emptied successfully"
+            else
+              echo "No S3 bucket found in stack outputs"
+            fi
+            
             # Delete stack if it exists (regardless of status)
             echo "Deleting existing SAM managed stack..."
             aws cloudformation delete-stack --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION
