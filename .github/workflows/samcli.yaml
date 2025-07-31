@@ -56,10 +56,8 @@ jobs:
           - invoke
           - start-lambda
           - start-api
-          - sync
-          - package
-          - deploy
-          - build
+          - sync, package, deploy
+          # - build
     steps:
 
       # SETUP
