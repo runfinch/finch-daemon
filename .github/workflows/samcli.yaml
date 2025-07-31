@@ -56,7 +56,7 @@ jobs:
           - invoke
           - start-lambda
           - start-api
-          - sync, package, deploy
+          - aws-stack-tests
           # - build
     steps:
 
@@ -267,7 +267,8 @@ jobs:
               fi
               ;;
 
-            sync)
+            aws-stack-tests)
+              echo "Sync tests"
               timeout 20m  python -m pytest tests/integration/sync -k 'image' -v > test_output.txt 2>&1 || true
               echo "Test summary:"
               grep -E "(PASSED|FAILED|ERROR)" test_output.txt | tail -10 || echo "No test summary available"
@@ -282,9 +283,8 @@ jobs:
               else
                 echo "All tests passed!"
               fi
-              ;;
 
-            package)
+              echo "Package tests"
               timeout 7m  python -m pytest tests/integration/package/test_package_command_image.py > test_output.txt 2>&1 || true
               echo "Test summary:"
               grep -E "(PASSED|FAILED|ERROR)" test_output.txt | tail -10 || echo "No test summary available"
@@ -309,9 +309,8 @@ jobs:
               else
                 echo "✅ All test failures were expected. Tests passed!"
               fi
-              ;;
 
-            deploy)
+              echo "Deploy tests"
               timeout 30m  python -m pytest tests/integration/deploy -k 'image' > test_output.txt 2>&1 || true
               echo "Test summary:"
               grep -E "(PASSED|FAILED|ERROR)" test_output.txt | tail -10 || echo "No test summary available"
@@ -326,7 +325,6 @@ jobs:
               else
                 echo "✅ All tests failed as expected!"
               fi
-              ;;
 
             build)
               timeout 70m python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' > test_output.txt 2>&1 || true
