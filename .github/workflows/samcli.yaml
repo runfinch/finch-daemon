@@ -325,6 +325,7 @@ jobs:
               else
                 echo "✅ All tests failed as expected!"
               fi
+              ;;
 
             build)
               timeout 70m python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' > test_output.txt 2>&1 || true
