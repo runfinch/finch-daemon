@@ -316,13 +316,24 @@ jobs:
               echo "Test summary:"
               grep -E "(PASSED|FAILED|ERROR)" test_output.txt | tail -10 || echo "No test summary available"
               
-              # Making sure no pass without error
-              if grep -B10 -A2 "PASSED" test_output.txt | grep -v -E "Error:|ERROR|500|Internal Server Error" | grep -q "PASSED"; then
-                echo "❌ Found tests that passed without errors (unexpected):"
-                grep -B10 -A2 "PASSED" test_output.txt | grep -v -E "Error:|ERROR|500|Internal Server Error"
+             # Check each PASSED test individually for errors in its context
+              CLEAN_PASSES=0
+              while IFS= read -r passed_line; do
+                line_num=$(echo "$passed_line" | cut -d: -f1)
+                # Get 10 lines before the PASSED line
+                context=$(sed -n "$((line_num-10)),$((line_num))p" test_output.txt)
+                if ! echo "$context" | grep -q -E "Error:|ERROR|500|Internal Server Error|Exception"; then
+                  echo "Found PASSED test without errors in context:"
+                  echo "$context"
+                  CLEAN_PASSES=$((CLEAN_PASSES + 1))
+                fi
+              done < <(grep -n "PASSED" test_output.txt)
+
+              if [ "$CLEAN_PASSES" -gt 0 ]; then
+                echo "❌ Found $CLEAN_PASSES test(s) that passed without errors (unexpected)"
                 exit 1
               else
-                echo "✅ All tests either failed or passed with errors!"
+                echo "✅ All PASSED tests had errors in their context!"
               fi
               ;;
 
