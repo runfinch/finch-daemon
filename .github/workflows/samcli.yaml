@@ -53,13 +53,13 @@ jobs:
       fail-fast: false
       matrix:
         test-suite: 
-          # - invoke
-          # - start-lambda
-          # - start-api
-          # - sync
-          # - package
+          - invoke
+          - start-lambda
+          - start-api
+          - sync
+          - package
           - deploy
-          # - build
+          - build
     steps:
 
       # SETUP
@@ -318,7 +318,7 @@ jobs:
               echo "Test summary:"
               grep -E "(PASSED|FAILED|ERROR)" test_output.txt | tail -10 || echo "No test summary available"
               
-              # Check if any tests PASSED
+              # Check if any tests PASSED (all should fail)
               if grep -q "PASSED" test_output.txt; then
                 echo "❌ Unexpected test passed:"
                 grep "PASSED" test_output.txt
