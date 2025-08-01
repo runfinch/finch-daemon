@@ -269,47 +269,47 @@ jobs:
               ;;
 
             aws-stack-tests)
-          #     echo "Sync tests"
-          #     timeout 20m  python -m pytest tests/integration/sync -k 'image' -v > test_output.txt 2>&1 || true
-          #     echo "Test summary:"
-          #     grep -E "(PASSED|FAILED|ERROR)" test_output.txt | tail -10 || echo "No test summary available"
+              echo "Sync tests"
+              timeout 20m  python -m pytest tests/integration/sync -k 'image' -v > test_output.txt 2>&1 || true
+              echo "Test summary:"
+              grep -E "(PASSED|FAILED|ERROR)" test_output.txt | tail -10 || echo "No test summary available"
               
-          #     # Check if any tests failed
-          #     if grep -q "FAILED" test_output.txt; then
-          #       echo "❌ Unexpected test failures found:"
-          #       grep "FAILED" test_output.txt
-          #       echo "Full test output:"
-          #       cat test_output.txt
-          #       exit 1
-          #     else
-          #       echo "All tests passed!"
-          #     fi
+              # Check if any tests failed
+              if grep -q "FAILED" test_output.txt; then
+                echo "❌ Unexpected test failures found:"
+                grep "FAILED" test_output.txt
+                echo "Full test output:"
+                cat test_output.txt
+                exit 1
+              else
+                echo "All tests passed!"
+              fi
 
-          #     echo "Package tests"
-          #     timeout 7m  python -m pytest tests/integration/package/test_package_command_image.py > test_output.txt 2>&1 || true
-          #     echo "Test summary:"
-          #     grep -E "(PASSED|FAILED|ERROR)" test_output.txt | tail -10 || echo "No test summary available"
+              echo "Package tests"
+              timeout 7m  python -m pytest tests/integration/package/test_package_command_image.py > test_output.txt 2>&1 || true
+              echo "Test summary:"
+              grep -E "(PASSED|FAILED|ERROR)" test_output.txt | tail -10 || echo "No test summary available"
 
-          #     # Create a list of expected failing tests
-          #     cat > expected_failures.txt << 'EOF'
-          # test_package_with_deep_nested_template_image
-          # test_package_template_with_image_repositories_nested_stack
-          # test_package_with_loadable_image_archive_0_template_image_load_yaml
-          # EOF
+              # Create a list of expected failing tests
+              cat > expected_failures.txt << 'EOF'
+          test_package_with_deep_nested_template_image
+          test_package_template_with_image_repositories_nested_stack
+          test_package_with_loadable_image_archive_0_template_image_load_yaml
+          EOF
 
-          #     # Extract actual failing tests and check unexpected
-          #     grep "FAILED" test_output.txt | sed 's/.*::\([^[:space:]]*\).*/\1/' > actual_failures.txt || touch actual_failures.txt
-          #     UNEXPECTED_FAILURES=$(grep -v -f expected_failures.txt actual_failures.txt || true)
+              # Extract actual failing tests and check unexpected
+              grep "FAILED" test_output.txt | sed 's/.*::\([^[:space:]]*\).*/\1/' > actual_failures.txt || touch actual_failures.txt
+              UNEXPECTED_FAILURES=$(grep -v -f expected_failures.txt actual_failures.txt || true)
 
-          #     if [ -n "$UNEXPECTED_FAILURES" ]; then
-          #       echo "❌ Unexpected test failures found:"
-          #       echo "$UNEXPECTED_FAILURES"
-          #       echo "Full test output:"
-          #       cat test_output.txt
-          #       exit 1
-          #     else
-          #       echo "✅ All test failures were expected. Tests passed!"
-          #     fi
+              if [ -n "$UNEXPECTED_FAILURES" ]; then
+                echo "❌ Unexpected test failures found:"
+                echo "$UNEXPECTED_FAILURES"
+                echo "Full test output:"
+                cat test_output.txt
+                exit 1
+              else
+                echo "✅ All test failures were expected. Tests passed!"
+              fi
 
               echo "Deploy tests"
               timeout 30m  python -m pytest tests/integration/deploy -k 'image' > test_output.txt 2>&1 || true
