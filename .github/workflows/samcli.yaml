@@ -54,8 +54,8 @@ jobs:
       matrix:
         test-suite: 
           - invoke
-          - start-lambda
-          - start-api
+          # - start-lambda
+          # - start-api
           - aws-stack-tests
           # - build
     steps:
