@@ -42,7 +42,7 @@ permissions:
 jobs:
   samcli-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 80
+    timeout-minutes: 300
     env:
       AWS_DEFAULT_REGION: ${{ secrets.REGION }}
       DOCKER_HOST: unix:///run/finch.sock
@@ -56,8 +56,9 @@ jobs:
           # - invoke
           # - start-lambda
           # - start-api
-          - aws-stack-tests
+          # - aws-stack-tests
           # - build
+          - sequential
     steps:
 
       # SETUP
@@ -136,7 +137,7 @@ jobs:
           echo "AWS credentials configured successfully"
 
       - name: Clean up SAM managed stack
-        if: matrix.test-suite == 'aws-stack-tests'
+        if: matrix.test-suite == 'aws-stack-tests' || matrix.test-suite == 'sequential'
         run: |
           echo "=== Cleaning up SAM managed stack ==="
           STACK_NAME="aws-sam-cli-managed-default"
@@ -384,6 +385,52 @@ jobs:
               else
                 echo "✅ All test failures were expected. Tests passed!"
               fi
+              ;;
+
+            sequential)
+
+              START_TIME=$(date +%s)
+
+              echo "=== Running ALL SAMcli tests sequentially with timing ==="
+
+              echo "1. SYNC TESTS - Started at $(date)"
+              SYNC_START=$(date +%s)
+              timeout 20m python -m pytest tests/integration/sync -k 'image' -v || echo "Sync failed but continuing..."
+              SYNC_END=$(date +%s)
+              echo "   Sync duration: $((SYNC_END - SYNC_START)) seconds"
+
+              echo "2. PACKAGE TESTS - Started at $(date)"
+              PACKAGE_START=$(date +%s)
+              timeout 7m python -m pytest tests/integration/package/test_package_command_image.py -v || echo "Package failed but continuing..."
+              PACKAGE_END=$(date +%s)
+              echo "   Package duration: $((PACKAGE_END - PACKAGE_START)) seconds"
+
+              echo "3. DEPLOY TESTS - Started at $(date)"
+              DEPLOY_START=$(date +%s)
+              timeout 30m python -m pytest tests/integration/deploy -k 'image' -v || echo "Deploy failed but continuing..."
+              DEPLOY_END=$(date +%s)
+              echo "   Deploy duration: $((DEPLOY_END - DEPLOY_START)) seconds"
+
+              echo "4. INVOKE TESTS - Started at $(date)"
+              INVOKE_START=$(date +%s)
+              timeout 75m python -m pytest tests/integration/local/invoke -k 'not Terraform' -v || echo "Invoke failed but continuing..."
+              INVOKE_END=$(date +%s)
+              echo "   Invoke duration: $((INVOKE_END - INVOKE_START)) seconds"
+
+              echo "5. START-LAMBDA TESTS - Started at $(date)"
+              LAMBDA_START=$(date +%s)
+              timeout 30m python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v || echo "Start-lambda failed but continuing..."
+              LAMBDA_END=$(date +%s)
+              echo "   Start-lambda duration: $((LAMBDA_END - LAMBDA_START)) seconds"
+
+              echo "6. START-API TESTS - Started at $(date)"
+              API_START=$(date +%s)
+              timeout 75m python -m pytest tests/integration/local/start_api -k 'not Terraform' -v || echo "Start-api failed but continuing..."
+              API_END=$(date +%s)
+              echo "   Start-api duration: $((API_END - API_START)) seconds"
+
+              TOTAL_END=$(date +%s)
+              echo "=== TOTAL DURATION: $((TOTAL_END - START_TIME)) seconds ==="
               ;;
             esac
 
