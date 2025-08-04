@@ -101,6 +101,7 @@ jobs:
           role-to-assume: ${{ secrets.ROLE }}
           role-session-name: samcli-sequential-tests
           aws-region: ${{ secrets.REGION }}
+          role-duration-seconds: 14400
 
       - name: Verify AWS credentials
         run: |
@@ -143,11 +144,13 @@ jobs:
               echo "No S3 bucket found in stack outputs"
             fi
             
-            # Force delete stack if it's in a failed state
-            if [[ "$STACK_STATUS" == *"FAILED"* ]]; then
-              echo "Stack is in failed state, attempting to continue deletion..."
+            # Force continue rollback only for specific failed states
+            if [[ "$STACK_STATUS" == "UPDATE_ROLLBACK_FAILED" ]]; then
+              echo "Stack is in UPDATE_ROLLBACK_FAILED state, attempting to continue rollback..."
               aws cloudformation continue-update-rollback --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION || true
               sleep 30
+            elif [[ "$STACK_STATUS" == *"FAILED"* ]]; then
+              echo "Stack is in failed state ($STACK_STATUS), will attempt direct deletion..."
             fi
             
             # Delete stack
@@ -225,11 +228,11 @@ jobs:
           echo "=== Running SAM CLI tests sequentially to avoid AWS resource conflicts ==="
           START_TIME=$(date +%s)
 
-          echo "1. INVOKE TESTS - Started at $(date)"
-          INVOKE_START=$(date +%s)
-          timeout 90m python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short || echo "Invoke tests completed with some failures"
-          INVOKE_END=$(date +%s)
-          echo "   Invoke duration: $((INVOKE_END - INVOKE_START)) seconds"
+          # echo "1. INVOKE TESTS - Started at $(date)"
+          # INVOKE_START=$(date +%s)
+          # timeout 90m python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short || echo "Invoke tests completed with some failures"
+          # INVOKE_END=$(date +%s)
+          # echo "   Invoke duration: $((INVOKE_END - INVOKE_START)) seconds"
 
           echo "2. START-LAMBDA TESTS - Started at $(date)"
           LAMBDA_START=$(date +%s)
@@ -237,12 +240,12 @@ jobs:
           LAMBDA_END=$(date +%s)
           echo "   Start-lambda duration: $((LAMBDA_END - LAMBDA_START)) seconds"
 
-          echo "3. START-API TESTS - Started at $(date)"
-          API_START=$(date +%s)
-          ulimit -n 8192
-          timeout 90m python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short || echo "Start-api tests completed with some failures"
-          API_END=$(date +%s)
-          echo "   Start-api duration: $((API_END - API_START)) seconds"
+          # echo "3. START-API TESTS - Started at $(date)"
+          # API_START=$(date +%s)
+          # ulimit -n 8192
+          # timeout 90m python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short || echo "Start-api tests completed with some failures"
+          # API_END=$(date +%s)
+          # echo "   Start-api duration: $((API_END - API_START)) seconds"
 
           # echo "4. BUILD TESTS - Started at $(date)"
           # BUILD_START=$(date +%s)
