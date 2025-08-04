@@ -214,7 +214,7 @@ jobs:
 
       - name: Set up SAM CLI from source
         run: |
-          git clone git@github.com:aws/aws-sam-cli.git
+          git clone https://github.com/aws/aws-sam-cli.git
           cd aws-sam-cli
           git checkout $(git describe --tags `git rev-list --tags --max-count=1`)  # Latest tag
           git submodule update --init --recursive
