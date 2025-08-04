@@ -228,7 +228,7 @@ jobs:
           echo "=== UNIT TESTS - Started at $(date) ==="
           
           # Fix common issues from test guide
-          ulimit -n unlimited  # Fix "too many open files" 
+          ulimit -n 8192  # Fix "too many open files" 
           
           # Clean up potentially problematic Docker config entries
           if [ -f ~/.docker/config.json ]; then
@@ -303,7 +303,7 @@ jobs:
         working-directory: aws-sam-cli
         run: |
           echo "=== START-API TESTS - Started at $(date) ==="
-          ulimit -n unlimited
+          ulimit -n 8192
           timeout 90m SAM_CLI_DEV=1 python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 || true
           
           # Should pass completely per test guide
