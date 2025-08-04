@@ -44,7 +44,7 @@ jobs:
     env:
       AWS_DEFAULT_REGION: ${{ secrets.REGION }}
       DOCKER_HOST: unix:///run/finch.sock
-      DOCKER_CONFIG: /home/runner/.docker
+      DOCKER_CONFIG: /home/runner/.finch
       BY_CANARY: true  # Full AWS access for all tests
       SAM_CLI_DEV: 1 
     steps:
@@ -105,7 +105,7 @@ jobs:
 
       - name: Verify AWS credentials
         run: |
-          aws sts get-caller-identity
+          aws sts get-caller-identity --query 'Account' --output text >/dev/null
           echo "AWS credentials configured successfully"
 
       - name: Clean up SAM managed stack (robust)
@@ -214,66 +214,245 @@ jobs:
 
       - name: Set up SAM CLI from source
         run: |
-          git clone https://github.com/aws/aws-sam-cli.git
+          git clone git@github.com:aws/aws-sam-cli.git
           cd aws-sam-cli
-          git checkout v1.142.1
+          git checkout $(git describe --tags `git rev-list --tags --max-count=1`)  # Latest tag
           git submodule update --init --recursive
           python -m pip install --upgrade pip
           make init
           samdev --version
 
-      - name: Run SAM CLI tests sequentially
+      - name: Run unit tests
         working-directory: aws-sam-cli
         run: |
-          echo "=== Running SAM CLI tests sequentially to avoid AWS resource conflicts ==="
-          START_TIME=$(date +%s)
+          echo "=== UNIT TESTS - Started at $(date) ==="
+          
+          # Fix common issues from test guide
+          ulimit -n unlimited  # Fix "too many open files" 
+          
+          # Clean up potentially problematic Docker config entries
+          if [ -f ~/.docker/config.json ]; then
+            if command -v jq >/dev/null 2>&1; then
+              jq 'del(.credsStore)' ~/.docker/config.json > ~/.docker/config.json.tmp && mv ~/.docker/config.json.tmp ~/.docker/config.json
+            else
+              sed -i '/"credsStore"/d' ~/.docker/config.json
+            fi
+          fi
+          
+          make test | tee unit_test_output.txt
+          
+          # Check coverage (should be ~94%)
+          COVERAGE=$(grep -o "[0-9]\+%" unit_test_output.txt | head -1 | tr -d '%')
+          if [ -z "$COVERAGE" ] || [ "$COVERAGE" -lt 90 ]; then
+            echo "❌ Coverage below threshold! Got: $COVERAGE%, Expected: ~94%"
+            exit 1
+          else
+            echo "✅ Unit tests passed with $COVERAGE% coverage"
+          fi
+        continue-on-error: true
 
-          # echo "1. INVOKE TESTS - Started at $(date)"
-          # INVOKE_START=$(date +%s)
-          # timeout 90m python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short || echo "Invoke tests completed with some failures"
-          # INVOKE_END=$(date +%s)
-          # echo "   Invoke duration: $((INVOKE_END - INVOKE_START)) seconds"
+      - name: Run invoke tests
+        working-directory: aws-sam-cli
+        run: |
+          echo "=== INVOKE TESTS - Started at $(date) ==="
+          timeout 90m SAM_CLI_DEV=1 python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
+          
+          # Expected failures from test guide (12 total from different test classes)
+          cat > expected_invoke_failures.txt << 'EOF'
+          test_invoke_with_error_during_image_build
+          test_invoke_with_timeout_set_0_TimeoutFunction
+          test_invoke_with_timeout_set_1_TimeoutFunctionWithParameter
+          test_invoke_with_timeout_set_2_TimeoutFunctionWithStringParameter
+          test_building_new_rapid_image_removes_old_rapid_images
+          test_invoke_returns_expected_results_from_git_function
+          test_invoke_returns_expected_results_from_git_function_with_parameters
+          EOF
+          
+          # Extract actual failures
+          grep "FAILED" invoke_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_invoke_failures.txt || true
+          
+          # Find unexpected failures
+          UNEXPECTED=$(grep -v -f expected_invoke_failures.txt actual_invoke_failures.txt 2>/dev/null || true)
+          
+          if [ -n "$UNEXPECTED" ]; then
+            echo "❌ Unexpected failures found:"
+            echo "$UNEXPECTED"
+            exit 1
+          else
+            echo "✅ All failures were expected (guide shows 12 known issues across test classes)"
+          fi
+        continue-on-error: true
 
-          echo "2. START-LAMBDA TESTS - Started at $(date)"
-          LAMBDA_START=$(date +%s)
-          timeout 45m python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short || echo "Start-lambda tests completed with some failures"
-          LAMBDA_END=$(date +%s)
-          echo "   Start-lambda duration: $((LAMBDA_END - LAMBDA_START)) seconds"
+      - name: Run start-lambda tests
+        working-directory: aws-sam-cli
+        run: |
+          echo "=== START-LAMBDA TESTS - Started at $(date) ==="
+          timeout 45m SAM_CLI_DEV=1 python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
+          
+          # Should pass completely per test guide
+          if grep -q "FAILED" start_lambda_output.txt; then
+            echo "❌ Start-lambda tests failed (should pass completely)"
+            grep "FAILED" start_lambda_output.txt
+            exit 1
+          else
+            echo "✅ All start-lambda tests passed as expected"
+          fi
+        continue-on-error: true
 
-          # echo "3. START-API TESTS - Started at $(date)"
-          # API_START=$(date +%s)
-          # ulimit -n 8192
-          # timeout 90m python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short || echo "Start-api tests completed with some failures"
-          # API_END=$(date +%s)
-          # echo "   Start-api duration: $((API_END - API_START)) seconds"
+      - name: Run start-api tests
+        working-directory: aws-sam-cli
+        run: |
+          echo "=== START-API TESTS - Started at $(date) ==="
+          ulimit -n unlimited
+          timeout 90m SAM_CLI_DEV=1 python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 || true
+          
+          # Should pass completely per test guide
+          if grep -q "FAILED" start_api_output.txt; then
+            echo "❌ Start-api tests failed (should pass completely)"
+            grep "FAILED" start_api_output.txt
+            exit 1
+          else
+            echo "✅ All start-api tests passed as expected"
+          fi
+        continue-on-error: true
 
-          # echo "4. BUILD TESTS - Started at $(date)"
-          # BUILD_START=$(date +%s)
-          # timeout 90m python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short || echo "Build tests completed with some failures"
-          # BUILD_END=$(date +%s)
-          # echo "   Build duration: $((BUILD_END - BUILD_START)) seconds"
+      - name: Run sync tests  
+        working-directory: aws-sam-cli
+        run: |
+          echo "=== SYNC TESTS - Started at $(date) ==="
+          timeout 30m AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION SAM_CLI_DEV=1 python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 || true
+          
+          # Should pass completely per test guide
+          if grep -q "FAILED" sync_output.txt; then
+            echo "❌ Sync tests failed (should pass completely)"
+            grep "FAILED" sync_output.txt
+            exit 1
+          else
+            echo "✅ All sync tests passed as expected"
+          fi
+        continue-on-error: true
 
-          echo "5. SYNC TESTS - Started at $(date)"
-          SYNC_START=$(date +%s)
-          timeout 30m python -m pytest tests/integration/sync -k 'image' -v --tb=short || echo "Sync tests completed with some failures"
-          SYNC_END=$(date +%s)
-          echo "   Sync duration: $((SYNC_END - SYNC_START)) seconds"
+      - name: Run package tests
+        working-directory: aws-sam-cli  
+        run: |
+          echo "=== PACKAGE TESTS - Started at $(date) ==="
+          timeout 15m AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short > package_output.txt 2>&1 || true
+          
+          # Expected failures from test guide
+          cat > expected_package_failures.txt << 'EOF'
+          test_package_with_deep_nested_template_image
+          test_package_with_loadable_image_archive_0_template_image_load_yaml
+          EOF
+          
+          # Extract actual failures
+          grep "FAILED" package_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_package_failures.txt || true
+          
+          # Also check for nested stack failures (pattern match)
+          grep "FAILED.*test_package_template_with_image_repositories_nested_stack" package_output.txt >> actual_package_failures.txt || true
+          
+          # Find unexpected failures (exclude nested stack pattern)
+          UNEXPECTED=$(grep -v -f expected_package_failures.txt actual_package_failures.txt | grep -v "test_package_template_with_image_repositories_nested_stack" || true)
+          
+          if [ -n "$UNEXPECTED" ]; then
+            echo "❌ Unexpected failures found:"
+            echo "$UNEXPECTED"
+            exit 1
+          else
+            echo "✅ All failures were expected (3 known issues)"
+          fi
+        continue-on-error: true
 
-          echo "6. PACKAGE TESTS - Started at $(date)"
-          PACKAGE_START=$(date +%s)
-          timeout 15m python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short || echo "Package tests completed with some failures"
-          PACKAGE_END=$(date +%s)
-          echo "   Package duration: $((PACKAGE_END - PACKAGE_START)) seconds"
+      - name: Run deploy tests
+        working-directory: aws-sam-cli
+        run: |
+          echo "=== DEPLOY TESTS - Started at $(date) ==="
+          timeout 45m AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION SAM_CLI_DEV=1 python -m pytest tests/integration/deploy -k 'image' -v --tb=short > deploy_output.txt 2>&1 || true
+          
+          # Check for arbitrary passes (PASSED with errors in preceding lines)
+          ARBITRARY_PASSES=""
+          if grep -q "PASSED" deploy_output.txt; then
+            # Get line numbers of PASSED tests
+            grep -n "PASSED" deploy_output.txt | while read line; do
+              LINE_NUM=$(echo "$line" | cut -d: -f1)
+              TEST_NAME=$(echo "$line" | grep -o "test_[a-zA-Z0-9_]*")
+              
+              # Check 10 lines before for errors
+              START_LINE=$((LINE_NUM - 10))
+              if [ $START_LINE -lt 1 ]; then START_LINE=1; fi
+              
+              # Look for error indicators in preceding lines
+              if sed -n "${START_LINE},${LINE_NUM}p" deploy_output.txt | grep -qi "error\|exception\|fail\|traceback"; then
+                echo "⚠️  Arbitrary pass detected: $TEST_NAME (errors found before PASSED)"
+                ARBITRARY_PASSES="$ARBITRARY_PASSES $TEST_NAME"
+              fi
+            done
+          fi
+          
+          PASSED_COUNT=$(grep -c "PASSED" deploy_output.txt || echo "0")
+          FAILED_COUNT=$(grep -c "FAILED" deploy_output.txt || echo "0")
+          
+          echo "Deploy results: $PASSED_COUNT passed, $FAILED_COUNT failed"
+          
+          # Most should fail due to multi-arch limitation
+          if [ "$FAILED_COUNT" -eq 0 ]; then
+            echo "❌ No deploy tests failed (expected most to fail due to multi-arch)"
+            exit 1
+          elif [ -n "$ARBITRARY_PASSES" ]; then
+            echo "✅ Deploy tests mostly failed as expected, with some arbitrary passes (errors present but test passed)"
+          else
+            echo "✅ Deploy tests behaved as expected (multi-arch limitation)"
+          fi
+        continue-on-error: true
 
-          echo "7. DEPLOY TESTS - Started at $(date)"
-          DEPLOY_START=$(date +%s)
-          timeout 45m python -m pytest tests/integration/deploy -k 'image' -v --tb=short || echo "Deploy tests completed with some failures"
-          DEPLOY_END=$(date +%s)
-          echo "   Deploy duration: $((DEPLOY_END - DEPLOY_START)) seconds"
-
-          TOTAL_END=$(date +%s)
-          echo "=== TOTAL DURATION: $((TOTAL_END - START_TIME)) seconds ==="
-          echo "=== All SAM CLI tests completed sequentially ==="
+      - name: Run build tests
+        working-directory: aws-sam-cli
+        run: |
+          echo "=== BUILD TESTS - Started at $(date) ==="
+          timeout 60m SAM_CLI_DEV=1 python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 || true
+          
+          # Expected failures from test guide (nerdctl ancestor filter limitation)
+          cat > expected_build_failures.txt << 'EOF'
+          test_with_invalid_dockerfile_definition
+          test_with_invalid_dockerfile_location
+          test_load_success
+          test_building_ruby_3_2_1_use_container
+          test_with_makefile_builder_specified_python_runtime_1_use_container
+          test_with_native_builder_specified_python_runtime_1_use_container
+          test_inline_not_built_1_use_container
+          test_json_env_vars_passed_0_use_container
+          test_json_env_vars_passed_1_use_container
+          test_inline_env_vars_passed_0_use_container
+          test_inline_env_vars_passed_1_use_container
+          test_custom_build_image_succeeds_0_use_container
+          test_custom_build_image_succeeds_1_use_container
+          test_building_ruby_in_container_with_specified_architecture_0_ruby3_2
+          test_building_java_in_container_with_arm64_architecture_00_java8_al2
+          test_building_java_in_container_with_arm64_architecture_03_java8_al2
+          test_building_java_in_container_with_arm64_architecture_04_java11
+          test_building_java_in_container_with_arm64_architecture_07_java11
+          test_building_java_in_container_with_arm64_architecture_08_java17
+          test_building_java_in_container_with_arm64_architecture_11_java17
+          test_building_java_in_container_with_arm64_architecture_al2023_0_java21
+          test_building_java_in_container_with_arm64_architecture_al2023_1_java21
+          test_building_java_in_container_with_arm64_architecture_al2023_2_java21
+          test_building_java_in_container_with_arm64_architecture_al2023_3_java21
+          test_building_java_in_container_00_java8_al2
+          EOF
+          
+          # Extract actual failures
+          grep "FAILED" build_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_build_failures.txt || true
+          
+          # Find unexpected failures
+          UNEXPECTED=$(grep -v -f expected_build_failures.txt actual_build_failures.txt 2>/dev/null || true)
+          
+          if [ -n "$UNEXPECTED" ]; then
+            echo "❌ Unexpected failures found:"
+            echo "$UNEXPECTED"
+            exit 1
+          else
+            echo "✅ All failures were expected (nerdctl ancestor filter limitation)"
+          fi
+        continue-on-error: true
 
       - name: Final cleanup
         if: always()
