@@ -44,7 +44,7 @@ jobs:
     env:
       AWS_DEFAULT_REGION: ${{ secrets.REGION }}
       DOCKER_HOST: unix:///run/finch.sock
-      DOCKER_CONFIG: /home/runner/.finch
+      DOCKER_CONFIG: /home/runner/.docker
       BY_CANARY: true  # Full AWS access for all tests
       SAM_CLI_DEV: 1 
     steps:
