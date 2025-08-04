@@ -89,39 +89,17 @@ jobs:
           sudo bin/finch-daemon --debug --socket-owner $UID --credential-socket-owner $UID &
           sleep 10
           curl --unix-socket /run/finch.sock http://localhost/_ping
-          
-          # Wait for finch-daemon to set up Docker config and export it
-          echo "Waiting for finch-daemon to create Docker config..."
 
-          echo "Checking what finch-daemon actually created:"
-          ls -la /home/runner/.finch/ || echo "No .finch directory"
-          ls -la /home/runner/.finch/.finch-daemon/ || echo "No .finch-daemon directory"
-          find /home/runner -name "config.json" -type f 2>/dev/null || echo "No config.json found"
-          
-          sleep 20  # Give finch-daemon time to set up config
+          # Fix the permissions so the workflow can access the config
+          sudo chown -R $USER:$USER /home/runner/.finch/
 
-          echo "Checking what finch-daemon actually created:"
-          ls -la /home/runner/.finch/ || echo "No .finch directory"
-          ls -la /home/runner/.finch/.finch-daemon/ || echo "No .finch-daemon directory"
-          find /home/runner -name "config.json" -type f 2>/dev/null || echo "No config.json found"
-
+          # Now your existing check will work
           if [ -d "/home/runner/.finch/.finch-daemon" ]; then
             echo "DOCKER_CONFIG=/home/runner/.finch/.finch-daemon" >> $GITHUB_ENV
           else
             echo "ERROR: finch-daemon config not found - this will break credential access"
             exit 1
           fi
-          
-          # # Check if config was created (finch-daemon sets it internally)
-          # if [ -d "/home/runner/.finch/.finch-daemon" ]; then
-          #   echo "Docker config created at: /home/runner/.finch/.finch-daemon"
-          #   ls -la /home/runner/.finch/.finch-daemon/
-          #   cat /home/runner/.finch/.finch-daemon/config.json
-          #   echo "DOCKER_CONFIG=/home/runner/.finch/.finch-daemon" >> $GITHUB_ENV
-          # else
-          #   echo "Warning: finch-daemon config not found, using fallback"
-          #   echo "DOCKER_CONFIG=/home/runner/.finch" >> $GITHUB_ENV
-          # fi
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
