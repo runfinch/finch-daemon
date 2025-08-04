@@ -44,7 +44,7 @@ jobs:
     env:
       AWS_DEFAULT_REGION: ${{ secrets.REGION }}
       DOCKER_HOST: unix:///run/finch.sock
-      DOCKER_CONFIG: /home/runner/.docker
+      # DOCKER_CONFIG will be set by finch-daemon automatically
       BY_CANARY: true  # Full AWS access for all tests
       SAM_CLI_DEV: 1 
     steps:
@@ -60,11 +60,6 @@ jobs:
 
       - name: Checkout finch-daemon repo
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-
-      - name: Setup Docker config for finch-daemon
-        run: |
-          mkdir -p $DOCKER_CONFIG
-          echo '{"auths":{"docker.io":{},"public.ecr.aws":{}}}' > $DOCKER_CONFIG/config.json
 
       - name: Stop pre-existing services
         run: |
@@ -91,9 +86,24 @@ jobs:
         run: |
           make build
           sudo cp bin/docker-credential-finch /usr/bin
-          sudo bin/finch-daemon --debug --socket-owner $UID &
+          sudo bin/finch-daemon --debug --socket-owner $UID --credential-socket-owner $UID &
           sleep 10
           curl --unix-socket /run/finch.sock http://localhost/_ping
+          
+          # Wait for finch-daemon to set up Docker config and export it
+          echo "Waiting for finch-daemon to create Docker config..."
+          sleep 5  # Give finch-daemon time to set up config
+          
+          # Check if config was created (finch-daemon sets it internally)
+          if [ -d "/home/runner/.finch/.finch-daemon" ]; then
+            echo "Docker config created at: /home/runner/.finch/.finch-daemon"
+            ls -la /home/runner/.finch/.finch-daemon/
+            cat /home/runner/.finch/.finch-daemon/config.json
+            echo "DOCKER_CONFIG=/home/runner/.finch/.finch-daemon" >> $GITHUB_ENV
+          else
+            echo "Warning: finch-daemon config not found, using fallback"
+            echo "DOCKER_CONFIG=/home/runner/.finch" >> $GITHUB_ENV
+          fi
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
@@ -257,6 +267,10 @@ jobs:
           echo "=== INVOKE TESTS - Started at $(date) ==="
           SAM_CLI_DEV=1 timeout 90m python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
           
+          echo "=== INVOKE TEST OUTPUT ==="
+          cat invoke_output.txt
+          echo "=== END INVOKE TEST OUTPUT ==="
+          
           # Expected failures from test guide (12 total from different test classes)
           cat > expected_invoke_failures.txt << 'EOF'
           test_invoke_with_error_during_image_build
@@ -267,6 +281,9 @@ jobs:
           test_invoke_returns_expected_results_from_git_function
           test_invoke_returns_expected_results_from_git_function_with_parameters
           EOF
+          
+          # Note: Guide shows 12 failures but some test names repeat across different test classes
+          # The sed extraction will capture all instances regardless of test class
           
           # Extract actual failures
           grep "FAILED" invoke_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_invoke_failures.txt || true
@@ -289,6 +306,10 @@ jobs:
           echo "=== START-LAMBDA TESTS - Started at $(date) ==="
           SAM_CLI_DEV=1 timeout 45m python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
           
+          echo "=== START-LAMBDA TEST OUTPUT ==="
+          cat start_lambda_output.txt
+          echo "=== END START-LAMBDA TEST OUTPUT ==="
+          
           # Should pass completely per test guide
           if grep -q "FAILED" start_lambda_output.txt; then
             echo "❌ Start-lambda tests failed (should pass completely)"
@@ -305,6 +326,10 @@ jobs:
           echo "=== START-API TESTS - Started at $(date) ==="
           ulimit -n 8192
           SAM_CLI_DEV=1 timeout 90m python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 || true
+
+          echo "=== START-API TEST OUTPUT ==="
+          cat start_api_output.txt
+          echo "=== END START-API TEST OUTPUT ==="
           
           # Should pass completely per test guide
           if grep -q "FAILED" start_api_output.txt; then
@@ -322,6 +347,10 @@ jobs:
           echo "=== SYNC TESTS - Started at $(date) ==="
           AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION SAM_CLI_DEV=1 timeout 30m python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 || true
           
+          echo "=== SYNC TEST OUTPUT ==="
+          cat sync_output.txt
+          echo "=== END SYNC TEST OUTPUT ==="
+          
           # Should pass completely per test guide
           if grep -q "FAILED" sync_output.txt; then
             echo "❌ Sync tests failed (should pass completely)"
@@ -337,6 +366,10 @@ jobs:
         run: |
           echo "=== PACKAGE TESTS - Started at $(date) ==="
           AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 timeout 15m python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short > package_output.txt 2>&1 || true
+          
+          echo "=== PACKAGE TEST OUTPUT ==="
+          cat package_output.txt
+          echo "=== END PACKAGE TEST OUTPUT ==="
           
           # Expected failures from test guide
           cat > expected_package_failures.txt << 'EOF'
@@ -367,6 +400,10 @@ jobs:
         run: |
           echo "=== DEPLOY TESTS - Started at $(date) ==="
           AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION SAM_CLI_DEV=1 timeout 45m python -m pytest tests/integration/deploy -k 'image' -v --tb=short > deploy_output.txt 2>&1 || true
+          
+          echo "=== DEPLOY TEST OUTPUT ==="
+          cat deploy_output.txt
+          echo "=== END DEPLOY TEST OUTPUT ==="
           
           # Check for arbitrary passes (PASSED with errors in preceding lines)
           ARBITRARY_PASSES=""
@@ -409,6 +446,10 @@ jobs:
         run: |
           echo "=== BUILD TESTS - Started at $(date) ==="
           SAM_CLI_DEV=1 timeout 60m python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 || true
+          
+          echo "=== BUILD TEST OUTPUT ==="
+          cat build_output.txt
+          echo "=== END BUILD TEST OUTPUT ==="
           
           # Expected failures from test guide (nerdctl ancestor filter limitation)
           cat > expected_build_failures.txt << 'EOF'
