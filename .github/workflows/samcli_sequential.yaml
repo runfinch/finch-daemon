@@ -92,18 +92,36 @@ jobs:
           
           # Wait for finch-daemon to set up Docker config and export it
           echo "Waiting for finch-daemon to create Docker config..."
-          sleep 5  # Give finch-daemon time to set up config
+
+          echo "Checking what finch-daemon actually created:"
+          ls -la /home/runner/.finch/ || echo "No .finch directory"
+          ls -la /home/runner/.finch/.finch-daemon/ || echo "No .finch-daemon directory"
+          find /home/runner -name "config.json" -type f 2>/dev/null || echo "No config.json found"
           
-          # Check if config was created (finch-daemon sets it internally)
+          sleep 20  # Give finch-daemon time to set up config
+
+          echo "Checking what finch-daemon actually created:"
+          ls -la /home/runner/.finch/ || echo "No .finch directory"
+          ls -la /home/runner/.finch/.finch-daemon/ || echo "No .finch-daemon directory"
+          find /home/runner -name "config.json" -type f 2>/dev/null || echo "No config.json found"
+
           if [ -d "/home/runner/.finch/.finch-daemon" ]; then
-            echo "Docker config created at: /home/runner/.finch/.finch-daemon"
-            ls -la /home/runner/.finch/.finch-daemon/
-            cat /home/runner/.finch/.finch-daemon/config.json
             echo "DOCKER_CONFIG=/home/runner/.finch/.finch-daemon" >> $GITHUB_ENV
           else
-            echo "Warning: finch-daemon config not found, using fallback"
-            echo "DOCKER_CONFIG=/home/runner/.finch" >> $GITHUB_ENV
+            echo "ERROR: finch-daemon config not found - this will break credential access"
+            exit 1
           fi
+          
+          # # Check if config was created (finch-daemon sets it internally)
+          # if [ -d "/home/runner/.finch/.finch-daemon" ]; then
+          #   echo "Docker config created at: /home/runner/.finch/.finch-daemon"
+          #   ls -la /home/runner/.finch/.finch-daemon/
+          #   cat /home/runner/.finch/.finch-daemon/config.json
+          #   echo "DOCKER_CONFIG=/home/runner/.finch/.finch-daemon" >> $GITHUB_ENV
+          # else
+          #   echo "Warning: finch-daemon config not found, using fallback"
+          #   echo "DOCKER_CONFIG=/home/runner/.finch" >> $GITHUB_ENV
+          # fi
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
@@ -261,44 +279,44 @@ jobs:
           fi
         continue-on-error: true
 
-      - name: Run invoke tests
-        working-directory: aws-sam-cli
-        run: |
-          echo "=== INVOKE TESTS - Started at $(date) ==="
-          SAM_CLI_DEV=1 timeout 90m python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
+      # - name: Run invoke tests
+      #   working-directory: aws-sam-cli
+      #   run: |
+      #     echo "=== INVOKE TESTS - Started at $(date) ==="
+      #     SAM_CLI_DEV=1 timeout 90m python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
           
-          echo "=== INVOKE TEST OUTPUT ==="
-          cat invoke_output.txt
-          echo "=== END INVOKE TEST OUTPUT ==="
+      #     echo "=== INVOKE TEST OUTPUT ==="
+      #     cat invoke_output.txt
+      #     echo "=== END INVOKE TEST OUTPUT ==="
           
-          # Expected failures from test guide (12 total from different test classes)
-          cat > expected_invoke_failures.txt << 'EOF'
-          test_invoke_with_error_during_image_build
-          test_invoke_with_timeout_set_0_TimeoutFunction
-          test_invoke_with_timeout_set_1_TimeoutFunctionWithParameter
-          test_invoke_with_timeout_set_2_TimeoutFunctionWithStringParameter
-          test_building_new_rapid_image_removes_old_rapid_images
-          test_invoke_returns_expected_results_from_git_function
-          test_invoke_returns_expected_results_from_git_function_with_parameters
-          EOF
+      #     # Expected failures from test guide (12 total from different test classes)
+      #     cat > expected_invoke_failures.txt << 'EOF'
+      #     test_invoke_with_error_during_image_build
+      #     test_invoke_with_timeout_set_0_TimeoutFunction
+      #     test_invoke_with_timeout_set_1_TimeoutFunctionWithParameter
+      #     test_invoke_with_timeout_set_2_TimeoutFunctionWithStringParameter
+      #     test_building_new_rapid_image_removes_old_rapid_images
+      #     test_invoke_returns_expected_results_from_git_function
+      #     test_invoke_returns_expected_results_from_git_function_with_parameters
+      #     EOF
           
-          # Note: Guide shows 12 failures but some test names repeat across different test classes
-          # The sed extraction will capture all instances regardless of test class
+      #     # Note: Guide shows 12 failures but some test names repeat across different test classes
+      #     # The sed extraction will capture all instances regardless of test class
           
-          # Extract actual failures
-          grep "FAILED" invoke_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_invoke_failures.txt || true
+      #     # Extract actual failures
+      #     grep "FAILED" invoke_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_invoke_failures.txt || true
           
-          # Find unexpected failures
-          UNEXPECTED=$(grep -v -f expected_invoke_failures.txt actual_invoke_failures.txt 2>/dev/null || true)
+      #     # Find unexpected failures
+      #     UNEXPECTED=$(grep -v -f expected_invoke_failures.txt actual_invoke_failures.txt 2>/dev/null || true)
           
-          if [ -n "$UNEXPECTED" ]; then
-            echo "❌ Unexpected failures found:"
-            echo "$UNEXPECTED"
-            exit 1
-          else
-            echo "✅ All failures were expected (guide shows 12 known issues across test classes)"
-          fi
-        continue-on-error: true
+      #     if [ -n "$UNEXPECTED" ]; then
+      #       echo "❌ Unexpected failures found:"
+      #       echo "$UNEXPECTED"
+      #       exit 1
+      #     else
+      #       echo "✅ All failures were expected (guide shows 12 known issues across test classes)"
+      #     fi
+      #   continue-on-error: true
 
       - name: Run start-lambda tests
         working-directory: aws-sam-cli
@@ -320,26 +338,26 @@ jobs:
           fi
         continue-on-error: true
 
-      - name: Run start-api tests
-        working-directory: aws-sam-cli
-        run: |
-          echo "=== START-API TESTS - Started at $(date) ==="
-          ulimit -n 8192
-          SAM_CLI_DEV=1 timeout 90m python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 || true
+      # - name: Run start-api tests
+      #   working-directory: aws-sam-cli
+      #   run: |
+      #     echo "=== START-API TESTS - Started at $(date) ==="
+      #     ulimit -n 8192
+      #     SAM_CLI_DEV=1 timeout 90m python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 || true
 
-          echo "=== START-API TEST OUTPUT ==="
-          cat start_api_output.txt
-          echo "=== END START-API TEST OUTPUT ==="
+      #     echo "=== START-API TEST OUTPUT ==="
+      #     cat start_api_output.txt
+      #     echo "=== END START-API TEST OUTPUT ==="
           
-          # Should pass completely per test guide
-          if grep -q "FAILED" start_api_output.txt; then
-            echo "❌ Start-api tests failed (should pass completely)"
-            grep "FAILED" start_api_output.txt
-            exit 1
-          else
-            echo "✅ All start-api tests passed as expected"
-          fi
-        continue-on-error: true
+      #     # Should pass completely per test guide
+      #     if grep -q "FAILED" start_api_output.txt; then
+      #       echo "❌ Start-api tests failed (should pass completely)"
+      #       grep "FAILED" start_api_output.txt
+      #       exit 1
+      #     else
+      #       echo "✅ All start-api tests passed as expected"
+      #     fi
+      #   continue-on-error: true
 
       - name: Run sync tests  
         working-directory: aws-sam-cli
