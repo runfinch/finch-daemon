@@ -53,12 +53,12 @@ jobs:
       fail-fast: false
       matrix:
         test-suite: 
-          # - invoke
-          # - start-lambda
-          # - start-api
-          # - aws-stack-tests
-          # - build
-          - sequential
+          - invoke
+          - start-lambda
+          - start-api
+          - aws-stack-tests
+          - build
+          # - sequential
     steps:
 
       # SETUP
