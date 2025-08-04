@@ -1,33 +1,33 @@
 name: samcli-canary-isolation
 
-on:
-  push:
-    branches:
-      - main
-    paths:
-      - '**.go'
-      - 'go.mod'
-      - 'go.sum'
-      - '.github/workflows/samcli_canary.yaml'
-      - 'Makefile*'
-      - 'cmd/**'
-      - 'pkg/**'
-      - 'internal/**'
-      - 'api/**'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - '**.go'
-      - 'go.mod'
-      - 'go.sum'
-      - '.github/workflows/samcli_canary.yaml'
-      - 'Makefile*'
-      - 'cmd/**'
-      - 'pkg/**'
-      - 'internal/**'
-      - 'api/**'
-  workflow_dispatch:
+# on:
+#   push:
+#     branches:
+#       - main
+#     paths:
+#       - '**.go'
+#       - 'go.mod'
+#       - 'go.sum'
+#       - '.github/workflows/samcli_canary.yaml'
+#       - 'Makefile*'
+#       - 'cmd/**'
+#       - 'pkg/**'
+#       - 'internal/**'
+#       - 'api/**'
+#   pull_request:
+#     branches:
+#       - main
+#     paths:
+#       - '**.go'
+#       - 'go.mod'
+#       - 'go.sum'
+#       - '.github/workflows/samcli_canary.yaml'
+#       - 'Makefile*'
+#       - 'cmd/**'
+#       - 'pkg/**'
+#       - 'internal/**'
+#       - 'api/**'
+#   workflow_dispatch:
 
 env:
   GO_VERSION: '1.23.8'
