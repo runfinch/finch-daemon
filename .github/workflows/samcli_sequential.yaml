@@ -255,7 +255,7 @@ jobs:
         working-directory: aws-sam-cli
         run: |
           echo "=== INVOKE TESTS - Started at $(date) ==="
-          timeout 90m SAM_CLI_DEV=1 python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
+          SAM_CLI_DEV=1 timeout 90m python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
           
           # Expected failures from test guide (12 total from different test classes)
           cat > expected_invoke_failures.txt << 'EOF'
@@ -287,7 +287,7 @@ jobs:
         working-directory: aws-sam-cli
         run: |
           echo "=== START-LAMBDA TESTS - Started at $(date) ==="
-          timeout 45m SAM_CLI_DEV=1 python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
+          SAM_CLI_DEV=1 timeout 45m python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
           
           # Should pass completely per test guide
           if grep -q "FAILED" start_lambda_output.txt; then
@@ -304,7 +304,7 @@ jobs:
         run: |
           echo "=== START-API TESTS - Started at $(date) ==="
           ulimit -n 8192
-          timeout 90m SAM_CLI_DEV=1 python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 || true
+          SAM_CLI_DEV=1 timeout 90m python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 || true
           
           # Should pass completely per test guide
           if grep -q "FAILED" start_api_output.txt; then
@@ -320,7 +320,7 @@ jobs:
         working-directory: aws-sam-cli
         run: |
           echo "=== SYNC TESTS - Started at $(date) ==="
-          timeout 30m AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION SAM_CLI_DEV=1 python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 || true
+          AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION SAM_CLI_DEV=1 timeout 30m python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 || true
           
           # Should pass completely per test guide
           if grep -q "FAILED" sync_output.txt; then
@@ -336,7 +336,7 @@ jobs:
         working-directory: aws-sam-cli  
         run: |
           echo "=== PACKAGE TESTS - Started at $(date) ==="
-          timeout 15m AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short > package_output.txt 2>&1 || true
+          AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 timeout 15m python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short > package_output.txt 2>&1 || true
           
           # Expected failures from test guide
           cat > expected_package_failures.txt << 'EOF'
@@ -366,7 +366,7 @@ jobs:
         working-directory: aws-sam-cli
         run: |
           echo "=== DEPLOY TESTS - Started at $(date) ==="
-          timeout 45m AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION SAM_CLI_DEV=1 python -m pytest tests/integration/deploy -k 'image' -v --tb=short > deploy_output.txt 2>&1 || true
+          AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION SAM_CLI_DEV=1 timeout 45m python -m pytest tests/integration/deploy -k 'image' -v --tb=short > deploy_output.txt 2>&1 || true
           
           # Check for arbitrary passes (PASSED with errors in preceding lines)
           ARBITRARY_PASSES=""
@@ -408,7 +408,7 @@ jobs:
         working-directory: aws-sam-cli
         run: |
           echo "=== BUILD TESTS - Started at $(date) ==="
-          timeout 60m SAM_CLI_DEV=1 python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 || true
+          SAM_CLI_DEV=1 timeout 60m python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 || true
           
           # Expected failures from test guide (nerdctl ancestor filter limitation)
           cat > expected_build_failures.txt << 'EOF'
