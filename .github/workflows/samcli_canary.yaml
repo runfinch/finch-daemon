@@ -141,7 +141,6 @@ jobs:
   aws-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 300
-    needs: local-tests  # Wait for local tests to complete
     env:
       AWS_DEFAULT_REGION: ${{ secrets.REGION }}
       DOCKER_HOST: unix:///run/finch.sock
