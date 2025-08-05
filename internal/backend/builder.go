@@ -107,6 +107,9 @@ func (w *NerdctlWrapper) RunBuild(ctx context.Context, client *containerd.Client
 	}
 	if !options.Quiet {
 		buildctlCmd.Stderr = options.Stderr
+	} else {
+		// TEMP: Always capture stderr for debugging BuildKit failures
+		buildctlCmd.Stderr = os.Stderr
 	}
 
 	if err := buildctlCmd.Start(); err != nil {
@@ -114,6 +117,7 @@ func (w *NerdctlWrapper) RunBuild(ctx context.Context, client *containerd.Client
 		return fmt.Errorf("buildctl start failed: %w", err)
 	}
 
+	// Combined into one..
 	if needsLoading {
 		platMC, err := platformutil.NewMatchComparer(false, options.Platform)
 		if err != nil {
