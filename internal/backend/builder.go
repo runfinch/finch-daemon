@@ -248,13 +248,16 @@ func generateBuildctlArgs(ctx context.Context, client *containerd.Client, option
 		if sharable {
 			output = "type=image,unpack=true" // ensure the target stage is unlazied (needed for any snapshotters)
 		} else {
-			output = "type=docker,dest=-"
+			// output = "type=docker,dest=-"
+			log.L.Infof("FORCING SHARABLE PATH FOR TESTING")
+			output = "type=image,unpack=true"
 			if len(options.Platform) > 1 {
 				// For avoiding `error: failed to solve: docker exporter does not currently support exporting manifest lists`
 				// TODO: consider using type=oci for single-options.Platform build too
 				output = "type=oci,dest=-"
 			}
-			needsLoading = true
+			needsLoading = false
+			// needsLoading = true
 		}
 	} else {
 		if !strings.Contains(output, "type=") {
