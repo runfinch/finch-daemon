@@ -31,8 +31,8 @@ on:
   workflow_dispatch:
 
 env:
-GO_VERSION: '1.23.8'
-CONTAINERD_VERSION: "1.7.27"
+  GO_VERSION: '1.23.8'
+  CONTAINERD_VERSION: "1.7.27"
 
 permissions:
   id-token: write
