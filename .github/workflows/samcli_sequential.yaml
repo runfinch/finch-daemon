@@ -154,7 +154,24 @@ jobs:
           echo "FROM alpine:latest" > /tmp/test-build/Dockerfile
           echo "RUN echo hello world" >> /tmp/test-build/Dockerfile
 
-          echo "Testing BuildKit docker output to file..."
+          echo "=== TEST 1: With dest=- and separated output ==="
+          sudo /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock build \
+            --progress=quiet \
+            --frontend=dockerfile.v0 \
+            --local=context=/tmp/test-build \
+            --local=dockerfile=/tmp/test-build \
+            --opt=filename=Dockerfile \
+            --output=type=docker,name=test:latest,dest=- > /tmp/clean-output.tar 2>/tmp/build-logs.txt
+
+          echo "Clean output file size: $(wc -c < /tmp/clean-output.tar)"
+          echo "Build logs file size: $(wc -c < /tmp/build-logs.txt)"
+          echo "Clean output first 100 bytes (hex):"
+          head -c 100 /tmp/clean-output.tar | hexdump -C || echo "No output"
+          echo "Build logs first 3 lines:"
+          head -3 /tmp/build-logs.txt || echo "No logs"
+
+          echo ""
+          echo "=== TEST 2: Original method (logs mixed with output) ==="
           sudo /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock build \
             --progress=plain \
             --frontend=dockerfile.v0 \
@@ -163,12 +180,9 @@ jobs:
             --opt=filename=Dockerfile \
             --output=type=docker,name=test:latest > /tmp/buildkit-output.tar 2>&1
 
-          echo "BuildKit output file size: $(wc -c < /tmp/buildkit-output.tar)"
-          echo "BuildKit output first 200 bytes (hex):"
-          head -c 200 /tmp/buildkit-output.tar | hexdump -C || echo "No output to display"
-
-          echo "BuildKit output first 5 lines (text):"
-          head -5 /tmp/buildkit-output.tar || echo "No text output"
+          echo "Mixed output file size: $(wc -c < /tmp/buildkit-output.tar)"
+          echo "Mixed output first 100 bytes (hex):"
+          head -c 100 /tmp/buildkit-output.tar | hexdump -C || echo "No output"
 
       - name: Clean up SAM managed stack (robust)
         run: |
