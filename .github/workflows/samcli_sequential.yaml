@@ -87,7 +87,7 @@ jobs:
         run: |
           aws sts get-caller-identity --query 'Account' --output text >/dev/null
           echo "AWS credentials configured successfully"
-
+          
       - name: Install and validate finch-daemon dependencies
         run: |
           ./setup-test-env.sh
@@ -96,29 +96,49 @@ jobs:
           # Wait for BuildKit to fully start and create socket
           echo "=== WAITING FOR BUILDKIT TO START ==="
           for i in {1..30}; do
-            if [ -S /run/buildkit/buildkitd.sock ]; then
-              echo "BuildKit socket found after $i seconds"
+            echo "Attempt $i: Checking for BuildKit socket..."
+
+            # Check if socket exists (any permissions)
+            if ls -la /run/buildkit/buildkitd.sock 2>/dev/null; then
+              echo "Socket found with ls command"
               break
             fi
-            echo "Waiting for BuildKit socket... ($i/30)"
+
+            # Check with find
+            if find /run -name "buildkitd.sock" -type s 2>/dev/null; then
+              echo "Socket found with find command"
+              break
+            fi
+
+            # Check all buildkit-related files
+            echo "All buildkit files in /run:"
+            find /run -name "*buildkit*" 2>/dev/null || echo "No buildkit files found"
+
             sleep 1
           done
 
           # NOW fix BuildKit socket permissions
           echo "=== FIXING BUILDKIT PERMISSIONS ==="
-          sudo chmod 666 /run/buildkit/buildkitd.sock || echo "BuildKit socket not found, checking alternatives..."
+
+          # Show what we found
+          echo "Final socket check:"
+          ls -la /run/buildkit/buildkitd.sock 2>/dev/null || echo "Main socket not accessible"
+
+          # Try to fix permissions on main socket
+          sudo chmod 666 /run/buildkit/buildkitd.sock 2>/dev/null && echo "Fixed main socket permissions" || echo "Could not fix main socket"
 
           # Check all possible BuildKit sockets
+          echo "Finding and fixing all BuildKit sockets:"
           find /run -name "*buildkit*" -type s 2>/dev/null | while read socket; do
             echo "Found BuildKit socket: $socket"
-            sudo chmod 666 "$socket"
-            ls -la "$socket"
+            sudo chmod 666 "$socket" 2>/dev/null && echo "  Fixed permissions" || echo "  Could not fix permissions"
+            ls -la "$socket" 2>/dev/null || echo "  Could not list socket"
           done
 
           # Verify fix
+          echo "=== TESTING BUILDKIT ACCESS ==="
           echo "Testing BuildKit access after permission fix..."
-          /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock debug info || echo "Still failing"
-
+          /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock debug info 2>&1 || echo "Still failing - will show error above"
       - name: Build and start finch-daemon
         run: |
           make build
