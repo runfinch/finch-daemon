@@ -114,6 +114,14 @@ func (w *NerdctlWrapper) RunBuild(ctx context.Context, client *containerd.Client
 		return fmt.Errorf("buildctl start failed: %w", err)
 	}
 
+	if err = buildctlCmd.Wait(); err != nil {
+		log.L.WithError(err).Errorf("buildctl command failed: %s %v", buildctlBinary, buildctlArgs)
+		log.L.Errorf("BUILDCTL EXIT CODE: %v", buildctlCmd.ProcessState.ExitCode()) // temp log
+		return fmt.Errorf("buildctl execution failed: %w", err)
+	} else {
+		log.L.Infof("BUILDCTL COMPLETED SUCCESSFULLY, EXIT CODE: %v", buildctlCmd.ProcessState.ExitCode()) // temp log
+	}
+
 	if needsLoading {
 		platMC, err := platformutil.NewMatchComparer(false, options.Platform)
 		if err != nil {
@@ -122,14 +130,6 @@ func (w *NerdctlWrapper) RunBuild(ctx context.Context, client *containerd.Client
 		if err = loadImage(ctx, buildctlStdout, options.GOptions.Namespace, options.GOptions.Address, options.GOptions.Snapshotter, options.Stdout, platMC, options.Quiet); err != nil {
 			return err
 		}
-	}
-
-	if err = buildctlCmd.Wait(); err != nil {
-		log.L.WithError(err).Errorf("buildctl command failed: %s %v", buildctlBinary, buildctlArgs)
-		log.L.Errorf("BUILDCTL EXIT CODE: %v", buildctlCmd.ProcessState.ExitCode()) // temp log
-		return fmt.Errorf("buildctl execution failed: %w", err)
-	} else {
-		log.L.Infof("BUILDCTL COMPLETED SUCCESSFULLY, EXIT CODE: %v", buildctlCmd.ProcessState.ExitCode()) // temp log
 	}
 
 	if options.IidFile != "" {
