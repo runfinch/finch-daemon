@@ -427,7 +427,7 @@ jobs:
         working-directory: aws-sam-cli
         run: |
           SAM_CLI_DEV=1 python -m pytest tests/integration/local/invoke/test_integration_cli_images.py::TestSamPython36HelloWorldIntegrationImages::test_invoke_with_env_vars -v -s --tb=long
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Run invoke tests
         working-directory: aws-sam-cli
