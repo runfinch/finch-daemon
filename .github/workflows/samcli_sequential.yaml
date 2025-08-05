@@ -75,6 +75,19 @@ jobs:
           sudo rm -f /run/finch.pid
           sudo rm -f /run/finch-credential.sock
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        with:
+          role-to-assume: ${{ secrets.ROLE }}
+          role-session-name: samcli-sequential-tests
+          aws-region: ${{ secrets.REGION }}
+          role-duration-seconds: 14400
+
+      - name: Verify AWS credentials
+        run: |
+          aws sts get-caller-identity --query 'Account' --output text >/dev/null
+          echo "AWS credentials configured successfully"
+
       - name: Install and validate finch-daemon dependencies
         run: |
           ./setup-test-env.sh
@@ -119,19 +132,6 @@ jobs:
           echo "Docker config created:"
           cat /home/runner/.finch/config.json
           echo "DOCKER_CONFIG set to: /home/runner/.finch"
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
-        with:
-          role-to-assume: ${{ secrets.ROLE }}
-          role-session-name: samcli-sequential-tests
-          aws-region: ${{ secrets.REGION }}
-          role-duration-seconds: 14400
-
-      - name: Verify AWS credentials
-        run: |
-          aws sts get-caller-identity --query 'Account' --output text >/dev/null
-          echo "AWS credentials configured successfully"
 
       - name: Clean up SAM managed stack (robust)
         run: |
