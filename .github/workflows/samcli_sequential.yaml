@@ -111,13 +111,13 @@ jobs:
           # Create finch config directory (matching regular finch location)
           mkdir -p /home/runner/.finch
           
-          # Create Docker config with both public and private ECR credentials
+          echo "AWS_DEFAULT_REGION: '$AWS_DEFAULT_REGION'"
+          # Create Docker config with ONLY private ECR credentials (public ECR doesn't need auth)
           cat > /home/runner/.finch/config.json << EOF
           {
             "auths": {
-              "public.ecr.aws": {
-                "auth": "$(echo "AWS:$ECR_TOKEN" | base64 -w 0)"
-              },
+              "docker.io": {},
+              "public.ecr.aws": {},
               "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com": {
                 "auth": "$(echo "AWS:$ECR_TOKEN" | base64 -w 0)"
               }
@@ -129,7 +129,7 @@ jobs:
           echo "DOCKER_CONFIG=/home/runner/.finch" >> $GITHUB_ENV
           
           # Verify config was created
-          echo "Docker config created:"
+          echo "Docker config created (private ECR only):"
           cat /home/runner/.finch/config.json
           echo "DOCKER_CONFIG set to: /home/runner/.finch"
 
