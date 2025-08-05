@@ -184,6 +184,35 @@ jobs:
           echo "Mixed output first 100 bytes (hex):"
           head -c 100 /tmp/buildkit-output.tar | hexdump -C || echo "No output"
 
+      - name: Check BuildKit Permissions
+        run: |
+          echo "=== PERMISSION CHECK ==="
+          echo "Current user: $(whoami)"
+          echo "User ID info: $(id)"
+          echo ""
+
+          echo "=== SOCKET PERMISSIONS ==="
+          echo "BuildKit socket:"
+          ls -la /run/buildkit/buildkitd.sock || echo "BuildKit socket not found"
+          echo ""
+          echo "Containerd socket:"
+          ls -la /run/containerd/containerd.sock || echo "Containerd socket not found"
+          echo ""
+
+          echo "=== BUILDKIT ACCESS TEST ==="
+          echo "Testing BuildKit access as current user..."
+          /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock debug info || echo "BuildKit access failed"
+          echo ""
+
+          echo "=== FINCH-DAEMON PROCESS INFO ==="
+          echo "Finch-daemon process:"
+          ps aux | grep finch-daemon | grep -v grep || echo "No finch-daemon process found"
+          echo ""
+
+          echo "=== SOCKET OWNERSHIP ==="
+          echo "Who owns the sockets:"
+          stat -c "%U:%G %a %n" /run/buildkit/buildkitd.sock /run/containerd/containerd.sock 2>/dev/null || echo "Could not get socket ownership"
+
       - name: Clean up SAM managed stack (robust)
         run: |
           STACK_NAME="aws-sam-cli-managed-default"
