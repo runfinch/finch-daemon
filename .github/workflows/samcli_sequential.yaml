@@ -130,15 +130,23 @@ jobs:
           echo "=== SYSTEM LOGS FOR BUILDKIT ==="
           journalctl -u buildkit --no-pager --lines=10 || echo "No systemd logs"
 
-          # NOW fix BuildKit socket permissions
-          echo "=== FIXING BUILDKIT PERMISSIONS ==="
+          # Fix BuildKit directory permissions FIRST
+          echo "=== FIXING BUILDKIT DIRECTORY PERMISSIONS ==="
+          sudo chmod 755 /run/buildkit/
+          echo "Directory permissions fixed"
+          ls -ld /run/buildkit/
 
-          # Show what we found
-          echo "Final socket check:"
-          ls -la /run/buildkit/buildkitd.sock 2>/dev/null || echo "Main socket not accessible"
+          echo "=== NOW CHECK DIRECTORY CONTENTS ==="
+          ls -la /run/buildkit/ || echo "Still cannot access directory"
 
-          # Try to fix permissions on main socket
-          sudo chmod 666 /run/buildkit/buildkitd.sock 2>/dev/null && echo "Fixed main socket permissions" || echo "Could not fix main socket"
+          echo "=== FIX SOCKET PERMISSIONS IF EXISTS ==="
+          if [ -S /run/buildkit/buildkitd.sock ]; then
+            sudo chmod 666 /run/buildkit/buildkitd.sock
+            echo "Socket permissions fixed"
+            ls -la /run/buildkit/buildkitd.sock
+          else
+            echo "Socket still doesn't exist - BuildKit might be failing to create it"
+          fi
 
           # Check all possible BuildKit sockets
           echo "Finding and fixing all BuildKit sockets:"
