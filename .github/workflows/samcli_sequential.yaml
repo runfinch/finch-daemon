@@ -170,86 +170,89 @@ jobs:
           sleep 10
           curl --unix-socket /run/finch.sock http://localhost/_ping
           echo "Finch-daemon started with PID: $FINCH_PID"
+
+          echo "CURL COMMAND TEST"
+          curl --unix-socket /var/run/finch.sock -X GET http:/v1.43/version
           
-          # Generate ECR credentials using AWS credentials from previous step
-          echo "Generating ECR credentials..."
-          ECR_TOKEN=$(aws ecr get-login-password --region $AWS_DEFAULT_REGION)
-          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          # # Generate ECR credentials using AWS credentials from previous step
+          # echo "Generating ECR credentials..."
+          # ECR_TOKEN=$(aws ecr get-login-password --region $AWS_DEFAULT_REGION)
+          # AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           
-          # Create finch config directory (matching regular finch location)
-          mkdir -p /home/runner/.finch
+          # # Create finch config directory (matching regular finch location)
+          # mkdir -p /home/runner/.finch
           
-          echo "AWS_DEFAULT_REGION: '$AWS_DEFAULT_REGION'"
-          # Create Docker config with ONLY private ECR credentials (public ECR doesn't need auth)
-          cat > /home/runner/.finch/config.json << EOF
-          {
-            "auths": {
-              "docker.io": {},
-              "public.ecr.aws": {},
-              "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com": {
-                "auth": "$(echo "AWS:$ECR_TOKEN" | base64 -w 0)"
-              }
-            }
-          }
-          EOF
+          # echo "AWS_DEFAULT_REGION: '$AWS_DEFAULT_REGION'"
+          # # Create Docker config with ONLY private ECR credentials (public ECR doesn't need auth)
+          # cat > /home/runner/.finch/config.json << EOF
+          # {
+          #   "auths": {
+          #     "docker.io": {},
+          #     "public.ecr.aws": {},
+          #     "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com": {
+          #       "auth": "$(echo "AWS:$ECR_TOKEN" | base64 -w 0)"
+          #     }
+          #   }
+          # }
+          # EOF
           
-          # Set Docker to use finch config location (matching regular finch)
-          echo "DOCKER_CONFIG=/home/runner/.finch" >> $GITHUB_ENV
+          # # Set Docker to use finch config location (matching regular finch)
+          # echo "DOCKER_CONFIG=/home/runner/.finch" >> $GITHUB_ENV
           
-          # Verify config was created
-          echo "Docker config created (private ECR only):"
-          cat /home/runner/.finch/config.json
-          echo "DOCKER_CONFIG set to: /home/runner/.finch"
+          # # Verify config was created
+          # echo "Docker config created (private ECR only):"
+          # cat /home/runner/.finch/config.json
+          # echo "DOCKER_CONFIG set to: /home/runner/.finch"
 
-      - name: Debug BuildKit Manual Test
-        run: |
-          echo "=== BUILDKIT VERSION & INFO ==="
-          sudo /usr/local/bin/buildctl --version
-          echo ""
+      # - name: Debug BuildKit Manual Test
+      #   run: |
+      #     echo "=== BUILDKIT VERSION & INFO ==="
+      #     sudo /usr/local/bin/buildctl --version
+      #     echo ""
 
-          echo "=== BUILDKIT WORKERS ==="
-          sudo /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock debug workers
-          echo ""
+      #     echo "=== BUILDKIT WORKERS ==="
+      #     sudo /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock debug workers
+      #     echo ""
 
-          echo "=== BUILDKIT DEBUG INFO ==="
-          sudo /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock debug info
-          echo ""
+      #     echo "=== BUILDKIT DEBUG INFO ==="
+      #     sudo /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock debug info
+      #     echo ""
 
-          echo "=== MANUAL BUILDKIT TEST ==="
-          # Create simple test context
-          mkdir -p /tmp/test-build
-          echo "FROM alpine:latest" > /tmp/test-build/Dockerfile
-          echo "RUN echo hello world" >> /tmp/test-build/Dockerfile
+      #     echo "=== MANUAL BUILDKIT TEST ==="
+      #     # Create simple test context
+      #     mkdir -p /tmp/test-build
+      #     echo "FROM alpine:latest" > /tmp/test-build/Dockerfile
+      #     echo "RUN echo hello world" >> /tmp/test-build/Dockerfile
 
-          echo "=== TEST 1: With dest=- and separated output ==="
-          sudo /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock build \
-            --progress=quiet \
-            --frontend=dockerfile.v0 \
-            --local=context=/tmp/test-build \
-            --local=dockerfile=/tmp/test-build \
-            --opt=filename=Dockerfile \
-            --output=type=docker,name=test:latest,dest=- > /tmp/clean-output.tar 2>/tmp/build-logs.txt
+      #     echo "=== TEST 1: With dest=- and separated output ==="
+      #     sudo /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock build \
+      #       --progress=quiet \
+      #       --frontend=dockerfile.v0 \
+      #       --local=context=/tmp/test-build \
+      #       --local=dockerfile=/tmp/test-build \
+      #       --opt=filename=Dockerfile \
+      #       --output=type=docker,name=test:latest,dest=- > /tmp/clean-output.tar 2>/tmp/build-logs.txt
 
-          echo "Clean output file size: $(wc -c < /tmp/clean-output.tar)"
-          echo "Build logs file size: $(wc -c < /tmp/build-logs.txt)"
-          echo "Clean output first 100 bytes (hex):"
-          head -c 100 /tmp/clean-output.tar | hexdump -C || echo "No output"
-          echo "Build logs first 3 lines:"
-          head -3 /tmp/build-logs.txt || echo "No logs"
+      #     echo "Clean output file size: $(wc -c < /tmp/clean-output.tar)"
+      #     echo "Build logs file size: $(wc -c < /tmp/build-logs.txt)"
+      #     echo "Clean output first 100 bytes (hex):"
+      #     head -c 100 /tmp/clean-output.tar | hexdump -C || echo "No output"
+      #     echo "Build logs first 3 lines:"
+      #     head -3 /tmp/build-logs.txt || echo "No logs"
 
-          echo ""
-          echo "=== TEST 2: Original method (logs mixed with output) ==="
-          sudo /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock build \
-            --progress=plain \
-            --frontend=dockerfile.v0 \
-            --local=context=/tmp/test-build \
-            --local=dockerfile=/tmp/test-build \
-            --opt=filename=Dockerfile \
-            --output=type=docker,name=test:latest > /tmp/buildkit-output.tar 2>&1
+      #     echo ""
+      #     echo "=== TEST 2: Original method (logs mixed with output) ==="
+      #     sudo /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock build \
+      #       --progress=plain \
+      #       --frontend=dockerfile.v0 \
+      #       --local=context=/tmp/test-build \
+      #       --local=dockerfile=/tmp/test-build \
+      #       --opt=filename=Dockerfile \
+      #       --output=type=docker,name=test:latest > /tmp/buildkit-output.tar 2>&1
 
-          echo "Mixed output file size: $(wc -c < /tmp/buildkit-output.tar)"
-          echo "Mixed output first 100 bytes (hex):"
-          head -c 100 /tmp/buildkit-output.tar | hexdump -C || echo "No output"
+      #     echo "Mixed output file size: $(wc -c < /tmp/buildkit-output.tar)"
+      #     echo "Mixed output first 100 bytes (hex):"
+      #     head -c 100 /tmp/buildkit-output.tar | hexdump -C || echo "No output"
 
       - name: Check BuildKit Permissions
         run: |
