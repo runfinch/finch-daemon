@@ -134,6 +134,42 @@ jobs:
           cat /home/runner/.finch/config.json
           echo "DOCKER_CONFIG set to: /home/runner/.finch"
 
+      - name: Debug BuildKit Manual Test
+        run: |
+          echo "=== BUILDKIT VERSION & INFO ==="
+          sudo /usr/local/bin/buildctl --version
+          echo ""
+
+          echo "=== BUILDKIT WORKERS ==="
+          sudo /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock debug workers
+          echo ""
+
+          echo "=== BUILDKIT DEBUG INFO ==="
+          sudo /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock debug info
+          echo ""
+
+          echo "=== MANUAL BUILDKIT TEST ==="
+          # Create simple test context
+          mkdir -p /tmp/test-build
+          echo "FROM alpine:latest" > /tmp/test-build/Dockerfile
+          echo "RUN echo hello world" >> /tmp/test-build/Dockerfile
+
+          echo "Testing BuildKit docker output to file..."
+          sudo /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock build \
+            --progress=plain \
+            --frontend=dockerfile.v0 \
+            --local=context=/tmp/test-build \
+            --local=dockerfile=/tmp/test-build \
+            --opt=filename=Dockerfile \
+            --output=type=docker,name=test:latest > /tmp/buildkit-output.tar 2>&1
+
+          echo "BuildKit output file size: $(wc -c < /tmp/buildkit-output.tar)"
+          echo "BuildKit output first 200 bytes (hex):"
+          head -c 200 /tmp/buildkit-output.tar | hexdump -C || echo "No output to display"
+
+          echo "BuildKit output first 5 lines (text):"
+          head -5 /tmp/buildkit-output.tar || echo "No text output"
+
       - name: Clean up SAM managed stack (robust)
         run: |
           STACK_NAME="aws-sam-cli-managed-default"
