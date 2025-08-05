@@ -93,30 +93,6 @@ jobs:
           ./setup-test-env.sh
           sleep 10
 
-          # Wait for BuildKit to fully start and create socket
-          echo "=== WAITING FOR BUILDKIT TO START ==="
-          for i in {1..30}; do
-            echo "Attempt $i: Checking for BuildKit socket..."
-
-            # Check if socket exists (any permissions)
-            if ls -la /run/buildkit/buildkitd.sock 2>/dev/null; then
-              echo "Socket found with ls command"
-              break
-            fi
-
-            # Check with find
-            if find /run -name "buildkitd.sock" -type s 2>/dev/null; then
-              echo "Socket found with find command"
-              break
-            fi
-
-            # Check all buildkit-related files
-            echo "All buildkit files in /run:"
-            find /run -name "*buildkit*" 2>/dev/null || echo "No buildkit files found"
-
-            sleep 1
-          done
-
           # Enhanced BuildKit debugging
           echo "=== BUILDKIT DIRECTORY CONTENTS ==="
           ls -la /run/buildkit/ || echo "Cannot access buildkit directory"
@@ -160,6 +136,30 @@ jobs:
           echo "=== TESTING BUILDKIT ACCESS ==="
           echo "Testing BuildKit access after permission fix..."
           /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock debug info 2>&1 || echo "Still failing - will show error above"
+
+          # Wait for BuildKit to fully start and create socket
+          echo "=== WAITING FOR BUILDKIT TO START ==="
+          for i in {1..30}; do
+            echo "Attempt $i: Checking for BuildKit socket..."
+
+            # Check if socket exists (any permissions)
+            if ls -la /run/buildkit/buildkitd.sock 2>/dev/null; then
+              echo "Socket found with ls command"
+              break
+            fi
+
+            # Check with find
+            if find /run -name "buildkitd.sock" -type s 2>/dev/null; then
+              echo "Socket found with find command"
+              break
+            fi
+
+            # Check all buildkit-related files
+            echo "All buildkit files in /run:"
+            find /run -name "*buildkit*" 2>/dev/null || echo "No buildkit files found"
+
+            sleep 1
+          done
 
       - name: Build and start finch-daemon
         run: |
