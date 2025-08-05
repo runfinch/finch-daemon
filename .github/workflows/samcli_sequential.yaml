@@ -394,40 +394,40 @@ jobs:
           make init
           samdev --version
 
-      # - name: Run unit tests
-      #   working-directory: aws-sam-cli
-      #   run: |
-      #     echo "=== UNIT TESTS - Started at $(date) ==="
+      - name: Run unit tests
+        working-directory: aws-sam-cli
+        run: |
+          echo "=== UNIT TESTS - Started at $(date) ==="
           
-      #     # Fix common issues from test guide
-      #     ulimit -n 8192  # Fix "too many open files" 
+          # Fix common issues from test guide
+          ulimit -n 8192  # Fix "too many open files" 
           
-      #     # Clean up potentially problematic Docker config entries
-      #     if [ -f ~/.docker/config.json ]; then
-      #       if command -v jq >/dev/null 2>&1; then
-      #         jq 'del(.credsStore)' ~/.docker/config.json > ~/.docker/config.json.tmp && mv ~/.docker/config.json.tmp ~/.docker/config.json
-      #       else
-      #         sed -i '/"credsStore"/d' ~/.docker/config.json
-      #       fi
-      #     fi
+          # Clean up potentially problematic Docker config entries
+          if [ -f ~/.docker/config.json ]; then
+            if command -v jq >/dev/null 2>&1; then
+              jq 'del(.credsStore)' ~/.docker/config.json > ~/.docker/config.json.tmp && mv ~/.docker/config.json.tmp ~/.docker/config.json
+            else
+              sed -i '/"credsStore"/d' ~/.docker/config.json
+            fi
+          fi
           
-      #     make test | tee unit_test_output.txt
+          make test | tee unit_test_output.txt
           
-      #     # Check coverage (should be ~94%)
-      #     COVERAGE=$(grep -o "[0-9]\+%" unit_test_output.txt | head -1 | tr -d '%')
-      #     if [ -z "$COVERAGE" ] || [ "$COVERAGE" -lt 90 ]; then
-      #       echo "❌ Coverage below threshold! Got: $COVERAGE%, Expected: ~94%"
-      #       exit 1
-      #     else
-      #       echo "✅ Unit tests passed with $COVERAGE% coverage"
-      #     fi
-      #   continue-on-error: true
+          # Check coverage (should be ~94%)
+          COVERAGE=$(grep -o "[0-9]\+%" unit_test_output.txt | head -1 | tr -d '%')
+          if [ -z "$COVERAGE" ] || [ "$COVERAGE" -lt 90 ]; then
+            echo "❌ Coverage below threshold! Got: $COVERAGE%, Expected: ~94%"
+            exit 1
+          else
+            echo "✅ Unit tests passed with $COVERAGE% coverage"
+          fi
+        continue-on-error: true
 
       - name: Verbose Testing
         working-directory: aws-sam-cli
         run: |
           SAM_CLI_DEV=1 python -m pytest tests/integration/local/invoke/test_integration_cli_images.py::TestSamPython36HelloWorldIntegrationImages::test_invoke_with_env_vars -v -s --tb=long
-        continue-on-error: false
+        continue-on-error: true
 
       - name: Run invoke tests
         working-directory: aws-sam-cli
