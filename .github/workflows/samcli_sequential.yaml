@@ -1,33 +1,33 @@
 name: samcli-sequential
 
-on:
-  push:
-    branches:
-      - main
-    paths:
-      - '**.go'
-      - 'go.mod'
-      - 'go.sum'
-      - '.github/workflows/samcli_sequential.yaml'
-      - 'Makefile*'
-      - 'cmd/**'
-      - 'pkg/**'
-      - 'internal/**'
-      - 'api/**'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - '**.go'
-      - 'go.mod'
-      - 'go.sum'
-      - '.github/workflows/samcli_sequential.yaml'
-      - 'Makefile*'
-      - 'cmd/**'
-      - 'pkg/**'
-      - 'internal/**'
-      - 'api/**'
-  workflow_dispatch:
+# on:
+#   push:
+#     branches:
+#       - main
+#     paths:
+#       - '**.go'
+#       - 'go.mod'
+#       - 'go.sum'
+#       - '.github/workflows/samcli_sequential.yaml'
+#       - 'Makefile*'
+#       - 'cmd/**'
+#       - 'pkg/**'
+#       - 'internal/**'
+#       - 'api/**'
+#   pull_request:
+#     branches:
+#       - main
+#     paths:
+#       - '**.go'
+#       - 'go.mod'
+#       - 'go.sum'
+#       - '.github/workflows/samcli_sequential.yaml'
+#       - 'Makefile*'
+#       - 'cmd/**'
+#       - 'pkg/**'
+#       - 'internal/**'
+#       - 'api/**'
+#   workflow_dispatch:
 
 env:
   GO_VERSION: '1.23.8'
@@ -82,11 +82,6 @@ jobs:
           role-session-name: samcli-sequential-tests
           aws-region: ${{ secrets.REGION }}
           role-duration-seconds: 14400
-
-      - name: Verify AWS credentials
-        run: |
-          aws sts get-caller-identity --query 'Account' --output text >/dev/null
-          echo "AWS credentials configured successfully"
 
       - name: Install and validate finch-daemon dependencies
         run: |
@@ -172,7 +167,10 @@ jobs:
           echo "Finch-daemon started with PID: $FINCH_PID"
 
           echo "CURL COMMAND TEST"
-          curl --unix-socket /var/run/finch.sock -X GET http:/v1.43/version
+          curl --unix-socket /var/run/finch.sock -X GET http:/v1.43/version # ensure socket running w version
+
+
+
           
           # # Generate ECR credentials using AWS credentials from previous step
           # echo "Generating ECR credentials..."
