@@ -93,7 +93,18 @@ jobs:
           ./setup-test-env.sh
           sleep 10
 
-          # Fix BuildKit socket permissions
+          # Wait for BuildKit to fully start and create socket
+          echo "=== WAITING FOR BUILDKIT TO START ==="
+          for i in {1..30}; do
+            if [ -S /run/buildkit/buildkitd.sock ]; then
+              echo "BuildKit socket found after $i seconds"
+              break
+            fi
+            echo "Waiting for BuildKit socket... ($i/30)"
+            sleep 1
+          done
+
+          # NOW fix BuildKit socket permissions
           echo "=== FIXING BUILDKIT PERMISSIONS ==="
           sudo chmod 666 /run/buildkit/buildkitd.sock || echo "BuildKit socket not found, checking alternatives..."
 
