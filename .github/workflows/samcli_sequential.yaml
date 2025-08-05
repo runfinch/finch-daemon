@@ -92,7 +92,21 @@ jobs:
         run: |
           ./setup-test-env.sh
           sleep 10
-          sudo chmod 666 /run/buildkit/buildkitd.sock
+
+          # Fix BuildKit socket permissions
+          echo "=== FIXING BUILDKIT PERMISSIONS ==="
+          sudo chmod 666 /run/buildkit/buildkitd.sock || echo "BuildKit socket not found, checking alternatives..."
+
+          # Check all possible BuildKit sockets
+          find /run -name "*buildkit*" -type s 2>/dev/null | while read socket; do
+            echo "Found BuildKit socket: $socket"
+            sudo chmod 666 "$socket"
+            ls -la "$socket"
+          done
+
+          # Verify fix
+          echo "Testing BuildKit access after permission fix..."
+          /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock debug info || echo "Still failing"
 
       - name: Build and start finch-daemon
         run: |
