@@ -87,7 +87,7 @@ jobs:
         run: |
           aws sts get-caller-identity --query 'Account' --output text >/dev/null
           echo "AWS credentials configured successfully"
-          
+
       - name: Install and validate finch-daemon dependencies
         run: |
           ./setup-test-env.sh
@@ -117,6 +117,19 @@ jobs:
             sleep 1
           done
 
+          # Enhanced BuildKit debugging
+          echo "=== BUILDKIT DIRECTORY CONTENTS ==="
+          ls -la /run/buildkit/ || echo "Cannot access buildkit directory"
+
+          echo "=== BUILDKIT DIRECTORY PERMISSIONS ==="
+          ls -ld /run/buildkit/ || echo "Cannot check directory permissions"
+
+          echo "=== BUILDKIT PROCESSES ==="
+          ps aux | grep buildkit | grep -v grep || echo "No buildkit processes running"
+
+          echo "=== SYSTEM LOGS FOR BUILDKIT ==="
+          journalctl -u buildkit --no-pager --lines=10 || echo "No systemd logs"
+
           # NOW fix BuildKit socket permissions
           echo "=== FIXING BUILDKIT PERMISSIONS ==="
 
@@ -139,6 +152,7 @@ jobs:
           echo "=== TESTING BUILDKIT ACCESS ==="
           echo "Testing BuildKit access after permission fix..."
           /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock debug info 2>&1 || echo "Still failing - will show error above"
+
       - name: Build and start finch-daemon
         run: |
           make build
