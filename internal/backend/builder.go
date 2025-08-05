@@ -99,8 +99,11 @@ func (w *NerdctlWrapper) RunBuild(ctx context.Context, client *containerd.Client
 		if err != nil {
 			return err
 		}
+		// DEBUG: Log what we're about to read
+		log.L.Infof("BUILDCTL: Setting up stdout pipe for image loading") // temp log
 	} else {
 		buildctlCmd.Stdout = options.Stdout
+		log.L.Infof("BUILDCTL: Directing stdout to options.Stdout") // temp log
 	}
 	if !options.Quiet {
 		buildctlCmd.Stderr = options.Stderr
@@ -123,7 +126,10 @@ func (w *NerdctlWrapper) RunBuild(ctx context.Context, client *containerd.Client
 
 	if err = buildctlCmd.Wait(); err != nil {
 		log.L.WithError(err).Errorf("buildctl command failed: %s %v", buildctlBinary, buildctlArgs)
+		log.L.Errorf("BUILDCTL EXIT CODE: %v", buildctlCmd.ProcessState.ExitCode()) // temp log
 		return fmt.Errorf("buildctl execution failed: %w", err)
+	} else {
+		log.L.Infof("BUILDCTL COMPLETED SUCCESSFULLY, EXIT CODE: %v", buildctlCmd.ProcessState.ExitCode()) // temp log
 	}
 
 	if options.IidFile != "" {
@@ -183,7 +189,11 @@ func loadImage(ctx context.Context, in io.Reader, namespace, address, snapshotte
 		client.Close()
 	}()
 	r := &readCounter{Reader: in}
+	log.L.Infof("IMPORT: Starting image import, reader ready") // temp log
+
 	imgs, err := client.Import(ctx, r, containerd.WithDigestRef(archive.DigestTranslator(snapshotter)), containerd.WithSkipDigestRef(func(name string) bool { return name != "" }), containerd.WithImportPlatform(platMC))
+	log.L.Infof("IMPORT: Attempted to read %d bytes", r.N) // temp log
+
 	if err != nil {
 		log.L.WithError(err).Errorf("failed to import image with snapshotter=%s, bytes_read=%d", snapshotter, r.N)
 		if r.N == 0 {
