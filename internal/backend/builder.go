@@ -114,42 +114,22 @@ func (w *NerdctlWrapper) RunBuild(ctx context.Context, client *containerd.Client
 		return fmt.Errorf("buildctl start failed: %w", err)
 	}
 
-	// Handle image loading concurrently with buildctl execution
 	if needsLoading {
 		platMC, err := platformutil.NewMatchComparer(false, options.Platform)
 		if err != nil {
 			return err
 		}
-
-		// Run image loading in a goroutine so it can read from stdout while buildctl is running
-		loadDone := make(chan error, 1)
-		go func() {
-			loadDone <- loadImage(ctx, buildctlStdout, options.GOptions.Namespace, options.GOptions.Address, options.GOptions.Snapshotter, options.Stdout, platMC, options.Quiet)
-		}()
-
-		// Wait for buildctl to finish
-		if err = buildctlCmd.Wait(); err != nil {
-			log.L.WithError(err).Errorf("buildctl command failed: %s %v", buildctlBinary, buildctlArgs)
-			log.L.Errorf("BUILDCTL EXIT CODE: %v", buildctlCmd.ProcessState.ExitCode()) // temp log
-			return fmt.Errorf("buildctl execution failed: %w", err)
-		} else {
-			log.L.Infof("BUILDCTL COMPLETED SUCCESSFULLY, EXIT CODE: %v", buildctlCmd.ProcessState.ExitCode()) // temp log
+		if err = loadImage(ctx, buildctlStdout, options.GOptions.Namespace, options.GOptions.Address, options.GOptions.Snapshotter, options.Stdout, platMC, options.Quiet); err != nil {
+			return err
 		}
+	}
 
-		// Wait for image loading to complete
-		loadErr := <-loadDone
-		if loadErr != nil {
-			return loadErr
-		}
+	if err = buildctlCmd.Wait(); err != nil {
+		log.L.WithError(err).Errorf("buildctl command failed: %s %v", buildctlBinary, buildctlArgs)
+		log.L.Errorf("BUILDCTL EXIT CODE: %v", buildctlCmd.ProcessState.ExitCode()) // temp log
+		return fmt.Errorf("buildctl execution failed: %w", err)
 	} else {
-		// For non-loading builds, just wait for buildctl to finish
-		if err = buildctlCmd.Wait(); err != nil {
-			log.L.WithError(err).Errorf("buildctl command failed: %s %v", buildctlBinary, buildctlArgs)
-			log.L.Errorf("BUILDCTL EXIT CODE: %v", buildctlCmd.ProcessState.ExitCode()) // temp log
-			return fmt.Errorf("buildctl execution failed: %w", err)
-		} else {
-			log.L.Infof("BUILDCTL COMPLETED SUCCESSFULLY, EXIT CODE: %v", buildctlCmd.ProcessState.ExitCode()) // temp log
-		}
+		log.L.Infof("BUILDCTL COMPLETED SUCCESSFULLY, EXIT CODE: %v", buildctlCmd.ProcessState.ExitCode()) // temp log
 	}
 
 	if options.IidFile != "" {
