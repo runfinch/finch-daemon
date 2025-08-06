@@ -93,7 +93,7 @@ jobs:
       - name: Build and start finch-daemon
         run: |
           make build
-          sudo bin/finch-daemon --debug --socket-owner $UID 2>&1 | tee finch-daemon.log &          
+          sudo bin/finch-daemon --debug --socket-owner $UID --namespace buildkit 2>&1 | tee finch-daemon.log &          
           sleep 10
           curl --unix-socket /run/finch.sock -X GET http:/v1.43/version
 
