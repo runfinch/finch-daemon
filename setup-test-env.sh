@@ -37,6 +37,6 @@ sudo tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v${CNI_VERSION}.tgz
 export PATH=$PATH:/usr/local/bin
 
 sudo containerd &
-sudo buildkitd &
+sudo buildkitd --containerd-namespace=finch &
 
 sleep 2
