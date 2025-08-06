@@ -41,12 +41,13 @@ permissions:
 jobs:
   samcli-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 120
     env:
       AWS_DEFAULT_REGION: ${{ secrets.REGION }}
       DOCKER_HOST: unix:///run/finch.sock
       BY_CANARY: true  # full aws access for tests
       SAM_CLI_DEV: 1 
+      SAM_CLI_TELEMETRY: 0 
     steps:
 
       - name: Configure AWS credentials
@@ -95,54 +96,6 @@ jobs:
           make build
           sudo bin/finch-daemon --debug --socket-owner $UID 2>&1 | tee finch-daemon.log &          
           sleep 10
-          curl --unix-socket /run/finch.sock -X GET http:/v1.43/version
-
-      - name: Configure permissions
-        run: |
-          sudo chmod 755 /run/buildkit/
-          echo "Directory permissions fixed"
-          ls -ld /run/buildkit/
-
-          if [ -S /run/buildkit/buildkitd.sock ]; then
-            sudo chmod 666 /run/buildkit/buildkitd.sock
-            echo "Socket permissions fixed"
-            ls -la /run/buildkit/buildkitd.sock
-          else
-            echo "Socket still doesn't exist - BuildKit might be failing to create it"
-          fi
-
-      - name: Debug containerd namespaces and connectivity
-        run: |
-          echo "=== CONTAINERD NAMESPACE DEBUG ==="
-          echo "Available namespaces in containerd:"
-          sudo ctr namespace list || echo "Could not list namespaces"
-          echo ""
-
-          echo "=== BUILDKIT WORKER INFO ==="
-          echo "BuildKit workers and their configuration:"
-          /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock debug workers || echo "Could not get BuildKit worker info"
-          echo ""
-
-          echo "=== IMAGES IN DIFFERENT NAMESPACES ==="
-          for ns in default buildkit finch moby; do
-            echo "Images in namespace '$ns':"
-            sudo ctr -n $ns images list 2>/dev/null || echo "  No images or namespace doesn't exist"
-            echo ""
-          done
-
-          echo "=== FINCH-DAEMON PROCESS INFO ==="
-          echo "finch-daemon command line:"
-          ps aux | grep finch-daemon | grep -v grep || echo "finch-daemon not found in process list"
-          echo ""
-
-          echo "=== CONTAINERD CONNECTION TEST ==="
-          echo "Testing containerd connectivity:"
-          sudo ctr version || echo "Could not connect to containerd"
-          echo ""
-
-          echo "=== BUILDKIT CONNECTION TEST ==="
-          echo "Testing BuildKit connectivity:"
-          /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock debug info || echo "Could not connect to BuildKit"
 
       - name: Set up SAM CLI from source
         run: |
@@ -181,23 +134,23 @@ jobs:
           else
             echo "✅ Unit tests passed with $COVERAGE% coverage"
           fi
-        continue-on-error: true
 
       - name: Verbose Testing
         working-directory: aws-sam-cli
         run: |
-          SAM_CLI_DEV=1 python -m pytest tests/integration/local/invoke/test_integration_cli_images.py::TestSamPython36HelloWorldIntegrationImages::test_invoke_with_env_vars -v -s --tb=long
+          python -m pytest tests/integration/local/invoke/test_integration_cli_images.py::TestSamPython36HelloWorldIntegrationImages::test_invoke_with_env_vars -v -s --tb=long
         continue-on-error: false
 
       - name: Run invoke tests
         working-directory: aws-sam-cli
+        timeout-minutes: 20
         run: |
           echo "=== INVOKE TESTS - Started at $(date) ==="
-          SAM_CLI_DEV=1 timeout 90m python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
+          python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
           
-          echo "=== INVOKE TEST OUTPUT ==="
-          cat invoke_output.txt
-          echo "=== END INVOKE TEST OUTPUT ==="
+          # echo "=== INVOKE TEST OUTPUT ==="
+          # cat invoke_output.txt
+          # echo "=== END INVOKE TEST OUTPUT ==="
           
           # Expected failures from test guide (12 total from different test classes)
           cat > expected_invoke_failures.txt << 'EOF'
@@ -210,9 +163,6 @@ jobs:
           test_invoke_returns_expected_results_from_git_function_with_parameters
           EOF
           
-          # Note: Guide shows 12 failures but some test names repeat across different test classes
-          # The sed extraction will capture all instances regardless of test class
-          
           # Extract actual failures
           grep "FAILED" invoke_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_invoke_failures.txt || true
           
@@ -224,19 +174,24 @@ jobs:
             echo "$UNEXPECTED"
             exit 1
           else
-            echo "✅ All failures were expected (guide shows 12 known issues across test classes)"
+            echo "✅ All failures were expected."
           fi
-        continue-on-error: true
+          
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" invoke_output.txt | tail -1 || echo "No pytest summary found"
+        
 
       - name: Run start-lambda tests
         working-directory: aws-sam-cli
+        timeout-minutes: 10
         run: |
           echo "=== START-LAMBDA TESTS - Started at $(date) ==="
-          SAM_CLI_DEV=1 timeout 45m python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
+          python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
           
-          echo "=== START-LAMBDA TEST OUTPUT ==="
-          cat start_lambda_output.txt
-          echo "=== END START-LAMBDA TEST OUTPUT ==="
+          # echo "=== START-LAMBDA TEST OUTPUT ==="
+          # cat start_lambda_output.txt
+          # echo "=== END START-LAMBDA TEST OUTPUT ==="
           
           # Should pass completely per test guide
           if grep -q "FAILED" start_lambda_output.txt; then
@@ -246,18 +201,23 @@ jobs:
           else
             echo "✅ All start-lambda tests passed as expected"
           fi
-        continue-on-error: true
+          
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_lambda_output.txt | tail -1 || echo "No pytest summary found"
+        
 
       - name: Run start-api tests
         working-directory: aws-sam-cli
+        timeout-minutes: 30
         run: |
           echo "=== START-API TESTS - Started at $(date) ==="
           ulimit -n 8192
-          SAM_CLI_DEV=1 timeout 90m python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 || true
+          python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 || true
 
-          echo "=== START-API TEST OUTPUT ==="
-          cat start_api_output.txt
-          echo "=== END START-API TEST OUTPUT ==="
+          # echo "=== START-API TEST OUTPUT ==="
+          # cat start_api_output.txt
+          # echo "=== END START-API TEST OUTPUT ==="
           
           # Should pass completely per test guide
           if grep -q "FAILED" start_api_output.txt; then
@@ -267,17 +227,22 @@ jobs:
           else
             echo "✅ All start-api tests passed as expected"
           fi
-        continue-on-error: true
+          
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_api_output.txt | tail -1 || echo "No pytest summary found"
+        
 
       - name: Run sync tests  
         working-directory: aws-sam-cli
+        timeout-minutes: 20
         run: |
           echo "=== SYNC TESTS - Started at $(date) ==="
-          AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION SAM_CLI_DEV=1 timeout 30m python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 || true
+          python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 || true
           
-          echo "=== SYNC TEST OUTPUT ==="
-          cat sync_output.txt
-          echo "=== END SYNC TEST OUTPUT ==="
+          # echo "=== SYNC TEST OUTPUT ==="
+          # cat sync_output.txt
+          # echo "=== END SYNC TEST OUTPUT ==="
           
           # Should pass completely per test guide
           if grep -q "FAILED" sync_output.txt; then
@@ -287,17 +252,22 @@ jobs:
           else
             echo "✅ All sync tests passed as expected"
           fi
-        continue-on-error: true
+          
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" sync_output.txt | tail -1 || echo "No pytest summary found"
+        
 
       - name: Run package tests
         working-directory: aws-sam-cli  
+        timeout-minutes: 5
         run: |
           echo "=== PACKAGE TESTS - Started at $(date) ==="
-          AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 timeout 15m python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short > package_output.txt 2>&1 || true
+          python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short > package_output.txt 2>&1 || true
           
-          echo "=== PACKAGE TEST OUTPUT ==="
-          cat package_output.txt
-          echo "=== END PACKAGE TEST OUTPUT ==="
+          # echo "=== PACKAGE TEST OUTPUT ==="
+          # cat package_output.txt
+          # echo "=== END PACKAGE TEST OUTPUT ==="
           
           # Expected failures from test guide
           cat > expected_package_failures.txt << 'EOF'
@@ -320,55 +290,103 @@ jobs:
             echo "$UNEXPECTED"
             exit 1
           else
-            echo "✅ All failures were expected (3 known issues)"
+            echo "✅ All failures were expected."
           fi
-        continue-on-error: true
-
+          
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" package_output.txt | tail -1 || echo "No pytest summary found"
+        
       - name: Run deploy tests
         working-directory: aws-sam-cli
+        timeout-minutes: 45
         run: |
           echo "=== DEPLOY TESTS - Started at $(date) ==="
-          AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION SAM_CLI_DEV=1 timeout 45m python -m pytest tests/integration/deploy -k 'image' -v --tb=short > deploy_output.txt 2>&1 || true
-          
-          echo "=== DEPLOY TEST OUTPUT ==="
-          cat deploy_output.txt
-          echo "=== END DEPLOY TEST OUTPUT ==="
-          
-          # Check for arbitrary passes (PASSED with errors in preceding lines)
-          ARBITRARY_PASSES=""
-          if grep -q "PASSED" deploy_output.txt; then
-            # Get line numbers of PASSED tests
-            grep -n "PASSED" deploy_output.txt | while read line; do
-              LINE_NUM=$(echo "$line" | cut -d: -f1)
-              TEST_NAME=$(echo "$line" | grep -o "test_[a-zA-Z0-9_]*")
-              
-              # Check 10 lines before for errors
-              START_LINE=$((LINE_NUM - 10))
-              if [ $START_LINE -lt 1 ]; then START_LINE=1; fi
-              
-              # Look for error indicators in preceding lines
-              if sed -n "${START_LINE},${LINE_NUM}p" deploy_output.txt | grep -qi "error\|exception\|fail\|traceback"; then
-                echo "⚠️  Arbitrary pass detected: $TEST_NAME (errors found before PASSED)"
-                ARBITRARY_PASSES="$ARBITRARY_PASSES $TEST_NAME"
-              fi
-            done
-          fi
-          
-          PASSED_COUNT=$(grep -c "PASSED" deploy_output.txt || echo "0")
-          FAILED_COUNT=$(grep -c "FAILED" deploy_output.txt || echo "0")
-          
-          echo "Deploy results: $PASSED_COUNT passed, $FAILED_COUNT failed"
-          
-          # Most should fail due to multi-arch limitation
-          if [ "$FAILED_COUNT" -eq 0 ]; then
-            echo "❌ No deploy tests failed (expected most to fail due to multi-arch)"
+          python -m pytest tests/integration/deploy -k 'image' -v --tb=short > deploy_output.txt 2>&1 || true
+
+          # echo "=== DEPLOY TEST OUTPUT ==="
+          # cat deploy_output.txt
+          # echo "=== END DEPLOY TEST OUTPUT ==="
+
+          # Expected passes - this test passes despite having an error in the output
+          cat > expected_deploy_passes.txt << 'EOF'
+          test_deploy_directly_from_image_archive_but_error_fail_0_template_image_load_fail_yaml
+          EOF
+
+          # Extract actual passes
+          grep "PASSED" deploy_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_deploy_passes.txt || true
+
+          # Find unexpected passes (passes that aren't in our expected list)
+          UNEXPECTED_PASSES=$(grep -v -f expected_deploy_passes.txt actual_deploy_passes.txt 2>/dev/null || true)
+
+          if [ -n "$UNEXPECTED_PASSES" ]; then
+            echo "❌ Unexpected passes found:"
+            echo "$UNEXPECTED_PASSES"
             exit 1
-          elif [ -n "$ARBITRARY_PASSES" ]; then
-            echo "✅ Deploy tests mostly failed as expected, with some arbitrary passes (errors present but test passed)"
           else
-            echo "✅ Deploy tests behaved as expected (multi-arch limitation)"
+            echo "✅ All failures and passes were expected (1 known pass with error, rest fail due to multi-arch)."
           fi
-        continue-on-error: true
+          
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" deploy_output.txt | tail -1 || echo "No pytest summary found"
+        
+      - name: Run build tests
+        working-directory: aws-sam-cli
+        run: |
+          echo "=== BUILD TESTS - Started at $(date) ==="
+          python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 || true
+
+          # echo "=== BUILD TEST OUTPUT ==="
+          # cat build_output.txt
+          # echo "=== END BUILD TEST OUTPUT ==="
+
+          # Expected failures from test guide (nerdctl ancestor filter limitation)
+          cat > expected_build_failures.txt << 'EOF'
+          test_with_invalid_dockerfile_definition
+          test_with_invalid_dockerfile_location
+          test_load_success
+          test_building_ruby_3_2_1_use_container
+          test_with_makefile_builder_specified_python_runtime_1_use_container
+          test_with_native_builder_specified_python_runtime_1_use_container
+          test_inline_not_built_1_use_container
+          test_json_env_vars_passed_0_use_container
+          test_json_env_vars_passed_1_use_container
+          test_inline_env_vars_passed_0_use_container
+          test_inline_env_vars_passed_1_use_container
+          test_custom_build_image_succeeds_0_use_container
+          test_custom_build_image_succeeds_1_use_container
+          test_building_ruby_in_container_with_specified_architecture_0_ruby3_2
+          test_building_java_in_container_with_arm64_architecture_00_java8_al2
+          test_building_java_in_container_with_arm64_architecture_03_java8_al2
+          test_building_java_in_container_with_arm64_architecture_04_java11
+          test_building_java_in_container_with_arm64_architecture_07_java11
+          test_building_java_in_container_with_arm64_architecture_08_java17
+          test_building_java_in_container_with_arm64_architecture_11_java17
+          test_building_java_in_container_with_arm64_architecture_al2023_0_java21
+          test_building_java_in_container_with_arm64_architecture_al2023_1_java21
+          test_building_java_in_container_with_arm64_architecture_al2023_2_java21
+          test_building_java_in_container_with_arm64_architecture_al2023_3_java21
+          test_building_java_in_container_00_java8_al2
+          EOF
+
+          # Extract actual failures
+          grep "FAILED" build_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_build_failures.txt || true
+
+          # Find unexpected failures
+          UNEXPECTED=$(grep -v -f expected_build_failures.txt actual_build_failures.txt 2>/dev/null || true)
+
+          if [ -n "$UNEXPECTED" ]; then
+            echo "❌ Unexpected failures found:"
+            echo "$UNEXPECTED"
+            exit 1
+          else
+            echo "✅ All failures were expected."
+          fi
+          
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" build_output.txt | tail -1 || echo "No pytest summary found"
 
       - name: Show finch-daemon logs
         if: always()
@@ -376,14 +394,51 @@ jobs:
           echo "=== FINCH-DAEMON OUTPUT ==="
           cat finch-daemon.log || echo "No log file found"
 
-      - name: Final cleanup
+      - name: AWS resource cleanup
         if: always()
         run: |
           echo "=== Final cleanup ==="
           # Clean up any remaining SAM managed stack
           STACK_NAME="aws-sam-cli-managed-default"
           if aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION >/dev/null 2>&1; then
-            echo "Cleaning up final SAM managed stack..."
-            aws cloudformation delete-stack --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION || true
+            STACK_STATUS=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION --query 'Stacks[0].StackStatus' --output text)
+            echo "Found existing stack with status: $STACK_STATUS"
+            
+            # Get the S3 bucket name from stack outputs
+            BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION --query 'Stacks[0].Outputs[?OutputKey==`SourceBucket`].OutputValue' --output text 2>/dev/null || echo "")
+            
+            if [ -n "$BUCKET_NAME" ]; then
+              echo "Found S3 bucket: $BUCKET_NAME"
+              echo "Emptying S3 bucket before stack deletion..."
+              
+              # Delete all object versions and delete markers
+              aws s3api list-object-versions --bucket "$BUCKET_NAME" --query 'Versions[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
+                if [ -n "$key" ] && [ -n "$version" ]; then
+                  aws s3api delete-object --bucket "$BUCKET_NAME" --key "$key" --version-id "$version" || true
+                fi
+              done
+              
+              # Delete any delete markers
+              aws s3api list-object-versions --bucket "$BUCKET_NAME" --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
+                if [ -n "$key" ] && [ -n "$version" ]; then
+                  aws s3api delete-object --bucket "$BUCKET_NAME" --key "$key" --version-id "$version" || true
+                fi
+              done
+              
+              echo "S3 bucket emptied successfully"
+            else
+              echo "No S3 bucket found in stack outputs"
+            fi
+            
+            # Delete stack
+            echo "Deleting SAM managed stack..."
+            aws cloudformation delete-stack --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION
+            
+            # Wait for deletion to complete
+            echo "Waiting for stack deletion to complete..."
+            aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION || true
+            echo "✅ Stack deletion completed"
+          else
+            echo "No existing SAM managed stack found"
           fi
           echo "Cleanup completed"

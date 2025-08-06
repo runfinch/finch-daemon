@@ -44,13 +44,7 @@ func (w *NerdctlWrapper) Build(ctx context.Context, client ContainerdClient, opt
 }
 
 func (w *NerdctlWrapper) GetBuildkitHost() (string, error) {
-	host, err := buildkitutil.GetBuildkitHost(w.globalOptions.Namespace)
-	if err != nil {
-		log.L.WithError(err).Error("failed to get buildkit host")
-		return "", fmt.Errorf("buildkit host unavailable: %w", err)
-	}
-	log.L.Debugf("using buildkit host: %s", host)
-	return host, nil
+	return buildkitutil.GetBuildkitHost(w.globalOptions.Namespace)
 }
 
 type PlatformParser interface {
@@ -99,22 +93,17 @@ func (w *NerdctlWrapper) RunBuild(ctx context.Context, client *containerd.Client
 		if err != nil {
 			return err
 		}
-		// DEBUG: Log what we're about to read
-		log.L.Infof("BUILDCTL: Setting up stdout pipe for image loading") // temp log
 	} else {
 		buildctlCmd.Stdout = options.Stdout
-		log.L.Infof("BUILDCTL: Directing stdout to options.Stdout") // temp log
 	}
 	if !options.Quiet {
 		buildctlCmd.Stderr = options.Stderr
 	}
 
 	if err := buildctlCmd.Start(); err != nil {
-		log.L.WithError(err).Errorf("failed to start buildctl command: %s %v", buildctlBinary, buildctlArgs)
-		return fmt.Errorf("buildctl start failed: %w", err)
+		return err
 	}
 
-	// separate again
 	if needsLoading {
 		platMC, err := platformutil.NewMatchComparer(false, options.Platform)
 		if err != nil {
@@ -126,11 +115,7 @@ func (w *NerdctlWrapper) RunBuild(ctx context.Context, client *containerd.Client
 	}
 
 	if err = buildctlCmd.Wait(); err != nil {
-		log.L.WithError(err).Errorf("buildctl command failed: %s %v", buildctlBinary, buildctlArgs)
-		log.L.Errorf("BUILDCTL EXIT CODE: %v", buildctlCmd.ProcessState.ExitCode()) // temp log
-		return fmt.Errorf("buildctl execution failed: %w", err)
-	} else {
-		log.L.Infof("BUILDCTL COMPLETED SUCCESSFULLY, EXIT CODE: %v", buildctlCmd.ProcessState.ExitCode()) // temp log
+		return err
 	}
 
 	if options.IidFile != "" {
@@ -182,21 +167,15 @@ func loadImage(ctx context.Context, in io.Reader, namespace, address, snapshotte
 	// Otherwise unpacking may fail.
 	client, ctx, cancel, err := clientutil.NewClient(ctx, namespace, address, containerd.WithDefaultPlatform(platMC))
 	if err != nil {
-		log.L.WithError(err).Errorf("failed to create containerd client for namespace=%s, address=%s", namespace, address)
-		return fmt.Errorf("containerd client creation failed: %w", err)
+		return err
 	}
 	defer func() {
 		cancel()
 		client.Close()
 	}()
 	r := &readCounter{Reader: in}
-	log.L.Infof("IMPORT: Starting image import, reader ready") // temp log
-
 	imgs, err := client.Import(ctx, r, containerd.WithDigestRef(archive.DigestTranslator(snapshotter)), containerd.WithSkipDigestRef(func(name string) bool { return name != "" }), containerd.WithImportPlatform(platMC))
-	log.L.Infof("IMPORT: Attempted to read %d bytes", r.N) // temp log
-
 	if err != nil {
-		log.L.WithError(err).Errorf("failed to import image with snapshotter=%s, bytes_read=%d", snapshotter, r.N)
 		if r.N == 0 {
 			// Avoid confusing "unrecognized image format"
 			return errors.New("no image was built")
@@ -231,10 +210,8 @@ func generateBuildctlArgs(ctx context.Context, client *containerd.Client, option
 	buildctlArgs []string, needsLoading bool, metaFile string, tags []string, cleanup func(), err error) {
 	buildctlBinary, err := buildkitutil.BuildctlBinary()
 	if err != nil {
-		log.L.WithError(err).Error("buildctl binary not found")
-		return "", nil, false, "", nil, nil, fmt.Errorf("buildctl binary unavailable: %w", err)
+		return "", nil, false, "", nil, nil, err
 	}
-	log.L.Debugf("using buildctl binary: %s", buildctlBinary)
 
 	output := options.Output
 	if output == "" {

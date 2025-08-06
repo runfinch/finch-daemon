@@ -16,7 +16,6 @@ import (
 	"github.com/containerd/nerdctl/v2/pkg/config"
 	toml "github.com/pelletier/go-toml/v2"
 
-	finchconfig "github.com/runfinch/finch-daemon/pkg/config"
 	"github.com/runfinch/finch-daemon/api/router"
 	"github.com/runfinch/finch-daemon/internal/backend"
 	"github.com/runfinch/finch-daemon/internal/service/builder"
@@ -28,6 +27,7 @@ import (
 	"github.com/runfinch/finch-daemon/internal/service/system"
 	"github.com/runfinch/finch-daemon/internal/service/volume"
 	"github.com/runfinch/finch-daemon/pkg/archive"
+	finchconfig "github.com/runfinch/finch-daemon/pkg/config"
 	"github.com/runfinch/finch-daemon/pkg/credential"
 	"github.com/runfinch/finch-daemon/pkg/ecc"
 	"github.com/runfinch/finch-daemon/pkg/flog"
@@ -80,25 +80,18 @@ func createNerdctlWrapper(clientWrapper *backend.ContainerdClientWrapper, conf *
 	// https://github.com/containerd/nerdctl/blob/9f8655f7722d6e6851755123730436bf1a6c9995/pkg/api/types/global.go#L21
 	globalOptions := (*types.GlobalCommandOptions)(conf)
 	ncWrapper := backend.NewNerdctlWrapper(clientWrapper, globalOptions)
-	fmt.Printf("Checking for nerdctl binary...\n")
-	nerdctlPath, err := ncWrapper.GetNerdctlExe()
-	if err != nil {
-		fmt.Printf("ERROR: Failed to find nerdctl binary: %v\n", err)
+	if _, err := ncWrapper.GetNerdctlExe(); err != nil {
 		return nil, fmt.Errorf("failed to find nerdctl binary: %w", err)
 	}
-	fmt.Printf("Found nerdctl binary at: %s\n", nerdctlPath)
 	return ncWrapper, nil
 }
 
 // createContainerdClient creates and wraps the containerd client.
 func createContainerdClient(conf *config.Config) (*backend.ContainerdClientWrapper, error) {
-	fmt.Printf("Creating containerd client with address=%s, namespace=%s\n", conf.Address, conf.Namespace)
 	client, err := containerd.New(conf.Address, containerd.WithDefaultNamespace(conf.Namespace))
 	if err != nil {
-		fmt.Printf("ERROR: Failed to create containerd client: %v\n", err)
 		return nil, fmt.Errorf("failed to create containerd client: %w", err)
 	}
-	fmt.Printf("Successfully created containerd client\n")
 	return backend.NewContainerdClientWrapper(client), nil
 }
 
