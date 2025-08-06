@@ -111,6 +111,39 @@ jobs:
             echo "Socket still doesn't exist - BuildKit might be failing to create it"
           fi
 
+      - name: Debug containerd namespaces and connectivity
+        run: |
+          echo "=== CONTAINERD NAMESPACE DEBUG ==="
+          echo "Available namespaces in containerd:"
+          sudo ctr namespace list || echo "Could not list namespaces"
+          echo ""
+
+          echo "=== BUILDKIT WORKER INFO ==="
+          echo "BuildKit workers and their configuration:"
+          /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock debug workers || echo "Could not get BuildKit worker info"
+          echo ""
+
+          echo "=== IMAGES IN DIFFERENT NAMESPACES ==="
+          for ns in default buildkit finch moby; do
+            echo "Images in namespace '$ns':"
+            sudo ctr -n $ns images list 2>/dev/null || echo "  No images or namespace doesn't exist"
+            echo ""
+          done
+
+          echo "=== FINCH-DAEMON PROCESS INFO ==="
+          echo "finch-daemon command line:"
+          ps aux | grep finch-daemon | grep -v grep || echo "finch-daemon not found in process list"
+          echo ""
+
+          echo "=== CONTAINERD CONNECTION TEST ==="
+          echo "Testing containerd connectivity:"
+          sudo ctr version || echo "Could not connect to containerd"
+          echo ""
+
+          echo "=== BUILDKIT CONNECTION TEST ==="
+          echo "Testing BuildKit connectivity:"
+          /usr/local/bin/buildctl --addr=unix:///run/buildkit/buildkitd.sock debug info || echo "Could not connect to BuildKit"
+
       - name: Set up SAM CLI from source
         run: |
           git clone https://github.com/aws/aws-sam-cli.git
@@ -154,7 +187,7 @@ jobs:
         working-directory: aws-sam-cli
         run: |
           SAM_CLI_DEV=1 python -m pytest tests/integration/local/invoke/test_integration_cli_images.py::TestSamPython36HelloWorldIntegrationImages::test_invoke_with_env_vars -v -s --tb=long
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Run invoke tests
         working-directory: aws-sam-cli
