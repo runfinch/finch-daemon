@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.20.0](https://github.com/runfinch/finch-daemon/compare/v0.19.1...v0.20.0) (2025-08-07)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/docker/docker ([d781e7a](https://github.com/runfinch/finch-daemon/commit/d781e7a3119a373af1da88d31b4448479612e60e))
+* **deps:** Bump github.com/docker/docker from 28.3.2+incompatible to 28.3.3+incompatible ([#291](https://github.com/runfinch/finch-daemon/issues/291)) ([d781e7a](https://github.com/runfinch/finch-daemon/commit/d781e7a3119a373af1da88d31b4448479612e60e))
+* **deps:** Bump github.com/open-policy-agent/opa from 1.6.0 to 1.7.1 ([#299](https://github.com/runfinch/finch-daemon/issues/299)) ([0565571](https://github.com/runfinch/finch-daemon/commit/05655716444c193295353328205f3b36e29814d3))
+
+
+### Features
+
+* add finch vm testing ([4cbe576](https://github.com/runfinch/finch-daemon/commit/4cbe5769d3b29e7b68d89be5479705c7aef6d287))
+
 ## [0.19.1](https://github.com/runfinch/finch-daemon/compare/v0.19.0...v0.19.1) (2025-07-28)
 
 
