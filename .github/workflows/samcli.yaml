@@ -159,243 +159,6 @@ jobs:
       #     #   echo "✅ Unit tests passed with $COVERAGE% coverage"
       #     # fi
 
-      # - name: Run invoke tests
-      #   working-directory: aws-sam-cli
-      #   timeout-minutes: 20
-      #   run: |
-      #     echo "=== INVOKE TESTS - Started at $(date) ==="
-      #     python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
-
-      #     # echo "=== INVOKE TEST OUTPUT ==="
-      #     # cat invoke_output.txt
-      #     # echo "=== END INVOKE TEST OUTPUT ==="
-
-      #     # Expected failures from test guide (12 total from different test classes)
-      #     cat > expected_invoke_failures.txt << 'EOF'
-      #     test_invoke_with_error_during_image_build
-      #     test_invoke_with_timeout_set_0_TimeoutFunction
-      #     test_invoke_with_timeout_set_1_TimeoutFunctionWithParameter
-      #     test_invoke_with_timeout_set_2_TimeoutFunctionWithStringParameter
-      #     test_building_new_rapid_image_removes_old_rapid_images
-      #     test_invoke_returns_expected_results_from_git_function
-      #     test_invoke_returns_expected_results_from_git_function_with_parameters
-      #     EOF
-
-      #     # Extract actual failures
-      #     grep "FAILED" invoke_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_invoke_failures.txt || true
-
-      #     # Find unexpected failures
-      #     UNEXPECTED=$(grep -v -f expected_invoke_failures.txt actual_invoke_failures.txt 2>/dev/null || true)
-
-      #     if [ -n "$UNEXPECTED" ]; then
-      #       echo "❌ Unexpected failures found:"
-      #       echo "$UNEXPECTED"
-      #       exit 1
-      #     else
-      #       echo "✅ All failures were expected."
-      #     fi
-
-      #     echo ""
-      #     echo "=== PYTEST SUMMARY ==="
-      #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" invoke_output.txt | tail -1 || echo "No pytest summary found"
-      #   continue-on-error: true
-
-      # - name: Run start-lambda tests
-      #   working-directory: aws-sam-cli
-      #   timeout-minutes: 10
-      #   run: |
-      #     echo "=== START-LAMBDA TESTS - Started at $(date) ==="
-      #     python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
-
-      #     # echo "=== START-LAMBDA TEST OUTPUT ==="
-      #     # cat start_lambda_output.txt
-      #     # echo "=== END START-LAMBDA TEST OUTPUT ==="
-
-      #     # Should pass completely per test guide
-      #     if grep -q "FAILED" start_lambda_output.txt; then
-      #       echo "❌ Start-lambda tests failed (should pass completely)"
-      #       grep "FAILED" start_lambda_output.txt
-      #       exit 1
-      #     else
-      #       echo "✅ All start-lambda tests passed as expected"
-      #     fi
-
-      #     echo ""
-      #     echo "=== PYTEST SUMMARY ==="
-      #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_lambda_output.txt | tail -1 || echo "No pytest summary found"
-      #   continue-on-error: true
-
-      # - name: Run start-api tests
-      #   working-directory: aws-sam-cli
-      #   timeout-minutes: 30
-      #   run: |
-      #     echo "=== START-API TESTS - Started at $(date) ==="
-      #     ulimit -n 65536
-      #     python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 || true
-
-      #     echo "=== START-API TEST OUTPUT ==="
-      #     cat start_api_output.txt
-      #     echo "=== END START-API TEST OUTPUT ==="
-
-      #     # Should pass completely per test guide
-      #     if grep -q "FAILED" start_api_output.txt; then
-      #       echo "❌ Start-api tests failed (should pass completely)"
-      #       grep "FAILED" start_api_output.txt
-      #       exit 1
-      #     else
-      #       echo "✅ All start-api tests passed as expected"
-      #     fi
-
-      #     echo ""
-      #     echo "=== PYTEST SUMMARY ==="
-      #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_api_output.txt | tail -1 || echo "No pytest summary found"
-      #   continue-on-error: true
-
-      - name: Intermediate AWS resource cleanup
-        if: always()
-        timeout-minutes: 10
-        run: |
-          echo "=== Intermediate cleanup ==="
-          
-          # Set error handling to continue on failures
-          set +e
-          
-          # Function to safely run AWS commands with retries
-          safe_aws_command() {
-            local max_attempts=3
-            local attempt=1
-            local command="$@"
-            
-            while [ $attempt -le $max_attempts ]; do
-              echo "Attempt $attempt: $command"
-              if eval "$command"; then
-                return 0
-              else
-                echo "Command failed, attempt $attempt/$max_attempts"
-                if [ $attempt -lt $max_attempts ]; then
-                  sleep 5
-                fi
-                attempt=$((attempt + 1))
-              fi
-            done
-            echo "Command failed after $max_attempts attempts: $command"
-            return 1
-          }
-          
-          # 1. Clean up SAM CLI test stacks
-          echo "=== Cleaning up SAM CLI test stacks ==="
-          TEST_STACK_PATTERNS=(
-            "sam-app"
-            "test-"
-            "integration-test"
-            "samcli"
-            "aws-sam-cli-managed"
-          )
-          
-          for pattern in "${TEST_STACK_PATTERNS[@]}"; do
-            echo "Looking for stacks matching pattern: *$pattern*"
-            STACKS=$(aws cloudformation list-stacks --region $AWS_DEFAULT_REGION --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE ROLLBACK_COMPLETE UPDATE_ROLLBACK_COMPLETE --query "StackSummaries[?contains(StackName, '$pattern')].[StackName]" --output text 2>/dev/null || true)
-            
-            if [ -n "$STACKS" ]; then
-              echo "Found stacks: $STACKS"
-              for stack in $STACKS; do
-                echo "Processing stack: $stack"
-                
-                # Get S3 buckets from stack outputs and resources
-                echo "Finding S3 buckets in stack: $stack"
-                BUCKET_NAMES=$(aws cloudformation describe-stacks --stack-name "$stack" --region $AWS_DEFAULT_REGION --query 'Stacks[0].Outputs[?contains(OutputKey, `Bucket`) || contains(OutputKey, `bucket`)].OutputValue' --output text 2>/dev/null || true)
-                RESOURCE_BUCKETS=$(aws cloudformation describe-stack-resources --stack-name "$stack" --region $AWS_DEFAULT_REGION --query 'StackResources[?ResourceType==`AWS::S3::Bucket`].PhysicalResourceId' --output text 2>/dev/null || true)
-                
-                ALL_BUCKETS="$BUCKET_NAMES $RESOURCE_BUCKETS"
-                
-                # Clean up S3 buckets
-                for bucket in $ALL_BUCKETS; do
-                  if [ -n "$bucket" ] && [ "$bucket" != "None" ]; then
-                    echo "Cleaning S3 bucket: $bucket"
-                    
-                    if aws s3api head-bucket --bucket "$bucket" 2>/dev/null; then
-                      echo "Emptying S3 bucket: $bucket"
-                      
-                      # Delete all object versions
-                      safe_aws_command "aws s3api list-object-versions --bucket '$bucket' --query 'Versions[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
-                        if [ -n \"\$key\" ] && [ -n \"\$version\" ] && [ \"\$key\" != \"None\" ] && [ \"\$version\" != \"None\" ]; then
-                          aws s3api delete-object --bucket '$bucket' --key \"\$key\" --version-id \"\$version\" || true
-                        fi
-                      done"
-                      
-                      # Delete delete markers
-                      safe_aws_command "aws s3api list-object-versions --bucket '$bucket' --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
-                        if [ -n \"\$key\" ] && [ -n \"\$version\" ] && [ \"\$key\" != \"None\" ] && [ \"\$version\" != \"None\" ]; then
-                          aws s3api delete-object --bucket '$bucket' --key \"\$key\" --version-id \"\$version\" || true
-                        fi
-                      done"
-                      
-                      # Force delete remaining objects
-                      safe_aws_command "aws s3 rm s3://$bucket --recursive --quiet" || true
-                      
-                      echo "✅ S3 bucket $bucket emptied"
-                    else
-                      echo "S3 bucket $bucket does not exist or is not accessible"
-                    fi
-                  fi
-                done
-                
-                # Delete the CloudFormation stack
-                echo "Deleting CloudFormation stack: $stack"
-                safe_aws_command "aws cloudformation delete-stack --stack-name '$stack' --region $AWS_DEFAULT_REGION"
-              done
-              
-              # Wait for all deletions to complete
-              echo "Waiting for stack deletions to complete..."
-              for stack in $STACKS; do
-                echo "Waiting for stack deletion: $stack"
-                safe_aws_command "aws cloudformation wait stack-delete-complete --stack-name '$stack' --region $AWS_DEFAULT_REGION" || true
-              done
-            else
-              echo "No stacks found for pattern: *$pattern*"
-            fi
-          done
-          
-          # 2. Clean up Lambda functions (addressing sync test timing issues)
-          echo "=== Cleaning up Lambda functions ==="
-          LAMBDA_PATTERNS=(
-            "sam-app"
-            "test-"
-            "HelloWorld"
-          )
-          
-          for pattern in "${LAMBDA_PATTERNS[@]}"; do
-            echo "Looking for Lambda functions matching pattern: *$pattern*"
-            FUNCTIONS=$(aws lambda list-functions --region $AWS_DEFAULT_REGION --query "Functions[?contains(FunctionName, '$pattern')].FunctionName" --output text 2>/dev/null || true)
-            
-            if [ -n "$FUNCTIONS" ]; then
-              for func in $FUNCTIONS; do
-                echo "Deleting Lambda function: $func"
-                safe_aws_command "aws lambda delete-function --function-name '$func' --region $AWS_DEFAULT_REGION" || true
-              done
-            fi
-          done
-          
-          # 3. Clean up API Gateway APIs
-          echo "=== Cleaning up API Gateway APIs ==="
-          APIS=$(aws apigateway get-rest-apis --region $AWS_DEFAULT_REGION --query 'items[?contains(name, `sam-app`) || contains(name, `test-`) || contains(name, `Test`)].id' --output text 2>/dev/null || true)
-          
-          if [ -n "$APIS" ]; then
-            for api in $APIS; do
-              echo "Deleting API Gateway API: $api"
-              safe_aws_command "aws apigateway delete-rest-api --rest-api-id '$api' --region $AWS_DEFAULT_REGION" || true
-            done
-          fi
-          
-          # 4. Brief wait for AWS eventual consistency
-          echo "Waiting 15 seconds for AWS eventual consistency..."
-          sleep 15
-          
-          # Reset error handling
-          set -e
-          
-          echo "✅ Intermediate cleanup completed"
-
       - name: Run sync tests
         working-directory: aws-sam-cli
         timeout-minutes: 40
@@ -466,6 +229,98 @@ jobs:
           echo "=== PYTEST SUMMARY ==="
           grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" package_output.txt | tail -1 || echo "No pytest summary found"
         continue-on-error: true
+
+      # - name: Run invoke tests
+      #   working-directory: aws-sam-cli
+      #   timeout-minutes: 20
+      #   run: |
+      #     echo "=== INVOKE TESTS - Started at $(date) ==="
+      #     python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
+
+      #     # echo "=== INVOKE TEST OUTPUT ==="
+      #     # cat invoke_output.txt
+      #     # echo "=== END INVOKE TEST OUTPUT ==="
+
+      #     # Expected failures from test guide (12 total from different test classes)
+      #     cat > expected_invoke_failures.txt << 'EOF'
+      #     test_invoke_with_error_during_image_build
+      #     test_invoke_with_timeout_set_0_TimeoutFunction
+      #     test_invoke_with_timeout_set_1_TimeoutFunctionWithParameter
+      #     test_invoke_with_timeout_set_2_TimeoutFunctionWithStringParameter
+      #     test_building_new_rapid_image_removes_old_rapid_images
+      #     test_invoke_returns_expected_results_from_git_function
+      #     test_invoke_returns_expected_results_from_git_function_with_parameters
+      #     EOF
+
+      #     # Extract actual failures
+      #     grep "FAILED" invoke_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_invoke_failures.txt || true
+
+      #     # Find unexpected failures
+      #     UNEXPECTED=$(grep -v -f expected_invoke_failures.txt actual_invoke_failures.txt 2>/dev/null || true)
+
+      #     if [ -n "$UNEXPECTED" ]; then
+      #       echo "❌ Unexpected failures found:"
+      #       echo "$UNEXPECTED"
+      #       exit 1
+      #     else
+      #       echo "✅ All failures were expected."
+      #     fi
+
+      #     echo ""
+      #     echo "=== PYTEST SUMMARY ==="
+      #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" invoke_output.txt | tail -1 || echo "No pytest summary found"
+      #   continue-on-error: true
+
+      - name: Run start-lambda tests
+        working-directory: aws-sam-cli
+        timeout-minutes: 10
+        run: |
+          echo "=== START-LAMBDA TESTS - Started at $(date) ==="
+          python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
+
+          # echo "=== START-LAMBDA TEST OUTPUT ==="
+          # cat start_lambda_output.txt
+          # echo "=== END START-LAMBDA TEST OUTPUT ==="
+
+          # Should pass completely per test guide
+          if grep -q "FAILED" start_lambda_output.txt; then
+            echo "❌ Start-lambda tests failed (should pass completely)"
+            grep "FAILED" start_lambda_output.txt
+            exit 1
+          else
+            echo "✅ All start-lambda tests passed as expected"
+          fi
+
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_lambda_output.txt | tail -1 || echo "No pytest summary found"
+        continue-on-error: true
+
+      # - name: Run start-api tests
+      #   working-directory: aws-sam-cli
+      #   timeout-minutes: 30
+      #   run: |
+      #     echo "=== START-API TESTS - Started at $(date) ==="
+      #     ulimit -n 65536
+      #     python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 || true
+
+      #     echo "=== START-API TEST OUTPUT ==="
+      #     cat start_api_output.txt
+      #     echo "=== END START-API TEST OUTPUT ==="
+
+      #     # Should pass completely per test guide
+      #     if grep -q "FAILED" start_api_output.txt; then
+      #       echo "❌ Start-api tests failed (should pass completely)"
+      #       grep "FAILED" start_api_output.txt
+      #       exit 1
+      #     else
+      #       echo "✅ All start-api tests passed as expected"
+      #     fi
+
+      #     echo ""
+      #     echo "=== PYTEST SUMMARY ==="
+      #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_api_output.txt | tail -1 || echo "No pytest summary found"
+      #   continue-on-error: true
 
       # - name: Run deploy tests
       #   working-directory: aws-sam-cli
