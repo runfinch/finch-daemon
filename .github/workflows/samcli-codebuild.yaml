@@ -1,0 +1,297 @@
+name: samcli-codebuild
+
+# on:
+#   schedule:
+#     - cron: '0 2 * * *'  # Run daily at 2 AM UTC
+#   workflow_dispatch:  # Allow manual triggering
+
+env:
+  GO_VERSION: '1.23.8'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  samcli-tests:
+    runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
+    timeout-minutes: 120
+    env:
+      AWS_DEFAULT_REGION: ${{ secrets.REGION }}
+      DOCKER_HOST: unix:///var/run/finch.sock
+      BY_CANARY: true  # full aws access for tests
+      SAM_CLI_DEV: 1
+      SAM_CLI_TELEMETRY: 0
+    steps:
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        with:
+          role-to-assume: ${{ secrets.ROLE }}
+          role-session-name: samcli-codebuild-tests
+          aws-region: ${{ secrets.REGION }}
+          role-duration-seconds: 14400
+
+      - name: Clean CodeBuild runner workspace
+        run: |
+          rm -rf ${{ github.workspace }}/*
+
+      - name: Configure Git for ec2-user
+        run: |
+          git config --global --add safe.directory "*"
+        shell: bash
+
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: Configure Go for ec2-user
+        run: |
+          # Ensure Go is properly configured for ec2-user
+          chown -R ec2-user:staff $GOPATH || true
+          chown -R ec2-user:staff $RUNNER_TOOL_CACHE/go || true
+
+      - name: Set up Python
+        run: |
+          # Install Python 3.11.12 for ec2-user
+          su ec2-user -c 'brew install python@3.11'
+          su ec2-user -c 'echo "export PATH=\"/opt/homebrew/opt/python@3.11/bin:\$PATH\"" >> /Users/ec2-user/.zshrc'
+
+      - name: Configure Homebrew for ec2-user
+        run: |
+          echo "Creating .brewrc file for ec2-user..."
+          cat > /Users/ec2-user/.brewrc << 'EOF'
+          # Homebrew environment setup
+          export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+          export HOMEBREW_PREFIX="/opt/homebrew"
+          export HOMEBREW_CELLAR="/opt/homebrew/Cellar"
+          export HOMEBREW_REPOSITORY="/opt/homebrew"
+          export HOMEBREW_NO_AUTO_UPDATE=1
+          EOF
+          chown ec2-user:staff /Users/ec2-user/.brewrc
+
+          # Fix Homebrew permissions
+          echo "Setting permissions for Homebrew directories..."
+          mkdir -p /opt/homebrew/Cellar
+          chown -R ec2-user:staff /opt/homebrew
+        shell: bash
+
+      - name: Install dependencies
+        run: |
+          echo "Installing dependencies as ec2-user..."
+          # Run brew with custom environment
+          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install lz4 automake autoconf libtool yq'
+        shell: bash
+
+      - name: Checkout finch-daemon repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Configure workspace for ec2-user
+        run: |
+          # Ensure workspace is properly owned by ec2-user
+          chown -R ec2-user:staff ${{ github.workspace }}
+
+      - name: Install Finch
+        run: |
+          echo "Installing Finch as ec2-user..."
+          # Run brew with custom environment
+          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install finch --cask'
+          # Verify installation
+          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew list | grep finch || echo "finch not installed"'
+          mkdir -p /private/var/run/finch-lima
+          chown ec2-user:daemon /private/var/run/finch-lima
+        shell: bash
+
+      - name: Build and install finch-daemon
+        run: |
+          echo "Building finch-daemon..."
+          su ec2-user -c 'cd ${{ github.workspace }} && STATIC=1 GOPROXY=direct GOOS=linux GOARCH=arm64 make'
+          su ec2-user -c 'finch vm remove -f'
+          cp -f ${{ github.workspace }}/bin/finch-daemon /Applications/Finch/finch-daemon/finch-daemon
+        shell: bash
+
+      - name: Initialize Finch VM
+        run: |
+          echo "Initializing Finch VM..."
+          su ec2-user -c 'finch vm init'
+          sleep 10  # Wait for services to be ready
+          echo "Checking Finch version..."
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch curl --unix-socket /var/run/finch.sock -X GET http:/v1.43/version'
+        shell: bash
+
+      - name: Set up SAM CLI from source
+        run: |
+          su ec2-user -c 'cd /Users/ec2-user && git clone https://github.com/aws/aws-sam-cli.git'
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && git checkout $(git describe --tags `git rev-list --tags --max-count=1`)'
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && git submodule update --init --recursive'
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && /opt/homebrew/opt/python@3.11/bin/python3.11 -m pip install --upgrade pip'
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && make init'
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && samdev --version'
+
+      - name: Run unit tests
+        run: |
+          echo "=== UNIT TESTS - Started at $(date) ==="
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && ulimit -n 8192 && make test | tee unit_test_output.txt'
+          
+          # Check coverage
+          COVERAGE=$(su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && grep -o "[0-9]\+%" unit_test_output.txt | head -1 | tr -d "%"')
+          if [ -z "$COVERAGE" ] || [ "$COVERAGE" -lt 90 ]; then
+            echo "❌ Coverage below threshold! Got: $COVERAGE%, Expected: ~94%"
+            exit 1
+          else
+            echo "✅ Unit tests passed with $COVERAGE% coverage"
+          fi
+
+      - name: Run invoke tests
+        timeout-minutes: 20
+        run: |
+          echo "=== INVOKE TESTS - Started at $(date) ==="
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && AWS_DEFAULT_REGION=${{ env.AWS_DEFAULT_REGION }} SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 DOCKER_HOST=unix:///var/run/finch.sock python -m pytest tests/integration/local/invoke -k "not Terraform" -v --tb=short > invoke_output.txt 2>&1 || true'
+          
+          # Expected failures validation (same as before)
+          cat > expected_invoke_failures.txt << 'EOF'
+          test_invoke_with_error_during_image_build
+          test_invoke_with_timeout_set_0_TimeoutFunction
+          test_invoke_with_timeout_set_1_TimeoutFunctionWithParameter
+          test_invoke_with_timeout_set_2_TimeoutFunctionWithStringParameter
+          test_building_new_rapid_image_removes_old_rapid_images
+          test_invoke_returns_expected_results_from_git_function
+          test_invoke_returns_expected_results_from_git_function_with_parameters
+          EOF
+          
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && grep "FAILED" invoke_output.txt | sed "s/.*::\(test_[a-zA-Z0-9_]*\).*/\1/" > actual_invoke_failures.txt || true'
+          UNEXPECTED=$(su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && grep -v -f ../expected_invoke_failures.txt actual_invoke_failures.txt 2>/dev/null || true')
+          
+          if [ -n "$UNEXPECTED" ]; then
+            echo "❌ Unexpected failures found:"
+            echo "$UNEXPECTED"
+            exit 1
+          else
+            echo "✅ All failures were expected."
+          fi
+          
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" invoke_output.txt | tail -1 || echo "No pytest summary found"'
+
+      - name: Run start-lambda tests
+        timeout-minutes: 10
+        run: |
+          echo "=== START-LAMBDA TESTS - Started at $(date) ==="
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && AWS_DEFAULT_REGION=${{ env.AWS_DEFAULT_REGION }} SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 DOCKER_HOST=unix:///var/run/finch.sock python -m pytest tests/integration/local/start_lambda -k "not Terraform" -v --tb=short > start_lambda_output.txt 2>&1 || true'
+          
+          if su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && grep -q "FAILED" start_lambda_output.txt'; then
+            echo "❌ Start-lambda tests failed (should pass completely)"
+            su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && grep "FAILED" start_lambda_output.txt'
+            exit 1
+          else
+            echo "✅ All start-lambda tests passed as expected"
+          fi
+          
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_lambda_output.txt | tail -1 || echo "No pytest summary found"'
+
+      - name: Run start-api tests
+        timeout-minutes: 30
+        run: |
+          echo "=== START-API TESTS - Started at $(date) ==="
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && ulimit -n 8192 && AWS_DEFAULT_REGION=${{ env.AWS_DEFAULT_REGION }} SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 DOCKER_HOST=unix:///var/run/finch.sock python -m pytest tests/integration/local/start_api -k "not Terraform" -v --tb=short > start_api_output.txt 2>&1 || true'
+          
+          if su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && grep -q "FAILED" start_api_output.txt'; then
+            echo "❌ Start-api tests failed (should pass completely)"
+            su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && grep "FAILED" start_api_output.txt'
+            exit 1
+          else
+            echo "✅ All start-api tests passed as expected"
+          fi
+          
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_api_output.txt | tail -1 || echo "No pytest summary found"'
+
+      - name: Run sync tests
+        timeout-minutes: 20
+        run: |
+          echo "=== SYNC TESTS - Started at $(date) ==="
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && AWS_DEFAULT_REGION=${{ env.AWS_DEFAULT_REGION }} SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 DOCKER_HOST=unix:///var/run/finch.sock python -m pytest tests/integration/sync -k "image" -v --tb=short > sync_output.txt 2>&1 || true'
+          
+          if su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && grep -q "FAILED" sync_output.txt'; then
+            echo "❌ Sync tests failed (should pass completely)"
+            su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && grep "FAILED" sync_output.txt'
+            exit 1
+          else
+            echo "✅ All sync tests passed as expected"
+          fi
+          
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" sync_output.txt | tail -1 || echo "No pytest summary found"'
+
+      - name: Show Finch logs
+        if: always()
+        run: |
+          echo "=== FINCH VM LOGS ==="
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch cat /var/log/finch-daemon.log || echo "No finch-daemon log found"'
+
+      - name: AWS resource cleanup
+        if: always()
+        run: |
+          echo "=== Final cleanup ==="
+          # Clean up any remaining SAM managed stack
+          STACK_NAME="aws-sam-cli-managed-default"
+          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region ${{ env.AWS_DEFAULT_REGION }} >/dev/null 2>&1; then
+            STACK_STATUS=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region ${{ env.AWS_DEFAULT_REGION }} --query 'Stacks[0].StackStatus' --output text)
+            echo "Found existing stack with status: $STACK_STATUS"
+            
+            # Get the S3 bucket name from stack outputs
+            BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region ${{ env.AWS_DEFAULT_REGION }} --query 'Stacks[0].Outputs[?OutputKey==`SourceBucket`].OutputValue' --output text 2>/dev/null || echo "")
+            
+            if [ -n "$BUCKET_NAME" ]; then
+              echo "Found S3 bucket: $BUCKET_NAME"
+              echo "Emptying S3 bucket before stack deletion..."
+              
+              # Delete all object versions and delete markers
+              aws s3api list-object-versions --bucket "$BUCKET_NAME" --query 'Versions[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
+                if [ -n "$key" ] && [ -n "$version" ]; then
+                  aws s3api delete-object --bucket "$BUCKET_NAME" --key "$key" --version-id "$version" || true
+                fi
+              done
+              
+              # Delete any delete markers
+              aws s3api list-object-versions --bucket "$BUCKET_NAME" --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
+                if [ -n "$key" ] && [ -n "$version" ]; then
+                  aws s3api delete-object --bucket "$BUCKET_NAME" --key "$key" --version-id "$version" || true
+                fi
+              done
+              
+              echo "S3 bucket emptied successfully"
+            else
+              echo "No S3 bucket found in stack outputs"
+            fi
+            
+            # Delete stack
+            echo "Deleting SAM managed stack..."
+            aws cloudformation delete-stack --stack-name "$STACK_NAME" --region ${{ env.AWS_DEFAULT_REGION }}
+            
+            # Wait for deletion to complete
+            echo "Waiting for stack deletion to complete..."
+            aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME" --region ${{ env.AWS_DEFAULT_REGION }} || true
+            echo "✅ Stack deletion completed"
+          else
+            echo "No existing SAM managed stack found"
+          fi
+          echo "Cleanup completed"
+
+      - name: Stop Finch VM
+        run: |
+          echo "Stopping Finch VM as ec2-user..."
+          su ec2-user -c "source /Users/ec2-user/.brewrc && HOME=/Users/ec2-user finch vm stop"
+        shell: bash
+        if: always()

@@ -93,34 +93,6 @@ jobs:
           make init
           samdev --version
 
-      - name: Create minimal test suite
-        run: |
-          cat > samcli_minimal_tests.txt << 'EOF'
-          # Minimal SAM CLI integration tests for finch-daemon PR validation
-          # Tests core Docker API operations that SAM CLI depends on
-          # Expected runtime: 5-15 minutes
-
-          # 1. Container Lifecycle (create → start → stop → remove)
-          # Tests: docker.from_env(), containers.create(), container.start(), volume mounting
-          tests/integration/local/invoke/test_integrations_cli.py::TestSamPythonHelloWorldIntegration::test_invoke_returncode_is_zero
-
-          # 2. Long-running Containers + Port Binding  
-          # Tests: Long-lived containers, port binding, HTTP requests
-          tests/integration/local/start_api/test_start_api.py::TestSamStartApi::test_static_directory
-
-          # 3. Concurrent Container Access
-          # Tests: Multiple containers, concurrent requests, container management
-          tests/integration/local/start_lambda/test_start_lambda.py::TestParallelRequests::test_same_endpoint
-
-          # 4. Log Streaming
-          # Tests: container.attach(), real-time log streaming
-          tests/integration/local/invoke/test_integrations_cli.py::TestSamPythonHelloWorldIntegration::test_invoke_with_stdout_stderr_logs
-
-          # 5. Docker Networking
-          # Tests: Docker network operations, host networking mode
-          tests/integration/local/invoke/test_integrations_cli.py::TestSamPythonHelloWorldIntegration::test_invoke_with_docker_network_of_host
-          EOF
-
       - name: Run minimal SAM CLI integration tests
         working-directory: aws-sam-cli
         timeout-minutes: 20
@@ -131,36 +103,32 @@ jobs:
           # Set ulimit for file handles
           ulimit -n 65536
           
-          # Run the minimal test suite
-          python -m pytest \
-            --tb=short \
-            -v \
-            --maxfail=3 \
-            $(cat ../samcli_minimal_tests.txt | grep -v '^#' | grep -v '^$') \
-            > minimal_test_output.txt 2>&1 || true
-
-          echo "=== MINIMAL TEST OUTPUT ==="
-          cat minimal_test_output.txt
-          echo "=== END MINIMAL TEST OUTPUT ==="
-
-          # Check if any tests failed
-          if grep -q "FAILED" minimal_test_output.txt; then
-            echo "❌ Minimal tests failed - finch-daemon Docker API compatibility issue detected"
-            echo "Failed tests:"
-            grep "FAILED" minimal_test_output.txt
-            
-            echo ""
-            echo "=== FINCH-DAEMON LOGS ==="
-            tail -50 ../finch-daemon.log
-            
+          # Run each test individually to avoid file parsing issues
+          echo "Running Test 1: Basic container lifecycle"
+          python -m pytest --tb=short -v tests/integration/local/invoke/test_integrations_cli.py::TestSamPythonHelloWorldIntegration::test_invoke_returncode_is_zero || TEST1_FAILED=1
+          
+          echo "Running Test 2: Docker networking"
+          python -m pytest --tb=short -v tests/integration/local/invoke/test_integrations_cli.py::TestSamPythonHelloWorldIntegration::test_invoke_with_docker_network_of_host || TEST2_FAILED=1
+          
+          echo "Running Test 3: Start-API proxy endpoint"
+          python -m pytest --tb=short -v tests/integration/local/start_api/test_start_api.py::TestSamStartApi::test_calling_proxy_endpoint || TEST3_FAILED=1
+          
+          echo "Running Test 4: API Gateway integration"
+          python -m pytest --tb=short -v tests/integration/local/start_api/test_start_api.py::TestSamStartApi::test_get_call_with_path_setup_with_any_implicit_api || TEST4_FAILED=1
+          
+          echo "Running Test 5: Warm container functionality"
+          python -m pytest --tb=short -v tests/integration/local/start_api/test_start_api.py::TestWarmContainers::test_can_invoke_lambda_function_successfully || TEST5_FAILED=1
+          
+          echo "Running Test 6: Container initialization"
+          python -m pytest --tb=short -v tests/integration/local/start_api/test_start_api.py::TestWarmContainers::test_all_containers_are_initialized_before_any_invoke || TEST6_FAILED=1
+          
+          # Check results
+          if [[ -n "$TEST1_FAILED" || -n "$TEST2_FAILED" || -n "$TEST3_FAILED" || -n "$TEST4_FAILED" || -n "$TEST5_FAILED" || -n "$TEST6_FAILED" ]]; then
+            echo "❌ Some minimal tests failed - finch-daemon Docker API compatibility issue detected"
             exit 1
           else
             echo "✅ All minimal tests passed - finch-daemon Docker API compatibility confirmed"
           fi
-
-          echo ""
-          echo "=== PYTEST SUMMARY ==="
-          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" minimal_test_output.txt | tail -1 || echo "No pytest summary found"
 
       - name: Show finch-daemon logs
         if: always()

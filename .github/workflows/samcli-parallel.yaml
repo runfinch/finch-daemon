@@ -1,32 +1,32 @@
 name: samcli
 
 on:
-  # push:
-  #   branches:
-  #     - main
-  #     - samcli-test
-  #   paths:
-  #     - '**.go'
-  #     - 'go.mod'
-  #     - 'go.sum'
-  #     - 'Makefile*'
-  #     - 'cmd/**'
-  #     - 'pkg/**'
-  #     - 'internal/**'
-  #     - 'api/**'
-  # pull_request:
-  #   branches:
-  #     - main
-  #   paths:
-  #     - '**.go'
-  #     - 'go.mod'
-  #     - 'go.sum'
-  #     - '.github/workflows/samcli.yaml'
-  #     - 'Makefile*'
-  #     - 'cmd/**'
-  #     - 'pkg/**'
-  #     - 'internal/**'
-  #     - 'api/**'
+  push:
+    branches:
+      - main
+      - samcli-test
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Makefile*'
+      - 'cmd/**'
+      - 'pkg/**'
+      - 'internal/**'
+      - 'api/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/samcli-parallel.yaml'
+      - 'Makefile*'
+      - 'cmd/**'
+      - 'pkg/**'
+      - 'internal/**'
+      - 'api/**'
   # schedule:
   #   - cron: '0 2 * * *'  # Run daily at 2 AM UTC
   workflow_dispatch:
@@ -43,6 +43,27 @@ jobs:
   samcli-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        test_step:
+          # SYNC TESTS - COMMENTED OUT (uncomment to test if sync can run in parallel)
+          # - name: sync
+          #   timeout: 40
+          - name: unit
+            timeout: 15
+          - name: package
+            timeout: 10
+          - name: start-lambda
+            timeout: 15
+          - name: invoke
+            timeout: 25
+          - name: start-api
+            timeout: 35
+          - name: deploy
+            timeout: 45
+          - name: build
+            timeout: 35
     env:
       AWS_DEFAULT_REGION: ${{ secrets.REGION }}
       DOCKER_HOST: unix:///run/finch.sock
@@ -55,7 +76,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
           role-to-assume: ${{ secrets.ROLE }}
-          role-session-name: samcli-sequential-tests
+          role-session-name: samcli-${{ matrix.test_step.name }}-tests
           aws-region: ${{ secrets.REGION }}
           role-duration-seconds: 14400
 
@@ -108,65 +129,41 @@ jobs:
           make init
           samdev --version
 
-      # - name: Verbose testing for specific failures
-      #   working-directory: aws-sam-cli
-      #   run: |
-      #     echo "=== DEBUGGING MULTIPLE REMOTE LAYERS TEST ==="
-      #     ulimit -n 65536
-
-      #     # Monitor finch-daemon logs during the specific test
-      #     echo "Starting finch-daemon log monitoring..."
-      #     tail -f ../finch-daemon.log &
-      #     TAIL_PID=$!
-
-      #     # Run just the failing test with maximum verbosity
-      #     python -m pytest tests/integration/local/start_api/test_start_api.py::TestWarmContainersMultipleRemoteLayersInvoke::test_can_invoke_lambda_layer_successfully -v -s --tb=long --capture=no || true
-
-      #     # Stop log monitoring
-      #     kill $TAIL_PID 2>/dev/null || true
-
-      #     echo "=== FINCH-DAEMON LOGS DURING TEST ==="
-      #     # Show recent finch-daemon logs
-      #     tail -100 ../finch-daemon.log
-      #   continue-on-error: true
-
       - name: Run unit tests
+        if: matrix.test_step.name == 'unit'
         working-directory: aws-sam-cli
+        timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           echo "=== UNIT TESTS - Started at $(date) ==="
 
           # Fix common issues from test guide
           ulimit -n 65536  # Fix "too many open files"
 
-          # # Clean up potentially problematic Docker config entries
-          # if [ -f ~/.docker/config.json ]; then
-          #   if command -v jq >/dev/null 2>&1; then
-          #     jq 'del(.credsStore)' ~/.docker/config.json > ~/.docker/config.json.tmp && mv ~/.docker/config.json.tmp ~/.docker/config.json
-          #   else
-          #     sed -i '/"credsStore"/d' ~/.docker/config.json
-          #   fi
-          # fi
-
           make test > unit_test_output.txt 2>&1 || true
           cat unit_test_output.txt
 
-          # # Check coverage (should be ~94%)
-          # COVERAGE=$(grep -o "[0-9]\+%" unit_test_output.txt | head -1 | tr -d '%')
-          # if [ -z "$COVERAGE" ] || [ "$COVERAGE" -lt 90 ]; then
-          #   echo "❌ Coverage below threshold! Got: $COVERAGE%, Expected: ~94%"
-          #   exit 1
-          # else
-          #   echo "✅ Unit tests passed with $COVERAGE% coverage"
-          # fi
+          # Check if tests passed (basic check)
+          if grep -q "FAILED" unit_test_output.txt; then
+            echo "❌ Some unit tests failed"
+            grep "FAILED" unit_test_output.txt | head -10
+          else
+            echo "✅ Unit tests completed"
+          fi
 
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" unit_test_output.txt | tail -1 || echo "No pytest summary found"
+        continue-on-error: true
+
+      # SYNC TESTS - COMMENTED OUT (uncomment to enable)
       - name: Run sync tests
+        if: matrix.test_step.name == 'sync'
         working-directory: aws-sam-cli
-        timeout-minutes: 40
+        timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           pip install pytest-rerunfailures
           echo "=== SYNC TESTS - Started at $(date) ==="
 
-          # python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 || true
           python -m pytest tests/integration/sync -k 'image' -v --tb=short \
                 --reruns 3 \
                 --reruns-delay 15 \
@@ -191,15 +188,16 @@ jobs:
         continue-on-error: true
 
       - name: Run package tests
+        if: matrix.test_step.name == 'package'
         working-directory: aws-sam-cli
-        timeout-minutes: 5
+        timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           echo "=== PACKAGE TESTS - Started at $(date) ==="
           python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short > package_output.txt 2>&1 || true
 
-          # echo "=== PACKAGE TEST OUTPUT ==="
-          # cat package_output.txt
-          # echo "=== END PACKAGE TEST OUTPUT ==="
+          echo "=== PACKAGE TEST OUTPUT ==="
+          cat package_output.txt
+          echo "=== END PACKAGE TEST OUTPUT ==="
 
           # Expected failures from test guide
           cat > expected_package_failures.txt << 'EOF'
@@ -231,15 +229,16 @@ jobs:
         continue-on-error: true
 
       - name: Run invoke tests
+        if: matrix.test_step.name == 'invoke'
         working-directory: aws-sam-cli
-        timeout-minutes: 20
+        timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           echo "=== INVOKE TESTS - Started at $(date) ==="
           python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
 
-          # echo "=== INVOKE TEST OUTPUT ==="
-          # cat invoke_output.txt
-          # echo "=== END INVOKE TEST OUTPUT ==="
+          echo "=== INVOKE TEST OUTPUT ==="
+          cat invoke_output.txt
+          echo "=== END INVOKE TEST OUTPUT ==="
 
           # Expected failures from test guide (12 total from different test classes)
           cat > expected_invoke_failures.txt << 'EOF'
@@ -272,15 +271,16 @@ jobs:
         continue-on-error: true
 
       - name: Run start-lambda tests
+        if: matrix.test_step.name == 'start-lambda'
         working-directory: aws-sam-cli
-        timeout-minutes: 10
+        timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           echo "=== START-LAMBDA TESTS - Started at $(date) ==="
           python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
 
-          # echo "=== START-LAMBDA TEST OUTPUT ==="
-          # cat start_lambda_output.txt
-          # echo "=== END START-LAMBDA TEST OUTPUT ==="
+          echo "=== START-LAMBDA TEST OUTPUT ==="
+          cat start_lambda_output.txt
+          echo "=== END START-LAMBDA TEST OUTPUT ==="
 
           # Should pass completely per test guide
           if grep -q "FAILED" start_lambda_output.txt; then
@@ -297,8 +297,9 @@ jobs:
         continue-on-error: true
 
       - name: Run start-api tests
+        if: matrix.test_step.name == 'start-api'
         working-directory: aws-sam-cli
-        timeout-minutes: 30
+        timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           echo "=== START-API TESTS - Started at $(date) ==="
           ulimit -n 65536
@@ -323,15 +324,16 @@ jobs:
         continue-on-error: true
 
       - name: Run deploy tests
+        if: matrix.test_step.name == 'deploy'
         working-directory: aws-sam-cli
-        timeout-minutes: 45
+        timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           echo "=== DEPLOY TESTS - Started at $(date) ==="
           python -m pytest tests/integration/deploy -k 'image' -v --tb=short > deploy_output.txt 2>&1 || true
 
-          # echo "=== DEPLOY TEST OUTPUT ==="
-          # cat deploy_output.txt
-          # echo "=== END DEPLOY TEST OUTPUT ==="
+          echo "=== DEPLOY TEST OUTPUT ==="
+          cat deploy_output.txt
+          echo "=== END DEPLOY TEST OUTPUT ==="
 
           # Expected passes - this test passes despite having an error in the output
           cat > expected_deploy_passes.txt << 'EOF'
@@ -357,63 +359,65 @@ jobs:
           grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" deploy_output.txt | tail -1 || echo "No pytest summary found"
         continue-on-error: true
 
-      # - name: Run build tests
-      #   working-directory: aws-sam-cli
-      #   run: |
-      #     echo "=== BUILD TESTS - Started at $(date) ==="
-      #     python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 || true
+      - name: Run build tests
+        if: matrix.test_step.name == 'build'
+        working-directory: aws-sam-cli
+        timeout-minutes: ${{ matrix.test_step.timeout }}
+        run: |
+          echo "=== BUILD TESTS - Started at $(date) ==="
+          python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 || true
 
-      #     # echo "=== BUILD TEST OUTPUT ==="
-      #     # cat build_output.txt
-      #     # echo "=== END BUILD TEST OUTPUT ==="
+          echo "=== BUILD TEST OUTPUT ==="
+          cat build_output.txt
+          echo "=== END BUILD TEST OUTPUT ==="
 
-      #     # Expected failures from test guide (nerdctl ancestor filter limitation)
-      #     cat > expected_build_failures.txt << 'EOF'
-      #     test_with_invalid_dockerfile_definition
-      #     test_with_invalid_dockerfile_location
-      #     test_load_success
-      #     test_building_ruby_3_2_1_use_container
-      #     test_with_makefile_builder_specified_python_runtime_1_use_container
-      #     test_with_native_builder_specified_python_runtime_1_use_container
-      #     test_inline_not_built_1_use_container
-      #     test_json_env_vars_passed_0_use_container
-      #     test_json_env_vars_passed_1_use_container
-      #     test_inline_env_vars_passed_0_use_container
-      #     test_inline_env_vars_passed_1_use_container
-      #     test_custom_build_image_succeeds_0_use_container
-      #     test_custom_build_image_succeeds_1_use_container
-      #     test_building_ruby_in_container_with_specified_architecture_0_ruby3_2
-      #     test_building_java_in_container_with_arm64_architecture_00_java8_al2
-      #     test_building_java_in_container_with_arm64_architecture_03_java8_al2
-      #     test_building_java_in_container_with_arm64_architecture_04_java11
-      #     test_building_java_in_container_with_arm64_architecture_07_java11
-      #     test_building_java_in_container_with_arm64_architecture_08_java17
-      #     test_building_java_in_container_with_arm64_architecture_11_java17
-      #     test_building_java_in_container_with_arm64_architecture_al2023_0_java21
-      #     test_building_java_in_container_with_arm64_architecture_al2023_1_java21
-      #     test_building_java_in_container_with_arm64_architecture_al2023_2_java21
-      #     test_building_java_in_container_with_arm64_architecture_al2023_3_java21
-      #     test_building_java_in_container_00_java8_al2
-      #     EOF
+          # Expected failures from test guide (nerdctl ancestor filter limitation)
+          cat > expected_build_failures.txt << 'EOF'
+          test_with_invalid_dockerfile_definition
+          test_with_invalid_dockerfile_location
+          test_load_success
+          test_building_ruby_3_2_1_use_container
+          test_with_makefile_builder_specified_python_runtime_1_use_container
+          test_with_native_builder_specified_python_runtime_1_use_container
+          test_inline_not_built_1_use_container
+          test_json_env_vars_passed_0_use_container
+          test_json_env_vars_passed_1_use_container
+          test_inline_env_vars_passed_0_use_container
+          test_inline_env_vars_passed_1_use_container
+          test_custom_build_image_succeeds_0_use_container
+          test_custom_build_image_succeeds_1_use_container
+          test_building_ruby_in_container_with_specified_architecture_0_ruby3_2
+          test_building_java_in_container_with_arm64_architecture_00_java8_al2
+          test_building_java_in_container_with_arm64_architecture_03_java8_al2
+          test_building_java_in_container_with_arm64_architecture_04_java11
+          test_building_java_in_container_with_arm64_architecture_07_java11
+          test_building_java_in_container_with_arm64_architecture_08_java17
+          test_building_java_in_container_with_arm64_architecture_11_java17
+          test_building_java_in_container_with_arm64_architecture_al2023_0_java21
+          test_building_java_in_container_with_arm64_architecture_al2023_1_java21
+          test_building_java_in_container_with_arm64_architecture_al2023_2_java21
+          test_building_java_in_container_with_arm64_architecture_al2023_3_java21
+          test_building_java_in_container_00_java8_al2
+          EOF
 
-      #     # Extract actual failures
-      #     grep "FAILED" build_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_build_failures.txt || true
+          # Extract actual failures
+          grep "FAILED" build_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_build_failures.txt || true
 
-      #     # Find unexpected failures
-      #     UNEXPECTED=$(grep -v -f expected_build_failures.txt actual_build_failures.txt 2>/dev/null || true)
+          # Find unexpected failures
+          UNEXPECTED=$(grep -v -f expected_build_failures.txt actual_build_failures.txt 2>/dev/null || true)
 
-      #     if [ -n "$UNEXPECTED" ]; then
-      #       echo "❌ Unexpected failures found:"
-      #       echo "$UNEXPECTED"
-      #       exit 1
-      #     else
-      #       echo "✅ All failures were expected."
-      #     fi
+          if [ -n "$UNEXPECTED" ]; then
+            echo "❌ Unexpected failures found:"
+            echo "$UNEXPECTED"
+            exit 1
+          else
+            echo "✅ All failures were expected."
+          fi
 
-      #     echo ""
-      #     echo "=== PYTEST SUMMARY ==="
-      #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" build_output.txt | tail -1 || echo "No pytest summary found"
-      #   continue-on-error: true
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" build_output.txt | tail -1 || echo "No pytest summary found"
+        continue-on-error: true
 
       - name: Show finch-daemon logs
         if: always()
@@ -421,11 +425,27 @@ jobs:
           echo "=== FINCH-DAEMON OUTPUT ==="
           cat finch-daemon.log || echo "No log file found"
 
-      - name: AWS resource cleanup
-        if: always()
+  # Cleanup job that runs after ALL matrix jobs complete
+  cleanup:
+    runs-on: ubuntu-latest
+    needs: samcli-tests
+    if: always()  # Run cleanup even if tests failed
+    timeout-minutes: 15
+    env:
+      AWS_DEFAULT_REGION: ${{ secrets.REGION }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        with:
+          role-to-assume: ${{ secrets.ROLE }}
+          role-session-name: samcli-cleanup
+          aws-region: ${{ secrets.REGION }}
+          role-duration-seconds: 3600
+
+      - name: Comprehensive AWS resource cleanup
         timeout-minutes: 10
         run: |
-          echo "=== Intermediate cleanup ==="
+          echo "=== Comprehensive cleanup after all tests ==="
           
           # Set error handling to continue on failures
           set +e
@@ -564,4 +584,4 @@ jobs:
           # Reset error handling
           set -e
           
-          echo "✅ Intermediate cleanup completed"
+          echo "✅ Comprehensive cleanup completed"
