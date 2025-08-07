@@ -1,11 +1,11 @@
 name: "Lint PR Title"
-# on:
-#   pull_request:
-#     types:
-#       - opened
-#       - edited
-#       - reopened
-#       - synchronize
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
 jobs:
   main:
     name: conventional-commit
