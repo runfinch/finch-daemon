@@ -251,10 +251,156 @@ jobs:
       #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_api_output.txt | tail -1 || echo "No pytest summary found"
       #   continue-on-error: true
 
+      - name: Intermediate AWS resource cleanup
+        if: always()
+        timeout-minutes: 10
+        run: |
+          echo "=== Intermediate cleanup ==="
+          
+          # Set error handling to continue on failures
+          set +e
+          
+          # Function to safely run AWS commands with retries
+          safe_aws_command() {
+            local max_attempts=3
+            local attempt=1
+            local command="$@"
+            
+            while [ $attempt -le $max_attempts ]; do
+              echo "Attempt $attempt: $command"
+              if eval "$command"; then
+                return 0
+              else
+                echo "Command failed, attempt $attempt/$max_attempts"
+                if [ $attempt -lt $max_attempts ]; then
+                  sleep 5
+                fi
+                attempt=$((attempt + 1))
+              fi
+            done
+            echo "Command failed after $max_attempts attempts: $command"
+            return 1
+          }
+          
+          # 1. Clean up SAM CLI test stacks
+          echo "=== Cleaning up SAM CLI test stacks ==="
+          TEST_STACK_PATTERNS=(
+            "sam-app"
+            "test-"
+            "integration-test"
+            "samcli"
+            "aws-sam-cli-managed"
+          )
+          
+          for pattern in "${TEST_STACK_PATTERNS[@]}"; do
+            echo "Looking for stacks matching pattern: *$pattern*"
+            STACKS=$(aws cloudformation list-stacks --region $AWS_DEFAULT_REGION --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE ROLLBACK_COMPLETE UPDATE_ROLLBACK_COMPLETE --query "StackSummaries[?contains(StackName, '$pattern')].[StackName]" --output text 2>/dev/null || true)
+            
+            if [ -n "$STACKS" ]; then
+              echo "Found stacks: $STACKS"
+              for stack in $STACKS; do
+                echo "Processing stack: $stack"
+                
+                # Get S3 buckets from stack outputs and resources
+                echo "Finding S3 buckets in stack: $stack"
+                BUCKET_NAMES=$(aws cloudformation describe-stacks --stack-name "$stack" --region $AWS_DEFAULT_REGION --query 'Stacks[0].Outputs[?contains(OutputKey, `Bucket`) || contains(OutputKey, `bucket`)].OutputValue' --output text 2>/dev/null || true)
+                RESOURCE_BUCKETS=$(aws cloudformation describe-stack-resources --stack-name "$stack" --region $AWS_DEFAULT_REGION --query 'StackResources[?ResourceType==`AWS::S3::Bucket`].PhysicalResourceId' --output text 2>/dev/null || true)
+                
+                ALL_BUCKETS="$BUCKET_NAMES $RESOURCE_BUCKETS"
+                
+                # Clean up S3 buckets
+                for bucket in $ALL_BUCKETS; do
+                  if [ -n "$bucket" ] && [ "$bucket" != "None" ]; then
+                    echo "Cleaning S3 bucket: $bucket"
+                    
+                    if aws s3api head-bucket --bucket "$bucket" 2>/dev/null; then
+                      echo "Emptying S3 bucket: $bucket"
+                      
+                      # Delete all object versions
+                      safe_aws_command "aws s3api list-object-versions --bucket '$bucket' --query 'Versions[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
+                        if [ -n \"\$key\" ] && [ -n \"\$version\" ] && [ \"\$key\" != \"None\" ] && [ \"\$version\" != \"None\" ]; then
+                          aws s3api delete-object --bucket '$bucket' --key \"\$key\" --version-id \"\$version\" || true
+                        fi
+                      done"
+                      
+                      # Delete delete markers
+                      safe_aws_command "aws s3api list-object-versions --bucket '$bucket' --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
+                        if [ -n \"\$key\" ] && [ -n \"\$version\" ] && [ \"\$key\" != \"None\" ] && [ \"\$version\" != \"None\" ]; then
+                          aws s3api delete-object --bucket '$bucket' --key \"\$key\" --version-id \"\$version\" || true
+                        fi
+                      done"
+                      
+                      # Force delete remaining objects
+                      safe_aws_command "aws s3 rm s3://$bucket --recursive --quiet" || true
+                      
+                      echo "✅ S3 bucket $bucket emptied"
+                    else
+                      echo "S3 bucket $bucket does not exist or is not accessible"
+                    fi
+                  fi
+                done
+                
+                # Delete the CloudFormation stack
+                echo "Deleting CloudFormation stack: $stack"
+                safe_aws_command "aws cloudformation delete-stack --stack-name '$stack' --region $AWS_DEFAULT_REGION"
+              done
+              
+              # Wait for all deletions to complete
+              echo "Waiting for stack deletions to complete..."
+              for stack in $STACKS; do
+                echo "Waiting for stack deletion: $stack"
+                safe_aws_command "aws cloudformation wait stack-delete-complete --stack-name '$stack' --region $AWS_DEFAULT_REGION" || true
+              done
+            else
+              echo "No stacks found for pattern: *$pattern*"
+            fi
+          done
+          
+          # 2. Clean up Lambda functions (addressing sync test timing issues)
+          echo "=== Cleaning up Lambda functions ==="
+          LAMBDA_PATTERNS=(
+            "sam-app"
+            "test-"
+            "HelloWorld"
+          )
+          
+          for pattern in "${LAMBDA_PATTERNS[@]}"; do
+            echo "Looking for Lambda functions matching pattern: *$pattern*"
+            FUNCTIONS=$(aws lambda list-functions --region $AWS_DEFAULT_REGION --query "Functions[?contains(FunctionName, '$pattern')].FunctionName" --output text 2>/dev/null || true)
+            
+            if [ -n "$FUNCTIONS" ]; then
+              for func in $FUNCTIONS; do
+                echo "Deleting Lambda function: $func"
+                safe_aws_command "aws lambda delete-function --function-name '$func' --region $AWS_DEFAULT_REGION" || true
+              done
+            fi
+          done
+          
+          # 3. Clean up API Gateway APIs
+          echo "=== Cleaning up API Gateway APIs ==="
+          APIS=$(aws apigateway get-rest-apis --region $AWS_DEFAULT_REGION --query 'items[?contains(name, `sam-app`) || contains(name, `test-`) || contains(name, `Test`)].id' --output text 2>/dev/null || true)
+          
+          if [ -n "$APIS" ]; then
+            for api in $APIS; do
+              echo "Deleting API Gateway API: $api"
+              safe_aws_command "aws apigateway delete-rest-api --rest-api-id '$api' --region $AWS_DEFAULT_REGION" || true
+            done
+          fi
+          
+          # 4. Brief wait for AWS eventual consistency
+          echo "Waiting 15 seconds for AWS eventual consistency..."
+          sleep 15
+          
+          # Reset error handling
+          set -e
+          
+          echo "✅ Intermediate cleanup completed"
+
       - name: Run sync tests
         working-directory: aws-sam-cli
         timeout-minutes: 40
         run: |
+          pip install pytest-rerunfailures
           echo "=== SYNC TESTS - Started at $(date) ==="
 
           # python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 || true
@@ -280,7 +426,6 @@ jobs:
           echo "=== PYTEST SUMMARY ==="
           grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" sync_output.txt | tail -1 || echo "No pytest summary found"
         continue-on-error: true
-
 
       # - name: Run package tests
       #   working-directory: aws-sam-cli
@@ -421,51 +566,147 @@ jobs:
           echo "=== FINCH-DAEMON OUTPUT ==="
           cat finch-daemon.log || echo "No log file found"
 
-      - name: AWS resource cleanup
+      - name: Intermediate AWS resource cleanup
         if: always()
+        timeout-minutes: 10
         run: |
-          echo "=== Final cleanup ==="
-          # Clean up any remaining SAM managed stack
-          STACK_NAME="aws-sam-cli-managed-default"
-          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION >/dev/null 2>&1; then
-            STACK_STATUS=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION --query 'Stacks[0].StackStatus' --output text)
-            echo "Found existing stack with status: $STACK_STATUS"
-
-            # Get the S3 bucket name from stack outputs
-            BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION --query 'Stacks[0].Outputs[?OutputKey==`SourceBucket`].OutputValue' --output text 2>/dev/null || echo "")
-
-            if [ -n "$BUCKET_NAME" ]; then
-              echo "Found S3 bucket: $BUCKET_NAME"
-              echo "Emptying S3 bucket before stack deletion..."
-
-              # Delete all object versions and delete markers
-              aws s3api list-object-versions --bucket "$BUCKET_NAME" --query 'Versions[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
-                if [ -n "$key" ] && [ -n "$version" ]; then
-                  aws s3api delete-object --bucket "$BUCKET_NAME" --key "$key" --version-id "$version" || true
+          echo "=== Intermediate cleanup ==="
+          
+          # Set error handling to continue on failures
+          set +e
+          
+          # Function to safely run AWS commands with retries
+          safe_aws_command() {
+            local max_attempts=3
+            local attempt=1
+            local command="$@"
+            
+            while [ $attempt -le $max_attempts ]; do
+              echo "Attempt $attempt: $command"
+              if eval "$command"; then
+                return 0
+              else
+                echo "Command failed, attempt $attempt/$max_attempts"
+                if [ $attempt -lt $max_attempts ]; then
+                  sleep 5
                 fi
+                attempt=$((attempt + 1))
+              fi
+            done
+            echo "Command failed after $max_attempts attempts: $command"
+            return 1
+          }
+          
+          # 1. Clean up SAM CLI test stacks
+          echo "=== Cleaning up SAM CLI test stacks ==="
+          TEST_STACK_PATTERNS=(
+            "sam-app"
+            "test-"
+            "integration-test"
+            "samcli"
+            "aws-sam-cli-managed"
+          )
+          
+          for pattern in "${TEST_STACK_PATTERNS[@]}"; do
+            echo "Looking for stacks matching pattern: *$pattern*"
+            STACKS=$(aws cloudformation list-stacks --region $AWS_DEFAULT_REGION --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE ROLLBACK_COMPLETE UPDATE_ROLLBACK_COMPLETE --query "StackSummaries[?contains(StackName, '$pattern')].[StackName]" --output text 2>/dev/null || true)
+            
+            if [ -n "$STACKS" ]; then
+              echo "Found stacks: $STACKS"
+              for stack in $STACKS; do
+                echo "Processing stack: $stack"
+                
+                # Get S3 buckets from stack outputs and resources
+                echo "Finding S3 buckets in stack: $stack"
+                BUCKET_NAMES=$(aws cloudformation describe-stacks --stack-name "$stack" --region $AWS_DEFAULT_REGION --query 'Stacks[0].Outputs[?contains(OutputKey, `Bucket`) || contains(OutputKey, `bucket`)].OutputValue' --output text 2>/dev/null || true)
+                RESOURCE_BUCKETS=$(aws cloudformation describe-stack-resources --stack-name "$stack" --region $AWS_DEFAULT_REGION --query 'StackResources[?ResourceType==`AWS::S3::Bucket`].PhysicalResourceId' --output text 2>/dev/null || true)
+                
+                ALL_BUCKETS="$BUCKET_NAMES $RESOURCE_BUCKETS"
+                
+                # Clean up S3 buckets
+                for bucket in $ALL_BUCKETS; do
+                  if [ -n "$bucket" ] && [ "$bucket" != "None" ]; then
+                    echo "Cleaning S3 bucket: $bucket"
+                    
+                    if aws s3api head-bucket --bucket "$bucket" 2>/dev/null; then
+                      echo "Emptying S3 bucket: $bucket"
+                      
+                      # Delete all object versions
+                      safe_aws_command "aws s3api list-object-versions --bucket '$bucket' --query 'Versions[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
+                        if [ -n \"\$key\" ] && [ -n \"\$version\" ] && [ \"\$key\" != \"None\" ] && [ \"\$version\" != \"None\" ]; then
+                          aws s3api delete-object --bucket '$bucket' --key \"\$key\" --version-id \"\$version\" || true
+                        fi
+                      done"
+                      
+                      # Delete delete markers
+                      safe_aws_command "aws s3api list-object-versions --bucket '$bucket' --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
+                        if [ -n \"\$key\" ] && [ -n \"\$version\" ] && [ \"\$key\" != \"None\" ] && [ \"\$version\" != \"None\" ]; then
+                          aws s3api delete-object --bucket '$bucket' --key \"\$key\" --version-id \"\$version\" || true
+                        fi
+                      done"
+                      
+                      # Force delete remaining objects
+                      safe_aws_command "aws s3 rm s3://$bucket --recursive --quiet" || true
+                      
+                      echo "✅ S3 bucket $bucket emptied"
+                    else
+                      echo "S3 bucket $bucket does not exist or is not accessible"
+                    fi
+                  fi
+                done
+                
+                # Delete the CloudFormation stack
+                echo "Deleting CloudFormation stack: $stack"
+                safe_aws_command "aws cloudformation delete-stack --stack-name '$stack' --region $AWS_DEFAULT_REGION"
               done
-
-              # Delete any delete markers
-              aws s3api list-object-versions --bucket "$BUCKET_NAME" --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
-                if [ -n "$key" ] && [ -n "$version" ]; then
-                  aws s3api delete-object --bucket "$BUCKET_NAME" --key "$key" --version-id "$version" || true
-                fi
+              
+              # Wait for all deletions to complete
+              echo "Waiting for stack deletions to complete..."
+              for stack in $STACKS; do
+                echo "Waiting for stack deletion: $stack"
+                safe_aws_command "aws cloudformation wait stack-delete-complete --stack-name '$stack' --region $AWS_DEFAULT_REGION" || true
               done
-
-              echo "S3 bucket emptied successfully"
             else
-              echo "No S3 bucket found in stack outputs"
+              echo "No stacks found for pattern: *$pattern*"
             fi
-
-            # Delete stack
-            echo "Deleting SAM managed stack..."
-            aws cloudformation delete-stack --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION
-
-            # Wait for deletion to complete
-            echo "Waiting for stack deletion to complete..."
-            aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME" --region $AWS_DEFAULT_REGION || true
-            echo "✅ Stack deletion completed"
-          else
-            echo "No existing SAM managed stack found"
+          done
+          
+          # 2. Clean up Lambda functions (addressing sync test timing issues)
+          echo "=== Cleaning up Lambda functions ==="
+          LAMBDA_PATTERNS=(
+            "sam-app"
+            "test-"
+            "HelloWorld"
+          )
+          
+          for pattern in "${LAMBDA_PATTERNS[@]}"; do
+            echo "Looking for Lambda functions matching pattern: *$pattern*"
+            FUNCTIONS=$(aws lambda list-functions --region $AWS_DEFAULT_REGION --query "Functions[?contains(FunctionName, '$pattern')].FunctionName" --output text 2>/dev/null || true)
+            
+            if [ -n "$FUNCTIONS" ]; then
+              for func in $FUNCTIONS; do
+                echo "Deleting Lambda function: $func"
+                safe_aws_command "aws lambda delete-function --function-name '$func' --region $AWS_DEFAULT_REGION" || true
+              done
+            fi
+          done
+          
+          # 3. Clean up API Gateway APIs
+          echo "=== Cleaning up API Gateway APIs ==="
+          APIS=$(aws apigateway get-rest-apis --region $AWS_DEFAULT_REGION --query 'items[?contains(name, `sam-app`) || contains(name, `test-`) || contains(name, `Test`)].id' --output text 2>/dev/null || true)
+          
+          if [ -n "$APIS" ]; then
+            for api in $APIS; do
+              echo "Deleting API Gateway API: $api"
+              safe_aws_command "aws apigateway delete-rest-api --rest-api-id '$api' --region $AWS_DEFAULT_REGION" || true
+            done
           fi
-          echo "Cleanup completed"
+          
+          # 4. Brief wait for AWS eventual consistency
+          echo "Waiting 15 seconds for AWS eventual consistency..."
+          sleep 15
+          
+          # Reset error handling
+          set -e
+          
+          echo "✅ Intermediate cleanup completed"
