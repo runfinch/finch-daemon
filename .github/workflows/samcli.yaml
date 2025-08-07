@@ -108,6 +108,28 @@ jobs:
           make init
           samdev --version
 
+      - name: Verbose testing for specific failures
+        working-directory: aws-sam-cli
+        run: |
+          echo "=== DEBUGGING MULTIPLE REMOTE LAYERS TEST ==="
+          ulimit -n 65536
+
+          # Monitor finch-daemon logs during the specific test
+          echo "Starting finch-daemon log monitoring..."
+          tail -f ../finch-daemon.log &
+          TAIL_PID=$!
+
+          # Run just the failing test with maximum verbosity
+          python -m pytest tests/integration/local/start_api/test_start_api.py::TestWarmContainersMultipleRemoteLayersInvoke::test_can_invoke_lambda_layer_successfully -v -s --tb=long --capture=no || true
+
+          # Stop log monitoring
+          kill $TAIL_PID 2>/dev/null || true
+
+          echo "=== FINCH-DAEMON LOGS DURING TEST ==="
+          # Show recent finch-daemon logs
+          tail -100 ../finch-daemon.log
+        continue-on-error: true
+
       # - name: Run unit tests
       #   working-directory: aws-sam-cli
       #   run: |
@@ -178,30 +200,30 @@ jobs:
       #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" invoke_output.txt | tail -1 || echo "No pytest summary found"
       #   continue-on-error: true
 
-      # - name: Run start-lambda tests
-      #   working-directory: aws-sam-cli
-      #   timeout-minutes: 10
-      #   run: |
-      #     echo "=== START-LAMBDA TESTS - Started at $(date) ==="
-      #     python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
+      - name: Run start-lambda tests
+        working-directory: aws-sam-cli
+        timeout-minutes: 10
+        run: |
+          echo "=== START-LAMBDA TESTS - Started at $(date) ==="
+          python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
 
-      #     # echo "=== START-LAMBDA TEST OUTPUT ==="
-      #     # cat start_lambda_output.txt
-      #     # echo "=== END START-LAMBDA TEST OUTPUT ==="
+          # echo "=== START-LAMBDA TEST OUTPUT ==="
+          # cat start_lambda_output.txt
+          # echo "=== END START-LAMBDA TEST OUTPUT ==="
 
-      #     # Should pass completely per test guide
-      #     if grep -q "FAILED" start_lambda_output.txt; then
-      #       echo "❌ Start-lambda tests failed (should pass completely)"
-      #       grep "FAILED" start_lambda_output.txt
-      #       exit 1
-      #     else
-      #       echo "✅ All start-lambda tests passed as expected"
-      #     fi
+          # Should pass completely per test guide
+          if grep -q "FAILED" start_lambda_output.txt; then
+            echo "❌ Start-lambda tests failed (should pass completely)"
+            grep "FAILED" start_lambda_output.txt
+            exit 1
+          else
+            echo "✅ All start-lambda tests passed as expected"
+          fi
 
-      #     echo ""
-      #     echo "=== PYTEST SUMMARY ==="
-      #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_lambda_output.txt | tail -1 || echo "No pytest summary found"
-      #   continue-on-error: true
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_lambda_output.txt | tail -1 || echo "No pytest summary found"
+        continue-on-error: true
 
       # - name: Run start-api tests
       #   working-directory: aws-sam-cli
@@ -234,8 +256,6 @@ jobs:
         timeout-minutes: 30
         run: |
           echo "=== SYNC TESTS - Started at $(date) ==="
-
-          pip install pytest-rerunfailures
 
           # python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 || true
           python -m pytest tests/integration/sync -k 'image' -v --tb=short \
