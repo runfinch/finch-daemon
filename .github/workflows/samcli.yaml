@@ -9,7 +9,6 @@ on:
       - '**.go'
       - 'go.mod'
       - 'go.sum'
-      - '.github/workflows/samcli.yaml'
       - 'Makefile*'
       - 'cmd/**'
       - 'pkg/**'
@@ -115,7 +114,7 @@ jobs:
           echo "=== UNIT TESTS - Started at $(date) ==="
 
           # Fix common issues from test guide
-          ulimit -n 8192  # Fix "too many open files"
+          ulimit -n 65536  # Fix "too many open files"
 
           # Clean up potentially problematic Docker config entries
           if [ -f ~/.docker/config.json ]; then
@@ -208,8 +207,7 @@ jobs:
         timeout-minutes: 30
         run: |
           echo "=== START-API TESTS - Started at $(date) ==="
-          ulimit -a
-          ulimit -n 8192
+          ulimit -n 65536
           python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 || true
 
           # echo "=== START-API TEST OUTPUT ==="
