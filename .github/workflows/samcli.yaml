@@ -200,30 +200,30 @@ jobs:
       #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" invoke_output.txt | tail -1 || echo "No pytest summary found"
       #   continue-on-error: true
 
-      - name: Run start-lambda tests
-        working-directory: aws-sam-cli
-        timeout-minutes: 10
-        run: |
-          echo "=== START-LAMBDA TESTS - Started at $(date) ==="
-          python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
+      # - name: Run start-lambda tests
+      #   working-directory: aws-sam-cli
+      #   timeout-minutes: 10
+      #   run: |
+      #     echo "=== START-LAMBDA TESTS - Started at $(date) ==="
+      #     python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
 
-          # echo "=== START-LAMBDA TEST OUTPUT ==="
-          # cat start_lambda_output.txt
-          # echo "=== END START-LAMBDA TEST OUTPUT ==="
+      #     # echo "=== START-LAMBDA TEST OUTPUT ==="
+      #     # cat start_lambda_output.txt
+      #     # echo "=== END START-LAMBDA TEST OUTPUT ==="
 
-          # Should pass completely per test guide
-          if grep -q "FAILED" start_lambda_output.txt; then
-            echo "❌ Start-lambda tests failed (should pass completely)"
-            grep "FAILED" start_lambda_output.txt
-            exit 1
-          else
-            echo "✅ All start-lambda tests passed as expected"
-          fi
+      #     # Should pass completely per test guide
+      #     if grep -q "FAILED" start_lambda_output.txt; then
+      #       echo "❌ Start-lambda tests failed (should pass completely)"
+      #       grep "FAILED" start_lambda_output.txt
+      #       exit 1
+      #     else
+      #       echo "✅ All start-lambda tests passed as expected"
+      #     fi
 
-          echo ""
-          echo "=== PYTEST SUMMARY ==="
-          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_lambda_output.txt | tail -1 || echo "No pytest summary found"
-        continue-on-error: true
+      #     echo ""
+      #     echo "=== PYTEST SUMMARY ==="
+      #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_lambda_output.txt | tail -1 || echo "No pytest summary found"
+      #   continue-on-error: true
 
       # - name: Run start-api tests
       #   working-directory: aws-sam-cli
@@ -427,45 +427,45 @@ jobs:
           grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" sync_output.txt | tail -1 || echo "No pytest summary found"
         continue-on-error: true
 
-      # - name: Run package tests
-      #   working-directory: aws-sam-cli
-      #   timeout-minutes: 5
-      #   run: |
-      #     echo "=== PACKAGE TESTS - Started at $(date) ==="
-      #     python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short > package_output.txt 2>&1 || true
+      - name: Run package tests
+        working-directory: aws-sam-cli
+        timeout-minutes: 5
+        run: |
+          echo "=== PACKAGE TESTS - Started at $(date) ==="
+          python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short > package_output.txt 2>&1 || true
 
-      #     # echo "=== PACKAGE TEST OUTPUT ==="
-      #     # cat package_output.txt
-      #     # echo "=== END PACKAGE TEST OUTPUT ==="
+          # echo "=== PACKAGE TEST OUTPUT ==="
+          # cat package_output.txt
+          # echo "=== END PACKAGE TEST OUTPUT ==="
 
-      #     # Expected failures from test guide
-      #     cat > expected_package_failures.txt << 'EOF'
-      #     test_package_with_deep_nested_template_image
-      #     test_package_template_with_image_repositories_nested_stack
-      #     test_package_with_loadable_image_archive_0_template_image_load_yaml
-      #     EOF
+          # Expected failures from test guide
+          cat > expected_package_failures.txt << 'EOF'
+          test_package_with_deep_nested_template_image
+          test_package_template_with_image_repositories_nested_stack
+          test_package_with_loadable_image_archive_0_template_image_load_yaml
+          EOF
 
-      #     # Extract actual failures
-      #     grep "FAILED" package_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_package_failures.txt || true
+          # Extract actual failures
+          grep "FAILED" package_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_package_failures.txt || true
 
-      #     # Also check for nested stack failures (pattern match)
-      #     grep "FAILED.*test_package_template_with_image_repositories_nested_stack" package_output.txt >> actual_package_failures.txt || true
+          # Also check for nested stack failures (pattern match)
+          grep "FAILED.*test_package_template_with_image_repositories_nested_stack" package_output.txt >> actual_package_failures.txt || true
 
-      #     # Find unexpected failures (exclude nested stack pattern)
-      #     UNEXPECTED=$(grep -v -f expected_package_failures.txt actual_package_failures.txt | grep -v "test_package_template_with_image_repositories_nested_stack" || true)
+          # Find unexpected failures (exclude nested stack pattern)
+          UNEXPECTED=$(grep -v -f expected_package_failures.txt actual_package_failures.txt | grep -v "test_package_template_with_image_repositories_nested_stack" || true)
 
-      #     if [ -n "$UNEXPECTED" ]; then
-      #       echo "❌ Unexpected failures found:"
-      #       echo "$UNEXPECTED"
-      #       exit 1
-      #     else
-      #       echo "✅ All failures were expected."
-      #     fi
+          if [ -n "$UNEXPECTED" ]; then
+            echo "❌ Unexpected failures found:"
+            echo "$UNEXPECTED"
+            exit 1
+          else
+            echo "✅ All failures were expected."
+          fi
 
-      #     echo ""
-      #     echo "=== PYTEST SUMMARY ==="
-      #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" package_output.txt | tail -1 || echo "No pytest summary found"
-      #   continue-on-error: true
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" package_output.txt | tail -1 || echo "No pytest summary found"
+        continue-on-error: true
 
       # - name: Run deploy tests
       #   working-directory: aws-sam-cli
