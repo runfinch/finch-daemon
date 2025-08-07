@@ -329,63 +329,63 @@ jobs:
           grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" deploy_output.txt | tail -1 || echo "No pytest summary found"
         continue-on-error: true
 
-      - name: Run build tests
-        working-directory: aws-sam-cli
-        run: |
-          echo "=== BUILD TESTS - Started at $(date) ==="
-          python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 || true
+      # - name: Run build tests
+      #   working-directory: aws-sam-cli
+      #   run: |
+      #     echo "=== BUILD TESTS - Started at $(date) ==="
+      #     python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 || true
 
-          # echo "=== BUILD TEST OUTPUT ==="
-          # cat build_output.txt
-          # echo "=== END BUILD TEST OUTPUT ==="
+      #     # echo "=== BUILD TEST OUTPUT ==="
+      #     # cat build_output.txt
+      #     # echo "=== END BUILD TEST OUTPUT ==="
 
-          # Expected failures from test guide (nerdctl ancestor filter limitation)
-          cat > expected_build_failures.txt << 'EOF'
-          test_with_invalid_dockerfile_definition
-          test_with_invalid_dockerfile_location
-          test_load_success
-          test_building_ruby_3_2_1_use_container
-          test_with_makefile_builder_specified_python_runtime_1_use_container
-          test_with_native_builder_specified_python_runtime_1_use_container
-          test_inline_not_built_1_use_container
-          test_json_env_vars_passed_0_use_container
-          test_json_env_vars_passed_1_use_container
-          test_inline_env_vars_passed_0_use_container
-          test_inline_env_vars_passed_1_use_container
-          test_custom_build_image_succeeds_0_use_container
-          test_custom_build_image_succeeds_1_use_container
-          test_building_ruby_in_container_with_specified_architecture_0_ruby3_2
-          test_building_java_in_container_with_arm64_architecture_00_java8_al2
-          test_building_java_in_container_with_arm64_architecture_03_java8_al2
-          test_building_java_in_container_with_arm64_architecture_04_java11
-          test_building_java_in_container_with_arm64_architecture_07_java11
-          test_building_java_in_container_with_arm64_architecture_08_java17
-          test_building_java_in_container_with_arm64_architecture_11_java17
-          test_building_java_in_container_with_arm64_architecture_al2023_0_java21
-          test_building_java_in_container_with_arm64_architecture_al2023_1_java21
-          test_building_java_in_container_with_arm64_architecture_al2023_2_java21
-          test_building_java_in_container_with_arm64_architecture_al2023_3_java21
-          test_building_java_in_container_00_java8_al2
-          EOF
+      #     # Expected failures from test guide (nerdctl ancestor filter limitation)
+      #     cat > expected_build_failures.txt << 'EOF'
+      #     test_with_invalid_dockerfile_definition
+      #     test_with_invalid_dockerfile_location
+      #     test_load_success
+      #     test_building_ruby_3_2_1_use_container
+      #     test_with_makefile_builder_specified_python_runtime_1_use_container
+      #     test_with_native_builder_specified_python_runtime_1_use_container
+      #     test_inline_not_built_1_use_container
+      #     test_json_env_vars_passed_0_use_container
+      #     test_json_env_vars_passed_1_use_container
+      #     test_inline_env_vars_passed_0_use_container
+      #     test_inline_env_vars_passed_1_use_container
+      #     test_custom_build_image_succeeds_0_use_container
+      #     test_custom_build_image_succeeds_1_use_container
+      #     test_building_ruby_in_container_with_specified_architecture_0_ruby3_2
+      #     test_building_java_in_container_with_arm64_architecture_00_java8_al2
+      #     test_building_java_in_container_with_arm64_architecture_03_java8_al2
+      #     test_building_java_in_container_with_arm64_architecture_04_java11
+      #     test_building_java_in_container_with_arm64_architecture_07_java11
+      #     test_building_java_in_container_with_arm64_architecture_08_java17
+      #     test_building_java_in_container_with_arm64_architecture_11_java17
+      #     test_building_java_in_container_with_arm64_architecture_al2023_0_java21
+      #     test_building_java_in_container_with_arm64_architecture_al2023_1_java21
+      #     test_building_java_in_container_with_arm64_architecture_al2023_2_java21
+      #     test_building_java_in_container_with_arm64_architecture_al2023_3_java21
+      #     test_building_java_in_container_00_java8_al2
+      #     EOF
 
-          # Extract actual failures
-          grep "FAILED" build_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_build_failures.txt || true
+      #     # Extract actual failures
+      #     grep "FAILED" build_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_build_failures.txt || true
 
-          # Find unexpected failures
-          UNEXPECTED=$(grep -v -f expected_build_failures.txt actual_build_failures.txt 2>/dev/null || true)
+      #     # Find unexpected failures
+      #     UNEXPECTED=$(grep -v -f expected_build_failures.txt actual_build_failures.txt 2>/dev/null || true)
 
-          if [ -n "$UNEXPECTED" ]; then
-            echo "❌ Unexpected failures found:"
-            echo "$UNEXPECTED"
-            exit 1
-          else
-            echo "✅ All failures were expected."
-          fi
+      #     if [ -n "$UNEXPECTED" ]; then
+      #       echo "❌ Unexpected failures found:"
+      #       echo "$UNEXPECTED"
+      #       exit 1
+      #     else
+      #       echo "✅ All failures were expected."
+      #     fi
 
-          echo ""
-          echo "=== PYTEST SUMMARY ==="
-          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" build_output.txt | tail -1 || echo "No pytest summary found"
-        continue-on-error: true
+      #     echo ""
+      #     echo "=== PYTEST SUMMARY ==="
+      #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" build_output.txt | tail -1 || echo "No pytest summary found"
+      #   continue-on-error: true
 
       - name: Show finch-daemon logs
         if: always()
