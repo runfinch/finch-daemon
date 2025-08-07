@@ -1,33 +1,33 @@
 name: samcli
 
 on:
-  # push:
-  #   branches:
-  #     - main
-  #     - samcli-test
-  #   paths:
-  #     - '**.go'
-  #     - 'go.mod'
-  #     - 'go.sum'
-  #     - '.github/workflows/samcli.yaml'
-  #     - 'Makefile*'
-  #     - 'cmd/**'
-  #     - 'pkg/**'
-  #     - 'internal/**'
-  #     - 'api/**'
-  # pull_request:
-  #   branches:
-  #     - main
-  #   paths:
-  #     - '**.go'
-  #     - 'go.mod'
-  #     - 'go.sum'
-  #     - '.github/workflows/samcli.yaml'
-  #     - 'Makefile*'
-  #     - 'cmd/**'
-  #     - 'pkg/**'
-  #     - 'internal/**'
-  #     - 'api/**'
+  push:
+    branches:
+      - main
+      - samcli-test
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/samcli.yaml'
+      - 'Makefile*'
+      - 'cmd/**'
+      - 'pkg/**'
+      - 'internal/**'
+      - 'api/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/samcli.yaml'
+      - 'Makefile*'
+      - 'cmd/**'
+      - 'pkg/**'
+      - 'internal/**'
+      - 'api/**'
   # schedule:
   #   - cron: '0 2 * * *'  # Run daily at 2 AM UTC
   workflow_dispatch:
