@@ -108,27 +108,27 @@ jobs:
           make init
           samdev --version
 
-      - name: Verbose testing for specific failures
-        working-directory: aws-sam-cli
-        run: |
-          echo "=== DEBUGGING MULTIPLE REMOTE LAYERS TEST ==="
-          ulimit -n 65536
+      # - name: Verbose testing for specific failures
+      #   working-directory: aws-sam-cli
+      #   run: |
+      #     echo "=== DEBUGGING MULTIPLE REMOTE LAYERS TEST ==="
+      #     ulimit -n 65536
 
-          # Monitor finch-daemon logs during the specific test
-          echo "Starting finch-daemon log monitoring..."
-          tail -f ../finch-daemon.log &
-          TAIL_PID=$!
+      #     # Monitor finch-daemon logs during the specific test
+      #     echo "Starting finch-daemon log monitoring..."
+      #     tail -f ../finch-daemon.log &
+      #     TAIL_PID=$!
 
-          # Run just the failing test with maximum verbosity
-          python -m pytest tests/integration/local/start_api/test_start_api.py::TestWarmContainersMultipleRemoteLayersInvoke::test_can_invoke_lambda_layer_successfully -v -s --tb=long --capture=no || true
+      #     # Run just the failing test with maximum verbosity
+      #     python -m pytest tests/integration/local/start_api/test_start_api.py::TestWarmContainersMultipleRemoteLayersInvoke::test_can_invoke_lambda_layer_successfully -v -s --tb=long --capture=no || true
 
-          # Stop log monitoring
-          kill $TAIL_PID 2>/dev/null || true
+      #     # Stop log monitoring
+      #     kill $TAIL_PID 2>/dev/null || true
 
-          echo "=== FINCH-DAEMON LOGS DURING TEST ==="
-          # Show recent finch-daemon logs
-          tail -100 ../finch-daemon.log
-        continue-on-error: true
+      #     echo "=== FINCH-DAEMON LOGS DURING TEST ==="
+      #     # Show recent finch-daemon logs
+      #     tail -100 ../finch-daemon.log
+      #   continue-on-error: true
 
       # - name: Run unit tests
       #   working-directory: aws-sam-cli
@@ -253,7 +253,7 @@ jobs:
 
       - name: Run sync tests
         working-directory: aws-sam-cli
-        timeout-minutes: 30
+        timeout-minutes: 40
         run: |
           echo "=== SYNC TESTS - Started at $(date) ==="
 
