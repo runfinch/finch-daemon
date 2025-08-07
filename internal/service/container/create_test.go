@@ -8,12 +8,14 @@ import (
 	"errors"
 
 	cerrdefs "github.com/containerd/errdefs"
+	"github.com/containerd/go-cni"
 	"github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/containerd/nerdctl/v2/pkg/netutil"
 	"github.com/containernetworking/cni/libcni"
-	"go.uber.org/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/mocks/mocks_archive"
 	"github.com/runfinch/finch-daemon/mocks/mocks_backend"
@@ -80,6 +82,9 @@ var _ = Describe("Container Create API ", func() {
 			args = append(args, cmd...)
 			ncContainerSvc.EXPECT().CreateContainer(ctx, args, netManager, createOptExp).Return(
 				con, nil, nil)
+
+			// make Labels() return an error to skip updateContainerMetadata
+			con.EXPECT().Labels(ctx).Return(nil, errors.New("mock error"))
 
 			// service should not return any error and the returned cid should match expected
 			cidResult, err := svc.Create(ctx, image, cmd, createOpt, netOpt)
@@ -284,6 +289,53 @@ var _ = Describe("Container Create API ", func() {
 			// function should return an error
 			err := svc.translateNetworkIds(&netOpt)
 			Expect(err).ShouldNot(BeNil())
+		})
+	})
+	Context("updateContainerMetadata", func() {
+		It("should successfully update container metadata", func() {
+			createOpt := types.ContainerCreateOptions{
+				NerdctlCmd: ncExe,
+				GOptions: types.GlobalCommandOptions{
+					DataRoot: "/tmp/test",
+					Address:  "/run/containerd/containerd.sock",
+				},
+			}
+			netOpt := types.NetworkOptions{
+				PortMappings: []cni.PortMapping{
+					{ContainerPort: 80, HostPort: 8080, Protocol: "tcp"},
+				},
+			}
+
+			// Mock container expectations
+			con.EXPECT().Labels(ctx).Return(map[string]string{}, nil)
+			con.EXPECT().Spec(ctx).Return(&specs.Spec{Annotations: map[string]string{}}, nil)
+			con.EXPECT().Update(ctx, gomock.Any(), gomock.Any()).Return(nil)
+
+			err := updateContainerMetadata(ctx, createOpt, netOpt, con)
+			Expect(err).Should(BeNil())
+		})
+
+		It("should return error when Labels() fails", func() {
+			createOpt := types.ContainerCreateOptions{}
+			netOpt := types.NetworkOptions{}
+			mockErr := errors.New("failed to get labels")
+
+			con.EXPECT().Labels(ctx).Return(nil, mockErr)
+
+			err := updateContainerMetadata(ctx, createOpt, netOpt, con)
+			Expect(err).Should(Equal(mockErr))
+		})
+
+		It("should return error when Spec() fails", func() {
+			createOpt := types.ContainerCreateOptions{}
+			netOpt := types.NetworkOptions{}
+			mockErr := errors.New("failed to get spec")
+
+			con.EXPECT().Labels(ctx).Return(map[string]string{}, nil)
+			con.EXPECT().Spec(ctx).Return(nil, mockErr)
+
+			err := updateContainerMetadata(ctx, createOpt, netOpt, con)
+			Expect(err).Should(Equal(mockErr))
 		})
 	})
 })
