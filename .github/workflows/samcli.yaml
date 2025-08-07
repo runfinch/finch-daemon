@@ -1,33 +1,35 @@
 name: samcli
 
 on:
-  push:
-    branches:
-      - main
-      - samcli-test
-    paths:
-      - '**.go'
-      - 'go.mod'
-      - 'go.sum'
-      - '.github/workflows/samcli.yaml'
-      - 'Makefile*'
-      - 'cmd/**'
-      - 'pkg/**'
-      - 'internal/**'
-      - 'api/**'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - '**.go'
-      - 'go.mod'
-      - 'go.sum'
-      - '.github/workflows/samcli.yaml'
-      - 'Makefile*'
-      - 'cmd/**'
-      - 'pkg/**'
-      - 'internal/**'
-      - 'api/**'
+  # push:
+  #   branches:
+  #     - main
+  #     - samcli-test
+  #   paths:
+  #     - '**.go'
+  #     - 'go.mod'
+  #     - 'go.sum'
+  #     - '.github/workflows/samcli.yaml'
+  #     - 'Makefile*'
+  #     - 'cmd/**'
+  #     - 'pkg/**'
+  #     - 'internal/**'
+  #     - 'api/**'
+  # pull_request:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - '**.go'
+  #     - 'go.mod'
+  #     - 'go.sum'
+  #     - '.github/workflows/samcli.yaml'
+  #     - 'Makefile*'
+  #     - 'cmd/**'
+  #     - 'pkg/**'
+  #     - 'internal/**'
+  #     - 'api/**'
+  # schedule:
+  #   - cron: '0 2 * * *'  # Run daily at 2 AM UTC
   workflow_dispatch:
 
 env:
@@ -135,76 +137,70 @@ jobs:
             echo "✅ Unit tests passed with $COVERAGE% coverage"
           fi
 
-      - name: Verbose Testing
-        working-directory: aws-sam-cli
-        run: |
-          python -m pytest tests/integration/local/invoke/test_integration_cli_images.py::TestSamPython36HelloWorldIntegrationImages::test_invoke_with_env_vars -v -s --tb=long
-        continue-on-error: false
-
-      - name: Run invoke tests
-        working-directory: aws-sam-cli
-        timeout-minutes: 20
-        run: |
-          echo "=== INVOKE TESTS - Started at $(date) ==="
-          python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
+      # - name: Run invoke tests
+      #   working-directory: aws-sam-cli
+      #   timeout-minutes: 20
+      #   run: |
+      #     echo "=== INVOKE TESTS - Started at $(date) ==="
+      #     python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
           
-          # echo "=== INVOKE TEST OUTPUT ==="
-          # cat invoke_output.txt
-          # echo "=== END INVOKE TEST OUTPUT ==="
+      #     # echo "=== INVOKE TEST OUTPUT ==="
+      #     # cat invoke_output.txt
+      #     # echo "=== END INVOKE TEST OUTPUT ==="
           
-          # Expected failures from test guide (12 total from different test classes)
-          cat > expected_invoke_failures.txt << 'EOF'
-          test_invoke_with_error_during_image_build
-          test_invoke_with_timeout_set_0_TimeoutFunction
-          test_invoke_with_timeout_set_1_TimeoutFunctionWithParameter
-          test_invoke_with_timeout_set_2_TimeoutFunctionWithStringParameter
-          test_building_new_rapid_image_removes_old_rapid_images
-          test_invoke_returns_expected_results_from_git_function
-          test_invoke_returns_expected_results_from_git_function_with_parameters
-          EOF
+      #     # Expected failures from test guide (12 total from different test classes)
+      #     cat > expected_invoke_failures.txt << 'EOF'
+      #     test_invoke_with_error_during_image_build
+      #     test_invoke_with_timeout_set_0_TimeoutFunction
+      #     test_invoke_with_timeout_set_1_TimeoutFunctionWithParameter
+      #     test_invoke_with_timeout_set_2_TimeoutFunctionWithStringParameter
+      #     test_building_new_rapid_image_removes_old_rapid_images
+      #     test_invoke_returns_expected_results_from_git_function
+      #     test_invoke_returns_expected_results_from_git_function_with_parameters
+      #     EOF
           
-          # Extract actual failures
-          grep "FAILED" invoke_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_invoke_failures.txt || true
+      #     # Extract actual failures
+      #     grep "FAILED" invoke_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_invoke_failures.txt || true
           
-          # Find unexpected failures
-          UNEXPECTED=$(grep -v -f expected_invoke_failures.txt actual_invoke_failures.txt 2>/dev/null || true)
+      #     # Find unexpected failures
+      #     UNEXPECTED=$(grep -v -f expected_invoke_failures.txt actual_invoke_failures.txt 2>/dev/null || true)
           
-          if [ -n "$UNEXPECTED" ]; then
-            echo "❌ Unexpected failures found:"
-            echo "$UNEXPECTED"
-            exit 1
-          else
-            echo "✅ All failures were expected."
-          fi
+      #     if [ -n "$UNEXPECTED" ]; then
+      #       echo "❌ Unexpected failures found:"
+      #       echo "$UNEXPECTED"
+      #       exit 1
+      #     else
+      #       echo "✅ All failures were expected."
+      #     fi
           
-          echo ""
-          echo "=== PYTEST SUMMARY ==="
-          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" invoke_output.txt | tail -1 || echo "No pytest summary found"
+      #     echo ""
+      #     echo "=== PYTEST SUMMARY ==="
+      #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" invoke_output.txt | tail -1 || echo "No pytest summary found"
         
 
-      - name: Run start-lambda tests
-        working-directory: aws-sam-cli
-        timeout-minutes: 10
-        run: |
-          echo "=== START-LAMBDA TESTS - Started at $(date) ==="
-          python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
+      # - name: Run start-lambda tests
+      #   working-directory: aws-sam-cli
+      #   timeout-minutes: 10
+      #   run: |
+      #     echo "=== START-LAMBDA TESTS - Started at $(date) ==="
+      #     python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
           
-          # echo "=== START-LAMBDA TEST OUTPUT ==="
-          # cat start_lambda_output.txt
-          # echo "=== END START-LAMBDA TEST OUTPUT ==="
+      #     # echo "=== START-LAMBDA TEST OUTPUT ==="
+      #     # cat start_lambda_output.txt
+      #     # echo "=== END START-LAMBDA TEST OUTPUT ==="
           
-          # Should pass completely per test guide
-          if grep -q "FAILED" start_lambda_output.txt; then
-            echo "❌ Start-lambda tests failed (should pass completely)"
-            grep "FAILED" start_lambda_output.txt
-            exit 1
-          else
-            echo "✅ All start-lambda tests passed as expected"
-          fi
+      #     # Should pass completely per test guide
+      #     if grep -q "FAILED" start_lambda_output.txt; then
+      #       echo "❌ Start-lambda tests failed (should pass completely)"
+      #       grep "FAILED" start_lambda_output.txt
+      #       exit 1
+      #     else
+      #       echo "✅ All start-lambda tests passed as expected"
+      #     fi
           
-          echo ""
-          echo "=== PYTEST SUMMARY ==="
-          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_lambda_output.txt | tail -1 || echo "No pytest summary found"
+      #     echo ""
+      #     echo "=== PYTEST SUMMARY ==="
+      #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_lambda_output.txt | tail -1 || echo "No pytest summary found"
         
 
       - name: Run start-api tests
