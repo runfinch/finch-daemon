@@ -75,7 +75,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
-          role-to-assume: ${{ secrets.ROLE }}
+          role-to-assume: ${{ matrix.test_step.name == 'sync' && secrets.ROLE_SYNC || secrets.ROLE }}
           role-session-name: samcli-${{ matrix.test_step.name }}-tests
           aws-region: ${{ secrets.REGION }}
           role-duration-seconds: 14400
@@ -140,7 +140,14 @@ jobs:
           ulimit -n 65536  # Fix "too many open files"
 
           make test > unit_test_output.txt 2>&1 || true
-          cat unit_test_output.txt
+
+          echo ""
+          echo "=== FAILURES ==="
+          grep "FAILED" unit_test_output.txt || echo "No failures found"
+          
+          echo ""
+          echo "=== PASSES ==="
+          grep "PASSED" unit_test_output.txt || echo "No passes found"
 
           # Check if required coverage was reached
           if grep -q "Required test coverage of.*reached" unit_test_output.txt; then
@@ -148,6 +155,9 @@ jobs:
             grep "Required test coverage of.*reached" unit_test_output.txt
           else
             echo "❌ Required test coverage not reached"
+            echo ""
+            echo "=== FULL OUTPUT FOR DEBUGGING ==="
+            cat unit_test_output.txt
           fi
 
           echo ""
@@ -168,14 +178,21 @@ jobs:
                 --reruns-delay 15 \
                 > sync_output.txt 2>&1 || true
 
-          # echo "=== SYNC TEST OUTPUT ==="
-          # cat sync_output.txt
-          # echo "=== END SYNC TEST OUTPUT ==="
+          echo ""
+          echo "=== FAILURES ==="
+          grep "FAILED" sync_output.txt || echo "No failures found"
+          
+          echo ""
+          echo "=== PASSES ==="
+          grep "PASSED" sync_output.txt || echo "No passes found"
 
           # Should pass completely pr test guide
           if grep -q "FAILED" sync_output.txt; then
             echo "❌ Sync tests failed (should pass completely)"
             grep "FAILED" sync_output.txt
+            echo ""
+            echo "=== FULL OUTPUT FOR DEBUGGING ==="
+            cat sync_output.txt
             exit 1
           else
             echo "✅ All sync tests passed as expected"
@@ -193,9 +210,13 @@ jobs:
           echo "=== PACKAGE TESTS - Started at $(date) ==="
           python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short > package_output.txt 2>&1 || true
 
-          # echo "=== PACKAGE TEST OUTPUT ==="
-          # cat package_output.txt
-          # echo "=== END PACKAGE TEST OUTPUT ==="
+          echo ""
+          echo "=== FAILURES ==="
+          grep "FAILED" package_output.txt || echo "No failures found"
+          
+          echo ""
+          echo "=== PASSES ==="
+          grep "PASSED" package_output.txt || echo "No passes found"
 
           # Expected failures from test guide
           cat > expected_package_failures.txt << 'EOF'
@@ -216,9 +237,12 @@ jobs:
           if [ -n "$UNEXPECTED" ]; then
             echo "❌ Unexpected failures found:"
             echo "$UNEXPECTED"
+            echo ""
+            echo "=== FULL OUTPUT FOR DEBUGGING ==="
+            cat package_output.txt
             exit 1
           else
-            echo "✅ All failures were expected."
+            echo "✅ All failures were expected"
           fi
 
           echo ""
@@ -233,9 +257,13 @@ jobs:
           echo "=== INVOKE TESTS - Started at $(date) ==="
           python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
 
-          # echo "=== INVOKE TEST OUTPUT ==="
-          # cat invoke_output.txt
-          # echo "=== END INVOKE TEST OUTPUT ==="
+          echo ""
+          echo "=== FAILURES ==="
+          grep "FAILED" invoke_output.txt || echo "No failures found"
+          
+          echo ""
+          echo "=== PASSES ==="
+          grep "PASSED" invoke_output.txt || echo "No passes found"
 
           # Expected failures from test guide (12 total from different test classes)
           cat > expected_invoke_failures.txt << 'EOF'
@@ -257,9 +285,12 @@ jobs:
           if [ -n "$UNEXPECTED" ]; then
             echo "❌ Unexpected failures found:"
             echo "$UNEXPECTED"
+            echo ""
+            echo "=== FULL OUTPUT FOR DEBUGGING ==="
+            cat invoke_output.txt
             exit 1
           else
-            echo "✅ All failures were expected."
+            echo "✅ All failures were expected"
           fi
 
           echo ""
@@ -274,14 +305,21 @@ jobs:
           echo "=== START-LAMBDA TESTS - Started at $(date) ==="
           python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
 
-          # echo "=== START-LAMBDA TEST OUTPUT ==="
-          # cat start_lambda_output.txt
-          # echo "=== END START-LAMBDA TEST OUTPUT ==="
+          echo ""
+          echo "=== FAILURES ==="
+          grep "FAILED" start_lambda_output.txt || echo "No failures found"
+          
+          echo ""
+          echo "=== PASSES ==="
+          grep "PASSED" start_lambda_output.txt || echo "No passes found"
 
           # Should pass completely per test guide
           if grep -q "FAILED" start_lambda_output.txt; then
             echo "❌ Start-lambda tests failed (should pass completely)"
             grep "FAILED" start_lambda_output.txt
+            echo ""
+            echo "=== FULL OUTPUT FOR DEBUGGING ==="
+            cat start_lambda_output.txt
             exit 1
           else
             echo "✅ All start-lambda tests passed as expected"
@@ -300,14 +338,21 @@ jobs:
           ulimit -n 65536
           python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 || true
 
-          # echo "=== START-API TEST OUTPUT ==="
-          # cat start_api_output.txt
-          # echo "=== END START-API TEST OUTPUT ==="
+          echo ""
+          echo "=== FAILURES ==="
+          grep "FAILED" start_api_output.txt || echo "No failures found"
+          
+          echo ""
+          echo "=== PASSES ==="
+          grep "PASSED" start_api_output.txt || echo "No passes found"
 
           # Should pass completely per test guide
           if grep -q "FAILED" start_api_output.txt; then
             echo "❌ Start-api tests failed (should pass completely)"
             grep "FAILED" start_api_output.txt
+            echo ""
+            echo "=== FULL OUTPUT FOR DEBUGGING ==="
+            cat start_api_output.txt
             exit 1
           else
             echo "✅ All start-api tests passed as expected"
@@ -329,13 +374,21 @@ jobs:
           # cat deploy_output.txt
           # echo "=== END DEPLOY TEST OUTPUT ==="
 
+          echo ""
+          echo "=== FAILURES ==="
+          grep "FAILED" deploy_output.txt || echo "No failures found"
+          
+          echo ""
+          echo "=== PASSES ==="
+          grep "PASSED" deploy_output.txt || echo "No passes found"
+
           # Expected passes - this test passes despite having an error in the output
           cat > expected_deploy_passes.txt << 'EOF'
           test_deploy_guided_image_auto_0_aws_serverless_function_image_yaml
           EOF
 
           # Extract actual passes - test names appear on the line after PASSED
-          grep -A1 "PASSED" deploy_output.txt | grep "test_" | grep -o 'test_[a-zA-Z0-9_]*' > actual_deploy_passes.txt || true
+          grep -A1 "PASSED" deploy_output.txt | grep "test_" | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_deploy_passes.txt || true
 
           # Find unexpected passes (passes that aren't in our expected list)
           UNEXPECTED_PASSES=$(grep -v -f expected_deploy_passes.txt actual_deploy_passes.txt 2>/dev/null || true)
@@ -343,6 +396,9 @@ jobs:
           if [ -n "$UNEXPECTED_PASSES" ]; then
             echo "❌ Unexpected passes found:"
             echo "$UNEXPECTED_PASSES"
+            echo ""
+            echo "=== FULL OUTPUT FOR DEBUGGING ==="
+            cat deploy_output.txt
             exit 1
           else
             echo "✅ All failures and passes were expected (1 known pass with error, rest fail due to multi-arch)."
@@ -363,6 +419,14 @@ jobs:
           # echo "=== BUILD TEST OUTPUT ==="
           # cat build_output.txt
           # echo "=== END BUILD TEST OUTPUT ==="
+
+          echo ""
+          echo "=== FAILURES ==="
+          grep "FAILED" build_output.txt || echo "No failures found"
+          
+          echo ""
+          echo "=== PASSES ==="
+          grep "PASSED" build_output.txt || echo "No passes found"
 
           # Expected failures from test guide (nerdctl ancestor filter limitation)
           cat > expected_build_failures.txt << 'EOF'
@@ -402,6 +466,9 @@ jobs:
           if [ -n "$UNEXPECTED" ]; then
             echo "❌ Unexpected failures found:"
             echo "$UNEXPECTED"
+            echo ""
+            echo "=== FULL OUTPUT FOR DEBUGGING ==="
+            cat build_output.txt
             exit 1
           else
             echo "✅ All failures were expected."
@@ -425,24 +492,24 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        region: 
-          - us-east-1   # for sync cleanup
-          - us-west-2   # for all other tests cleanup
+        role: 
+          - ROLE       # main account cleanup
+          - ROLE_SYNC  # sync account cleanup
     env:
-      AWS_DEFAULT_REGION: ${{ matrix.region }}
+      AWS_DEFAULT_REGION: us-east-1
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
-          role-to-assume: ${{ secrets.ROLE }}
-          role-session-name: samcli-cleanup-${{ matrix.region }}
-          aws-region: ${{ matrix.region }}
+          role-to-assume: ${{ secrets[matrix.role] }}
+          role-session-name: samcli-cleanup-${{ matrix.role }}
+          aws-region: us-east-1
           role-duration-seconds: 3600
 
       - name: Comprehensive AWS resource cleanup
         timeout-minutes: 10
         run: |
-          echo "=== Comprehensive cleanup in ${{ matrix.region }} ==="
+          echo "=== Comprehensive cleanup ==="
           
           # Set error handling to continue on failures
           set +e
