@@ -48,8 +48,8 @@ jobs:
       matrix:
         test_step:
           # SYNC TESTS - COMMENTED OUT (uncomment to test if sync can run in parallel)
-          # - name: sync
-          #   timeout: 40
+          - name: sync
+            timeout: 40
           - name: unit
             timeout: 15
           - name: package
@@ -60,12 +60,12 @@ jobs:
             timeout: 25
           - name: start-api
             timeout: 35
-          # - name: deploy
-          #   timeout: 45
-          # - name: build
-          #   timeout: 35
+          - name: deploy
+            timeout: 45
+          - name: build
+            timeout: 35
     env:
-      AWS_DEFAULT_REGION: ${{ secrets.REGION }}
+      AWS_DEFAULT_REGION: ${{ matrix.test_step.name == 'sync' && secrets.REGION || 'us-west-2' }}
       DOCKER_HOST: unix:///run/finch.sock
       BY_CANARY: true  # full aws access for tests
       SAM_CLI_DEV: 1
@@ -77,7 +77,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.ROLE }}
           role-session-name: samcli-${{ matrix.test_step.name }}-tests
-          aws-region: ${{ secrets.REGION }}
+          aws-region: ${{ matrix.test_step.name == 'sync' && secrets.REGION || 'us-west-2' }}
           role-duration-seconds: 14400
 
       - name: Set up Go
@@ -153,7 +153,6 @@ jobs:
           echo ""
           echo "=== PYTEST SUMMARY ==="
           grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" unit_test_output.txt | tail -1 || echo "No pytest summary found"
-        continue-on-error: true
 
       # SYNC TESTS - COMMENTED OUT (uncomment to enable)
       - name: Run sync tests
@@ -169,11 +168,11 @@ jobs:
                 --reruns-delay 15 \
                 > sync_output.txt 2>&1 || true
 
-          echo "=== SYNC TEST OUTPUT ==="
-          cat sync_output.txt
-          echo "=== END SYNC TEST OUTPUT ==="
+          # echo "=== SYNC TEST OUTPUT ==="
+          # cat sync_output.txt
+          # echo "=== END SYNC TEST OUTPUT ==="
 
-          # Should pass completely per test guide
+          # Should pass completely pr test guide
           if grep -q "FAILED" sync_output.txt; then
             echo "❌ Sync tests failed (should pass completely)"
             grep "FAILED" sync_output.txt
@@ -185,7 +184,6 @@ jobs:
           echo ""
           echo "=== PYTEST SUMMARY ==="
           grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" sync_output.txt | tail -1 || echo "No pytest summary found"
-        continue-on-error: true
 
       - name: Run package tests
         if: matrix.test_step.name == 'package'
@@ -226,7 +224,6 @@ jobs:
           echo ""
           echo "=== PYTEST SUMMARY ==="
           grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" package_output.txt | tail -1 || echo "No pytest summary found"
-        continue-on-error: true
 
       - name: Run invoke tests
         if: matrix.test_step.name == 'invoke'
@@ -268,7 +265,6 @@ jobs:
           echo ""
           echo "=== PYTEST SUMMARY ==="
           grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" invoke_output.txt | tail -1 || echo "No pytest summary found"
-        continue-on-error: true
 
       - name: Run start-lambda tests
         if: matrix.test_step.name == 'start-lambda'
@@ -294,7 +290,6 @@ jobs:
           echo ""
           echo "=== PYTEST SUMMARY ==="
           grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_lambda_output.txt | tail -1 || echo "No pytest summary found"
-        continue-on-error: true
 
       - name: Run start-api tests
         if: matrix.test_step.name == 'start-api'
@@ -321,7 +316,6 @@ jobs:
           echo ""
           echo "=== PYTEST SUMMARY ==="
           grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_api_output.txt | tail -1 || echo "No pytest summary found"
-        continue-on-error: true
 
       - name: Run deploy tests
         if: matrix.test_step.name == 'deploy'
@@ -357,67 +351,65 @@ jobs:
           echo ""
           echo "=== PYTEST SUMMARY ==="
           grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" deploy_output.txt | tail -1 || echo "No pytest summary found"
-        continue-on-error: true
 
-      # - name: Run build tests
-      #   if: matrix.test_step.name == 'build'
-      #   working-directory: aws-sam-cli
-      #   timeout-minutes: ${{ matrix.test_step.timeout }}
-      #   run: |
-      #     echo "=== BUILD TESTS - Started at $(date) ==="
-      #     python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 || true
+      - name: Run build tests
+        if: matrix.test_step.name == 'build'
+        working-directory: aws-sam-cli
+        timeout-minutes: ${{ matrix.test_step.timeout }}
+        run: |
+          echo "=== BUILD TESTS - Started at $(date) ==="
+          python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 || true
 
-      #     echo "=== BUILD TEST OUTPUT ==="
-      #     cat build_output.txt
-      #     echo "=== END BUILD TEST OUTPUT ==="
+          echo "=== BUILD TEST OUTPUT ==="
+          cat build_output.txt
+          echo "=== END BUILD TEST OUTPUT ==="
 
-      #     # Expected failures from test guide (nerdctl ancestor filter limitation)
-      #     cat > expected_build_failures.txt << 'EOF'
-      #     test_with_invalid_dockerfile_definition
-      #     test_with_invalid_dockerfile_location
-      #     test_load_success
-      #     test_building_ruby_3_2_1_use_container
-      #     test_with_makefile_builder_specified_python_runtime_1_use_container
-      #     test_with_native_builder_specified_python_runtime_1_use_container
-      #     test_inline_not_built_1_use_container
-      #     test_json_env_vars_passed_0_use_container
-      #     test_json_env_vars_passed_1_use_container
-      #     test_inline_env_vars_passed_0_use_container
-      #     test_inline_env_vars_passed_1_use_container
-      #     test_custom_build_image_succeeds_0_use_container
-      #     test_custom_build_image_succeeds_1_use_container
-      #     test_building_ruby_in_container_with_specified_architecture_0_ruby3_2
-      #     test_building_java_in_container_with_arm64_architecture_00_java8_al2
-      #     test_building_java_in_container_with_arm64_architecture_03_java8_al2
-      #     test_building_java_in_container_with_arm64_architecture_04_java11
-      #     test_building_java_in_container_with_arm64_architecture_07_java11
-      #     test_building_java_in_container_with_arm64_architecture_08_java17
-      #     test_building_java_in_container_with_arm64_architecture_11_java17
-      #     test_building_java_in_container_with_arm64_architecture_al2023_0_java21
-      #     test_building_java_in_container_with_arm64_architecture_al2023_1_java21
-      #     test_building_java_in_container_with_arm64_architecture_al2023_2_java21
-      #     test_building_java_in_container_with_arm64_architecture_al2023_3_java21
-      #     test_building_java_in_container_00_java8_al2
-      #     EOF
+          # Expected failures from test guide (nerdctl ancestor filter limitation)
+          cat > expected_build_failures.txt << 'EOF'
+          test_with_invalid_dockerfile_definition
+          test_with_invalid_dockerfile_location
+          test_load_success
+          test_building_ruby_3_2_1_use_container
+          test_with_makefile_builder_specified_python_runtime_1_use_container
+          test_with_native_builder_specified_python_runtime_1_use_container
+          test_inline_not_built_1_use_container
+          test_json_env_vars_passed_0_use_container
+          test_json_env_vars_passed_1_use_container
+          test_inline_env_vars_passed_0_use_container
+          test_inline_env_vars_passed_1_use_container
+          test_custom_build_image_succeeds_0_use_container
+          test_custom_build_image_succeeds_1_use_container
+          test_building_ruby_in_container_with_specified_architecture_0_ruby3_2
+          test_building_java_in_container_with_arm64_architecture_00_java8_al2
+          test_building_java_in_container_with_arm64_architecture_03_java8_al2
+          test_building_java_in_container_with_arm64_architecture_04_java11
+          test_building_java_in_container_with_arm64_architecture_07_java11
+          test_building_java_in_container_with_arm64_architecture_08_java17
+          test_building_java_in_container_with_arm64_architecture_11_java17
+          test_building_java_in_container_with_arm64_architecture_al2023_0_java21
+          test_building_java_in_container_with_arm64_architecture_al2023_1_java21
+          test_building_java_in_container_with_arm64_architecture_al2023_2_java21
+          test_building_java_in_container_with_arm64_architecture_al2023_3_java21
+          test_building_java_in_container_00_java8_al2
+          EOF
 
-      #     # Extract actual failures
-      #     grep "FAILED" build_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_build_failures.txt || true
+          # Extract actual failures
+          grep "FAILED" build_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_build_failures.txt || true
 
-      #     # Find unexpected failures
-      #     UNEXPECTED=$(grep -v -f expected_build_failures.txt actual_build_failures.txt 2>/dev/null || true)
+          # Find unexpected failures
+          UNEXPECTED=$(grep -v -f expected_build_failures.txt actual_build_failures.txt 2>/dev/null || true)
 
-      #     if [ -n "$UNEXPECTED" ]; then
-      #       echo "❌ Unexpected failures found:"
-      #       echo "$UNEXPECTED"
-      #       exit 1
-      #     else
-      #       echo "✅ All failures were expected."
-      #     fi
+          if [ -n "$UNEXPECTED" ]; then
+            echo "❌ Unexpected failures found:"
+            echo "$UNEXPECTED"
+            exit 1
+          else
+            echo "✅ All failures were expected."
+          fi
 
-      #     echo ""
-      #     echo "=== PYTEST SUMMARY ==="
-      #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" build_output.txt | tail -1 || echo "No pytest summary found"
-      #   continue-on-error: true
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" build_output.txt | tail -1 || echo "No pytest summary found"
 
       - name: Show finch-daemon logs
         if: always()
@@ -431,21 +423,26 @@ jobs:
     needs: samcli-tests
     if: always()  # Run cleanup even if tests failed
     timeout-minutes: 15
+    strategy:
+      matrix:
+        region: 
+          - ${{ secrets.REGION }}  # us-east-1 for sync cleanup
+          - us-west-2              # for all other tests cleanup
     env:
-      AWS_DEFAULT_REGION: ${{ secrets.REGION }}
+      AWS_DEFAULT_REGION: ${{ matrix.region }}
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
           role-to-assume: ${{ secrets.ROLE }}
-          role-session-name: samcli-cleanup
-          aws-region: ${{ secrets.REGION }}
+          role-session-name: samcli-cleanup-${{ matrix.region }}
+          aws-region: ${{ matrix.region }}
           role-duration-seconds: 3600
 
       - name: Comprehensive AWS resource cleanup
         timeout-minutes: 10
         run: |
-          echo "=== Comprehensive cleanup after all tests ==="
+          echo "=== Comprehensive cleanup in ${{ matrix.region }} ==="
           
           # Set error handling to continue on failures
           set +e
