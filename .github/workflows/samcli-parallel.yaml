@@ -48,8 +48,8 @@ jobs:
       matrix:
         test_step:
           # SYNC TESTS - COMMENTED OUT (uncomment to test if sync can run in parallel)
-          # - name: sync
-          #   timeout: 200 # put a ton of time; this is weirdly inconsistent
+          - name: sync
+            timeout: 200 # put a ton of time; this is weirdly inconsistent
           - name: unit
             timeout: 15
           - name: package
