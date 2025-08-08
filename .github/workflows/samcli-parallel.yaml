@@ -1,4 +1,4 @@
-name: samcli
+name: samcli-parallel
 
 on:
   push:
