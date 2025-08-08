@@ -426,8 +426,8 @@ jobs:
     strategy:
       matrix:
         region: 
-          - ${{ secrets.REGION }}  # us-east-1 for sync cleanup
-          - us-west-2              # for all other tests cleanup
+          - us-east-1   # for sync cleanup
+          - us-west-2   # for all other tests cleanup
     env:
       AWS_DEFAULT_REGION: ${{ matrix.region }}
     steps:
