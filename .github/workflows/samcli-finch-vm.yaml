@@ -416,8 +416,8 @@ jobs:
             return 1
           }
           
-          # Clean up SAM CLI test stacks
-          echo "=== Cleaning up SAM CLI test stacks ==="
+          # 1. Clean up S3 buckets from SAM CLI test stacks (without deleting stacks)
+          echo "=== Cleaning up S3 buckets from SAM CLI test stacks ==="
           TEST_STACK_PATTERNS=(
             "sam-app"
             "test-"
@@ -433,7 +433,7 @@ jobs:
             if [ -n "$STACKS" ]; then
               echo "Found stacks: $STACKS"
               for stack in $STACKS; do
-                echo "Processing stack: $stack"
+                echo "Processing stack: $stack (cleaning buckets only)"
                 
                 # Get S3 buckets from stack outputs and resources
                 echo "Finding S3 buckets in stack: $stack"
@@ -457,20 +457,11 @@ jobs:
                   fi
                 done
                 
-                # Delete the CloudFormation stack
-                echo "Deleting CloudFormation stack: $stack"
-                safe_aws_command "aws cloudformation delete-stack --stack-name '$stack' --region $AWS_DEFAULT_REGION"
-              done
-              
-              # Wait for all deletions to complete
-              echo "Waiting for stack deletions to complete..."
-              for stack in $STACKS; do
-                echo "Waiting for stack deletion: $stack"
-                safe_aws_command "aws cloudformation wait stack-delete-complete --stack-name '$stack' --region $AWS_DEFAULT_REGION" || true
+                echo "✅ Stack $stack buckets cleaned (stack preserved for debugging)"
               done
             else
               echo "No stacks found for pattern: *$pattern*"
             fi
           done
           
-          echo "✅ Comprehensive cleanup completed"
+          echo "✅ Comprehensive cleanup completed (stacks preserved for debugging)"
