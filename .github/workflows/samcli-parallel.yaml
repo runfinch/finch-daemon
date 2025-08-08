@@ -52,20 +52,20 @@ jobs:
             timeout: 200 # put a ton of time; this is weirdly inconsistent
           - name: unit
             timeout: 15
-          # - name: package
-          #   timeout: 10
-          - name: start-lambda
-            timeout: 15
-          - name: invoke
-            timeout: 25
-          - name: start-api
-            timeout: 35
+          - name: package
+            timeout: 10
+          # - name: start-lambda
+          #   timeout: 15
+          # - name: invoke
+          #   timeout: 25
+          # - name: start-api
+          #   timeout: 35
           # - name: deploy
           #   timeout: 45
           # - name: build
           #   timeout: 35
     env:
-      AWS_DEFAULT_REGION: ${{ (matrix.test_step.name == 'sync' || matrix.test_step.name == 'package' || matrix.test_step.name == 'deploy') && secrets.REGION || 'us-west-2' }}
+      AWS_DEFAULT_REGION: ${{ secrets.REGION }}
       DOCKER_HOST: unix:///run/finch.sock
       BY_CANARY: true  # full aws access for tests
       SAM_CLI_DEV: 1
@@ -77,7 +77,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.ROLE }}
           role-session-name: samcli-${{ matrix.test_step.name }}-tests
-          aws-region: ${{ (matrix.test_step.name == 'sync' || matrix.test_step.name == 'package' || matrix.test_step.name == 'deploy') && secrets.REGION || 'us-west-2' }}
+          aws-region: ${{ secrets.REGION }}
           role-duration-seconds: 14400
 
       - name: Set up Go
