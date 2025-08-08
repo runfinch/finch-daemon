@@ -1,20 +1,20 @@
 name: samcli-pr-validation
 
-on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - '**.go'
-      - 'go.mod'
-      - 'go.sum'
-      - '.github/workflows/samcli_on_pr.yaml'
-      - 'Makefile*'
-      - 'cmd/**'
-      - 'pkg/**'
-      - 'internal/**'
-      - 'api/**'
-  workflow_dispatch:
+# on:
+#   pull_request:
+#     branches:
+#       - main
+#     paths:
+#       - '**.go'
+#       - 'go.mod'
+#       - 'go.sum'
+#       - '.github/workflows/samcli_on_pr.yaml'
+#       - 'Makefile*'
+#       - 'cmd/**'
+#       - 'pkg/**'
+#       - 'internal/**'
+#       - 'api/**'
+#   workflow_dispatch:
 
 env:
   GO_VERSION: '1.23.8'

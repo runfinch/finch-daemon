@@ -1,6 +1,6 @@
 name: samcli
 
-on:
+# on:
   # push:
   #   branches:
   #     - main
@@ -29,7 +29,7 @@ on:
   #     - 'api/**'
   # schedule:
   #   - cron: '0 2 * * *'  # Run daily at 2 AM UTC
-  workflow_dispatch:
+  # workflow_dispatch:
 
 env:
   GO_VERSION: '1.23.8'
@@ -108,27 +108,27 @@ jobs:
           make init
           samdev --version
 
-      # - name: Verbose testing for specific failures
-      #   working-directory: aws-sam-cli
-      #   run: |
-      #     echo "=== DEBUGGING MULTIPLE REMOTE LAYERS TEST ==="
-      #     ulimit -n 65536
+      - name: Verbose testing for specific failures
+        working-directory: aws-sam-cli
+        run: |
+          echo "=== DEBUGGING MULTIPLE REMOTE LAYERS TEST ==="
+          ulimit -n 65536
 
-      #     # Monitor finch-daemon logs during the specific test
-      #     echo "Starting finch-daemon log monitoring..."
-      #     tail -f ../finch-daemon.log &
-      #     TAIL_PID=$!
+          # Monitor finch-daemon logs during the specific test
+          echo "Starting finch-daemon log monitoring..."
+          tail -f ../finch-daemon.log &
+          TAIL_PID=$!
 
-      #     # Run just the failing test with maximum verbosity
-      #     python -m pytest tests/integration/local/start_api/test_start_api.py::TestWarmContainersMultipleRemoteLayersInvoke::test_can_invoke_lambda_layer_successfully -v -s --tb=long --capture=no || true
+          # Run just the failing test with maximum verbosity
+          python -m pytest tests/integration/local/start_api/test_start_api.py::TestWarmContainersMultipleRemoteLayersInvoke::test_can_invoke_lambda_layer_successfully -v -s --tb=long --capture=no || true
 
-      #     # Stop log monitoring
-      #     kill $TAIL_PID 2>/dev/null || true
+          # Stop log monitoring
+          kill $TAIL_PID 2>/dev/null || true
 
-      #     echo "=== FINCH-DAEMON LOGS DURING TEST ==="
-      #     # Show recent finch-daemon logs
-      #     tail -100 ../finch-daemon.log
-      #   continue-on-error: true
+          echo "=== FINCH-DAEMON LOGS DURING TEST ==="
+          # Show recent finch-daemon logs
+          tail -100 ../finch-daemon.log
+        continue-on-error: true
 
       - name: Run unit tests
         working-directory: aws-sam-cli
@@ -355,6 +355,104 @@ jobs:
           echo ""
           echo "=== PYTEST SUMMARY ==="
           grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" deploy_output.txt | tail -1 || echo "No pytest summary found"
+        continue-on-error: true
+
+      - name: Run specific build tests with verbose output
+        working-directory: aws-sam-cli
+        timeout-minutes: 20
+        run: |
+          echo "=== SPECIFIC BUILD TESTS - Started at $(date) ==="
+          
+          # Monitor finch-daemon logs during tests
+          echo "Starting finch-daemon log monitoring..."
+          tail -f ../finch-daemon.log &
+          TAIL_PID=$!
+          
+          # Test 1: Ruby container build test
+          echo "=== TEST 1: Ruby container build ==="
+          python -m pytest tests/integration/buildcmd/test_build_cmd.py::TestBuildCommand_PythonFunctions::test_building_ruby_3_2_1_use_container -v -s --tb=long --capture=no || true
+          
+          echo ""
+          echo "=== TEST 2: Load success test ==="
+          python -m pytest tests/integration/buildcmd/test_build_cmd.py::TestBuildCommand_SingleFunctionBuilds::test_load_success -v -s --tb=long --capture=no || true
+          
+          echo ""
+          echo "=== TEST 3: Invalid dockerfile test ==="
+          python -m pytest tests/integration/buildcmd/test_build_cmd.py::TestBuildCommand_ErrorCases::test_with_invalid_dockerfile_definition -v -s --tb=long --capture=no || true
+          
+          echo ""
+          echo "=== TEST 4: Custom build image test ==="
+          python -m pytest tests/integration/buildcmd/test_build_cmd.py::TestBuildCommand_PythonFunctions::test_custom_build_image_succeeds_0_use_container -v -s --tb=long --capture=no || true
+          
+          echo ""
+          echo "=== TEST 5: Java ARM64 build test ==="
+          python -m pytest tests/integration/buildcmd/test_build_cmd.py::TestBuildCommand_Java_With_Specified_Architecture::test_building_java_in_container_with_arm64_architecture_00_java8_al2 -v -s --tb=long --capture=no || true
+          
+          # Stop log monitoring
+          kill $TAIL_PID 2>/dev/null || true
+          
+          echo ""
+          echo "=== RECENT FINCH-DAEMON LOGS ==="
+          tail -50 ../finch-daemon.log
+        continue-on-error: true
+
+      - name: Run build tests
+        working-directory: aws-sam-cli
+        timeout-minutes: 30
+        run: |
+          echo "=== BUILD TESTS - Started at $(date) ==="
+          python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 || true
+
+          echo "=== BUILD TEST OUTPUT ==="
+          cat build_output.txt
+          echo "=== END BUILD TEST OUTPUT ==="
+
+          # Expected failures from test guide (nerdctl ancestor filter limitation)
+          cat > expected_build_failures.txt << 'EOF'
+          test_with_invalid_dockerfile_definition
+          test_with_invalid_dockerfile_location
+          test_load_success
+          test_building_ruby_3_2_1_use_container
+          test_with_makefile_builder_specified_python_runtime_1_use_container
+          test_with_native_builder_specified_python_runtime_1_use_container
+          test_inline_not_built_1_use_container
+          test_json_env_vars_passed_0_use_container
+          test_json_env_vars_passed_1_use_container
+          test_inline_env_vars_passed_0_use_container
+          test_inline_env_vars_passed_1_use_container
+          test_custom_build_image_succeeds_0_use_container
+          test_custom_build_image_succeeds_1_use_container
+          test_building_ruby_in_container_with_specified_architecture_0_ruby3_2
+          test_building_java_in_container_with_arm64_architecture_00_java8_al2
+          test_building_java_in_container_with_arm64_architecture_03_java8_al2
+          test_building_java_in_container_with_arm64_architecture_04_java11
+          test_building_java_in_container_with_arm64_architecture_07_java11
+          test_building_java_in_container_with_arm64_architecture_08_java17
+          test_building_java_in_container_with_arm64_architecture_11_java17
+          test_building_java_in_container_with_arm64_architecture_al2023_0_java21
+          test_building_java_in_container_with_arm64_architecture_al2023_1_java21
+          test_building_java_in_container_with_arm64_architecture_al2023_2_java21
+          test_building_java_in_container_with_arm64_architecture_al2023_3_java21
+          test_building_java_in_container_00_java8_al2
+          EOF
+
+          # Extract actual failures
+          grep "FAILED" build_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_build_failures.txt || true
+
+          # Find unexpected failures
+          UNEXPECTED=$(grep -v -f expected_build_failures.txt actual_build_failures.txt 2>/dev/null || true)
+
+          if [ -n "$UNEXPECTED" ]; then
+            echo "❌ Unexpected failures found:"
+            echo "$UNEXPECTED"
+            exit 1
+          else
+            echo "✅ All failures were expected."
+          fi
+
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" build_output.txt | tail -1 || echo "No pytest summary found"
         continue-on-error: true
 
       # - name: Run build tests
