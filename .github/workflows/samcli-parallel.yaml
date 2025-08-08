@@ -47,7 +47,6 @@ jobs:
       fail-fast: false
       matrix:
         test_step:
-          # SYNC TESTS - COMMENTED OUT (uncomment to test if sync can run in parallel)
           - name: sync
             timeout: 200 # put a ton of time; this is weirdly inconsistent
           - name: unit
@@ -67,7 +66,7 @@ jobs:
     env:
       AWS_DEFAULT_REGION: ${{ secrets.REGION }}
       DOCKER_HOST: unix:///run/finch.sock
-      BY_CANARY: true  # full aws access for tests
+      BY_CANARY: true  # full aws access for tests 
       SAM_CLI_DEV: 1
       SAM_CLI_TELEMETRY: 0
     steps:
