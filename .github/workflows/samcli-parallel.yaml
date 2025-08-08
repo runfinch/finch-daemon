@@ -334,8 +334,8 @@ jobs:
           test_deploy_guided_image_auto_0_aws_serverless_function_image_yaml
           EOF
 
-          # Extract actual passes
-          grep "PASSED" deploy_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_deploy_passes.txt || true
+          # Extract actual passes - test names appear on the line after PASSED
+          grep -A1 "PASSED" deploy_output.txt | grep "test_" | grep -o 'test_[a-zA-Z0-9_]*' > actual_deploy_passes.txt || true
 
           # Find unexpected passes (passes that aren't in our expected list)
           UNEXPECTED_PASSES=$(grep -v -f expected_deploy_passes.txt actual_deploy_passes.txt 2>/dev/null || true)
