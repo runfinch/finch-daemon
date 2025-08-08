@@ -52,14 +52,14 @@ jobs:
             timeout: 200 # put a ton of time; this is weirdly inconsistent
           - name: unit
             timeout: 15
-          - name: package
-            timeout: 10
-          # - name: start-lambda
-          #   timeout: 15
-          # - name: invoke
-          #   timeout: 25
-          # - name: start-api
-          #   timeout: 35
+          # - name: package
+          #   timeout: 10
+          - name: start-lambda
+            timeout: 15
+          - name: invoke
+            timeout: 25
+          - name: start-api
+            timeout: 35
           # - name: deploy
           #   timeout: 45
           # - name: build
