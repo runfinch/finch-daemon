@@ -1,32 +1,32 @@
 name: samcli-finch-vm
 
-# on:
-#   push:
-#     branches:
-#       - main
-#       - samcli-test
-#     paths:
-#       - '**.go'
-#       - 'go.mod'
-#       - 'go.sum'
-#       - 'Makefile*'
-#       - 'cmd/**'
-#       - 'pkg/**'
-#       - 'internal/**'
-#       - 'api/**'
-#   pull_request:
-#     branches:
-#       - main
-#     paths:
-#       - '**.go'
-#       - 'go.mod'
-#       - 'go.sum'
-#       - '.github/workflows/samcli-finch-vm.yaml'
-#       - 'Makefile*'
-#       - 'cmd/**'
-#       - 'pkg/**'
-#       - 'internal/**'
-#       - 'api/**'
+on:
+  push:
+    branches:
+      - main
+      - samcli-test
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Makefile*'
+      - 'cmd/**'
+      - 'pkg/**'
+      - 'internal/**'
+      - 'api/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/samcli-finch-vm.yaml'
+      - 'Makefile*'
+      - 'cmd/**'
+      - 'pkg/**'
+      - 'internal/**'
+      - 'api/**'
 #   workflow_dispatch:
 
 env:
@@ -44,6 +44,8 @@ jobs:
       fail-fast: false
       matrix:
         test_step:
+          - name: sync
+            timeout: 40 # reduced from 200
           - name: unit
             timeout: 15
           - name: package
@@ -56,6 +58,8 @@ jobs:
             timeout: 35
           - name: deploy
             timeout: 45
+          # - name: build
+          #   timeout: 30
     env:
       AWS_DEFAULT_REGION: ${{ secrets.REGION }}
       BY_CANARY: true
@@ -119,6 +123,40 @@ jobs:
           python -m pip install --upgrade pip
           make init
           samdev --version
+
+      - name: Run sync tests
+        if: matrix.test_step.name == 'sync'
+        working-directory: aws-sam-cli
+        timeout-minutes: ${{ matrix.test_step.timeout }}
+        run: |
+          pip install pytest-rerunfailures
+          echo "=== SYNC TESTS - Started at $(date) ==="
+
+          python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 || true
+
+          echo ""
+          echo "=== PASSES ==="
+          grep "PASSED" sync_output.txt || echo "No passes found"
+
+          echo ""
+          echo "=== FAILURES ==="
+          grep "FAILED" sync_output.txt || echo "No failures found"
+
+          # Should pass completely pr test guide
+          if grep -q "FAILED" sync_output.txt; then
+            echo "❌ Sync tests failed (should pass completely)"
+            grep "FAILED" sync_output.txt
+            echo ""
+            echo "=== FULL OUTPUT FOR DEBUGGING ==="
+            cat sync_output.txt
+            exit 1
+          else
+            echo "✅ All sync tests passed as expected"
+          fi
+
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" sync_output.txt | tail -1 || echo "No pytest summary found"
 
       - name: Run unit tests
         if: matrix.test_step.name == 'unit'
@@ -312,7 +350,7 @@ jobs:
             echo "$UNEXPECTED"
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
-            cat start_api_output.txt
+            # cat start_api_output.txt
             exit 1
           else
             echo "✅ All start-api failures were expected (CI environment flakiness)"
@@ -363,6 +401,72 @@ jobs:
           echo ""
           echo "=== PYTEST SUMMARY ==="
           grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" deploy_output.txt | tail -1 || echo "No pytest summary found"
+
+      # - name: Run build tests
+      #   if: matrix.test_step.name == 'build'
+      #   working-directory: aws-sam-cli
+      #   timeout-minutes: ${{ matrix.test_step.timeout }}
+      #   run: |
+      #     echo "=== BUILD TESTS - Started at $(date) ==="
+      #     python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 || true
+
+      #     echo ""
+      #     echo "=== PASSES ==="
+      #     grep "PASSED" build_output.txt || echo "No passes found"
+
+      #     echo ""
+      #     echo "=== FAILURES ==="
+      #     grep "FAILED" build_output.txt || echo "No failures found"
+
+      #     # Expected failures from test guide (nerdctl ancestor filter limitation)
+      #     cat > expected_build_failures.txt << 'EOF'
+      #     test_with_invalid_dockerfile_definition
+      #     test_with_invalid_dockerfile_location
+      #     test_load_success
+      #     test_building_ruby_3_2_1_use_container
+      #     test_with_makefile_builder_specified_python_runtime_1_use_container
+      #     test_with_native_builder_specified_python_runtime_1_use_container
+      #     test_inline_not_built_1_use_container
+      #     test_json_env_vars_passed_0_use_container
+      #     test_json_env_vars_passed_1_use_container
+      #     test_inline_env_vars_passed_0_use_container
+      #     test_inline_env_vars_passed_1_use_container
+      #     test_custom_build_image_succeeds_0_use_container
+      #     test_custom_build_image_succeeds_1_use_container
+      #     test_building_ruby_in_container_with_specified_architecture_0_ruby3_2
+      #     test_building_java_in_container_with_arm64_architecture_00_java8_al2
+      #     test_building_java_in_container_with_arm64_architecture_03_java8_al2
+      #     test_building_java_in_container_with_arm64_architecture_04_java11
+      #     test_building_java_in_container_with_arm64_architecture_07_java11
+      #     test_building_java_in_container_with_arm64_architecture_08_java17
+      #     test_building_java_in_container_with_arm64_architecture_11_java17
+      #     test_building_java_in_container_with_arm64_architecture_al2023_0_java21
+      #     test_building_java_in_container_with_arm64_architecture_al2023_1_java21
+      #     test_building_java_in_container_with_arm64_architecture_al2023_2_java21
+      #     test_building_java_in_container_with_arm64_architecture_al2023_3_java21
+      #     test_building_java_in_container_00_java8_al2
+      #     EOF
+
+      #     # Extract actual failures
+      #     grep "FAILED" build_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_build_failures.txt || true
+
+      #     # Find unexpected failures
+      #     UNEXPECTED=$(grep -v -f expected_build_failures.txt actual_build_failures.txt 2>/dev/null || true)
+
+      #     if [ -n "$UNEXPECTED" ]; then
+      #       echo "❌ Unexpected failures found:"
+      #       echo "$UNEXPECTED"
+      #       echo ""
+      #       echo "=== FULL OUTPUT FOR DEBUGGING ==="
+      #       cat build_output.txt
+      #       exit 1
+      #     else
+      #       echo "✅ All failures were expected."
+      #     fi
+
+      #     echo ""
+      #     echo "=== PYTEST SUMMARY ==="
+      #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" build_output.txt | tail -1 || echo "No pytest summary found"
 
   # Cleanup job that runs after ALL matrix jobs complete
   cleanup:

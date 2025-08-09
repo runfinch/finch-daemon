@@ -1,35 +1,35 @@
 name: samcli-parallel
 
-on:
-  push:
-    branches:
-      - main
-      - samcli-test
-    paths:
-      - '**.go'
-      - 'go.mod'
-      - 'go.sum'
-      - 'Makefile*'
-      - 'cmd/**'
-      - 'pkg/**'
-      - 'internal/**'
-      - 'api/**'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - '**.go'
-      - 'go.mod'
-      - 'go.sum'
-      - '.github/workflows/samcli-parallel.yaml'
-      - 'Makefile*'
-      - 'cmd/**'
-      - 'pkg/**'
-      - 'internal/**'
-      - 'api/**'
-  # schedule:
-  #   - cron: '0 2 * * *'  # Run daily at 2 AM UTC
-  workflow_dispatch:
+# on:
+#   push:
+#     branches:
+#       - main
+#       - samcli-test
+#     paths:
+#       - '**.go'
+#       - 'go.mod'
+#       - 'go.sum'
+#       - 'Makefile*'
+#       - 'cmd/**'
+#       - 'pkg/**'
+#       - 'internal/**'
+#       - 'api/**'
+#   pull_request:
+#     branches:
+#       - main
+#     paths:
+#       - '**.go'
+#       - 'go.mod'
+#       - 'go.sum'
+#       - '.github/workflows/samcli-parallel.yaml'
+#       - 'Makefile*'
+#       - 'cmd/**'
+#       - 'pkg/**'
+#       - 'internal/**'
+#       - 'api/**'
+#   # schedule:
+#   #   - cron: '0 2 * * *'  # Run daily at 2 AM UTC
+#   workflow_dispatch:
 
 env:
   GO_VERSION: '1.23.8'
@@ -315,7 +315,7 @@ jobs:
             grep "FAILED" start_lambda_output.txt
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
-            cat start_lambda_output.txt
+            # cat start_lambda_output.txt
             exit 1
           else
             echo "✅ All start-lambda tests passed as expected"
