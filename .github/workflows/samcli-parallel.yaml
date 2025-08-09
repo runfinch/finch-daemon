@@ -1,6 +1,6 @@
 name: samcli-parallel
 
-# on:
+on:
 #   push:
 #     branches:
 #       - main
@@ -29,7 +29,7 @@ name: samcli-parallel
 #       - 'api/**'
 #   # schedule:
 #   #   - cron: '0 2 * * *'  # Run daily at 2 AM UTC
-#   workflow_dispatch:
+  workflow_dispatch:
 
 env:
   GO_VERSION: '1.23.8'
