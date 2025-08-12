@@ -1,6 +1,10 @@
 name: samcli-vm
 
 on:
+  push:
+    branches:
+      - main
+      - samcli-test
   pull_request:
     branches:
       - main

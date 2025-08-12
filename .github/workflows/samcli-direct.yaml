@@ -1,6 +1,10 @@
 name: samcli-direct
 
 on:
+  push:
+    branches:
+      - main
+      - samcli-test
   pull_request:
     branches:
       - main
