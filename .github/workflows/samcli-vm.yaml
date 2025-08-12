@@ -71,14 +71,6 @@ jobs:
       SAM_CLI_TELEMETRY: 0
     steps:
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
-        with:
-          role-to-assume: ${{ matrix.test_step.name == 'sync' && secrets.SAMCLI_VM_ROLE_SYNC || secrets.SAMCLI_VM_ROLE_BASE }}
-          role-session-name: samcli-finch-vm-${{ matrix.test_step.name }}-tests
-          aws-region: ${{ secrets.REGION }}
-          role-duration-seconds: 2000
-
       - name: Clean macOS runner workspace
         run: |
           rm -rf ${{ github.workspace }}/*
@@ -88,20 +80,118 @@ jobs:
           git config --global --add safe.directory "*"
         shell: bash
 
+      - name: Configure Go for ec2-user
+        run: |
+          chown -R ec2-user:staff $GOPATH || true
+          chown -R ec2-user:staff $RUNNER_TOOL_CACHE/go || true
+
+      - name: Install Rosetta 2
+        run: su ec2-user -c 'echo "A" | /usr/sbin/softwareupdate --install-rosetta --agree-to-license || true'
+
+      - name: Configure Homebrew for ec2-user
+        run: |
+          echo "Creating .brewrc file for ec2-user..."
+          cat > /Users/ec2-user/.brewrc << 'EOF'
+          # Homebrew environment setup
+          export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+          export HOMEBREW_PREFIX="/opt/homebrew"
+          export HOMEBREW_CELLAR="/opt/homebrew/Cellar"
+          export HOMEBREW_REPOSITORY="/opt/homebrew"
+          export HOMEBREW_NO_AUTO_UPDATE=1
+          EOF
+          chown ec2-user:staff /Users/ec2-user/.brewrc
+
+          # Fix Homebrew permissions
+          echo "Setting permissions for Homebrew directories..."
+          mkdir -p /opt/homebrew/Cellar
+          chown -R ec2-user:staff /opt/homebrew
+        shell: bash
+
+      - name: Install dependencies
+        run: |
+          echo "Installing dependencies as ec2-user..."
+          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install lz4 automake autoconf libtool yq'
+        shell: bash
+
+      - name: Checkout finch-daemon repo
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Configure workspace for ec2-user
+        run: |
+          chown -R ec2-user:staff ${{ github.workspace }}
+
+      - name: Install Finch
+        run: |
+          echo "Installing Finch as ec2-user..."
+          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install finch --cask'
+          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew list | grep finch || echo "finch not installed"'
+          mkdir -p /private/var/run/finch-lima
+          cat /etc/passwd
+          chown ec2-user:daemon /private/var/run/finch-lima
+        shell: bash
+
+      - name: Build and replace finch-daemon
+        run: |
+          echo "Building cross architecture binaries..."
+          su ec2-user -c 'cd ${{ github.workspace }} && STATIC=1 GOPROXY=direct GOOS=linux GOARCH=arm64 make'
+          su ec2-user -c 'finch vm remove -f'
+          cp -f ${{ github.workspace }}/bin/finch-daemon /Applications/Finch/finch-daemon/finch-daemon
+        shell: bash
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        with:
+          role-to-assume: ${{ matrix.test_step.name == 'sync' && secrets.SAMCLI_VM_ROLE_SYNC || secrets.SAMCLI_VM_ROLE_BASE }}
+          role-session-name: samcli-finch-vm-${{ matrix.test_step.name }}-tests
+          aws-region: ${{ secrets.REGION }}
+          role-duration-seconds: 2000
+
       - name: Set up Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache: false
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
+      - name: Initialize Finch VM
+        run: |
+          echo "Initializing VM and checking version..."
+          su ec2-user -c 'finch vm init'
+          sleep 5
+          echo "Checking Finch version..."
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch curl --unix-socket /var/run/finch.sock -X GET http:/v1.43/version'
+        shell: bash
 
-      - name: Checkout finch-daemon repo
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - name: Configure Docker environment for SAM CLI
+        run: |
+          # Set DOCKER_HOST to use finch command (which handles VM communication)
+          export DOCKER_HOST=unix:///Users/ec2-user/.finch/lima/data/finch/sock/docker.sock
+          echo "DOCKER_HOST=unix:///Users/ec2-user/.finch/lima/data/finch/sock/docker.sock" >> $GITHUB_ENV
 
-      - name: Configure Docker environment for Finch VM
+      - name: Install Finch
+        run: |
+          echo "Installing Finch as ec2-user..."
+          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install finch --cask'
+          mkdir -p /private/var/run/finch-lima
+          chown ec2-user:daemon /private/var/run/finch-lima
+
+      - name: Build and replace finch-daemon
+        run: |
+          echo "Building new finch-daemon..."
+          su ec2-user -c 'cd ${{ github.workspace }} && STATIC=1 GOPROXY=direct GOOS=linux GOARCH=arm64 make'
+          
+          echo "Replacing finch-daemon..."
+          su ec2-user -c 'finch vm remove -f'
+          cp -f ${{ github.workspace }}/bin/finch-daemon /Applications/Finch/finch-daemon/finch-daemon
+
+      - name: Initialize Finch VM
+        run: |
+          echo "Initializing Finch VM..."
+          su ec2-user -c 'finch vm init'
+          sleep 10
         run: |
           # Set DOCKER_CONFIG to point to Finch config folder
           export DOCKER_CONFIG=$HOME/.finch
