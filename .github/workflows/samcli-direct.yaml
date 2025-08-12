@@ -8,7 +8,7 @@ on:
       - '**.go'
       - 'go.mod'
       - 'go.sum'
-      - '.github/workflows/samcli-parallel.yaml'
+      - '.github/workflows/samcli-direct.yaml'
       - 'Makefile*'
       - 'cmd/**'
       - 'pkg/**'
