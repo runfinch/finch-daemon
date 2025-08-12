@@ -1,33 +1,36 @@
 name: samcli-finch-vm
 
-# on:
-#   push:
-#     branches:
-#       - main
-#       - samcli-test
-#     paths:
-#       - '**.go'
-#       - 'go.mod'
-#       - 'go.sum'
-#       - 'Makefile*'
-#       - 'cmd/**'
-#       - 'pkg/**'
-#       - 'internal/**'
-#       - 'api/**'
-#   pull_request:
-#     branches:
-#       - main
-#     paths:
-#       - '**.go'
-#       - 'go.mod'
-#       - 'go.sum'
-#       - '.github/workflows/samcli-finch-vm.yaml'
-#       - 'Makefile*'
-#       - 'cmd/**'
-#       - 'pkg/**'
-#       - 'internal/**'
-#       - 'api/**'
-# #   workflow_dispatch:
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/samcli-finch-vm.yaml'
+      - 'Makefile*'
+      - 'cmd/**'
+      - 'pkg/**'
+      - 'internal/**'
+      - 'api/**'
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Which tests to run'
+        required: true
+        type: choice
+        default: 'all'
+        options:
+          - all
+          - sync
+          - unit
+          - package
+          - start-lambda
+          - invoke
+          - start-api
+          - deploy
+          - build
 
 env:
   GO_VERSION: '1.23.8'
@@ -43,23 +46,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test_step:
-          - name: sync
-            timeout: 40 # reduced from 200
-          - name: unit
-            timeout: 15
-          - name: package
-            timeout: 10
-          - name: start-lambda
-            timeout: 15
-          - name: invoke
-            timeout: 25
-          - name: start-api
-            timeout: 35
-          - name: deploy
-            timeout: 45
-          # - name: build
-          #   timeout: 30
+        test_step: ${{ 
+          !github.event.inputs.test_type || github.event.inputs.test_type == 'all' 
+          ? fromJson('[
+              {"name": "sync", "timeout": 40},
+              {"name": "unit", "timeout": 15},
+              {"name": "package", "timeout": 10},
+              {"name": "start-lambda", "timeout": 15},
+              {"name": "invoke", "timeout": 25},
+              {"name": "start-api", "timeout": 35},
+              {"name": "deploy", "timeout": 45},
+              {"name": "build", "timeout": 30}
+            ]')
+          : fromJson(format('[{{"name": "{0}", "timeout": 30}}]', github.event.inputs.test_type))
+        }}
     env:
       AWS_DEFAULT_REGION: ${{ secrets.REGION }}
       BY_CANARY: true
@@ -73,7 +73,7 @@ jobs:
           role-to-assume: ${{ matrix.test_step.name == 'sync' && secrets.ROLE_FINCH_VM_SYNC || secrets.ROLE_FINCH_VM }}
           role-session-name: samcli-finch-vm-${{ matrix.test_step.name }}-tests
           aws-region: ${{ secrets.REGION }}
-          role-duration-seconds: 14400
+          role-duration-seconds: 2000
 
       - name: Clean macOS runner workspace
         run: |
@@ -149,6 +149,9 @@ jobs:
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
             cat sync_output.txt
+            echo "=== NOTE ==="
+            echo "This is a known flaky test with ~ % pass rate."
+            echo "Please try again using an individual workflow trigger."
             exit 1
           else
             echo "✅ All sync tests passed as expected"
@@ -351,6 +354,10 @@ jobs:
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
             # cat start_api_output.txt
+            echo "Output removed due to extreme length."
+            echo "=== NOTE ==="
+            echo "This is a known flaky test with ~ % pass rate."
+            echo "Please try again using an individual workflow trigger."
             exit 1
           else
             echo "✅ All start-api failures were expected (CI environment flakiness)"
