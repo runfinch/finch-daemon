@@ -48,18 +48,18 @@ jobs:
       fail-fast: false
       matrix:
         test_step: ${{
-          !github.event.inputs.test_type || github.event.inputs.test_type == 'all'
-          ? fromJson('[
-              {"name": "sync", "timeout": 40},
-              {"name": "unit", "timeout": 15},
-              {"name": "package", "timeout": 10},
-              {"name": "start-lambda", "timeout": 15},
-              {"name": "invoke", "timeout": 25},
-              {"name": "start-api", "timeout": 35},
-              {"name": "deploy", "timeout": 45},
-              {"name": "build", "timeout": 30}
-            ]')
-          : fromJson(format('[{{"name": "{0}", "timeout": 30}}]', github.event.inputs.test_type))
+          (!github.event.inputs.test_type || github.event.inputs.test_type == 'all') &&
+          fromJson('[
+            {"name": "sync", "timeout": 40},
+            {"name": "unit", "timeout": 15},
+            {"name": "package", "timeout": 10},
+            {"name": "start-lambda", "timeout": 15},
+            {"name": "invoke", "timeout": 25},
+            {"name": "start-api", "timeout": 35},
+            {"name": "deploy", "timeout": 45},
+            {"name": "build", "timeout": 30}
+          ]') ||
+          fromJson(format('[{{"name": "{0}", "timeout": 30}}]', github.event.inputs.test_type))
         }}
         }}
     env:
