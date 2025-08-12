@@ -60,6 +60,7 @@ jobs:
             ]')
           : fromJson(format('[{{"name": "{0}", "timeout": 30}}]', github.event.inputs.test_type))
         }}
+        }}
     env:
       AWS_DEFAULT_REGION: ${{ secrets.REGION }}
       BY_CANARY: true
