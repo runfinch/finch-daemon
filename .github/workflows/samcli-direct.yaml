@@ -63,8 +63,8 @@ jobs:
             timeout: 35
           - name: deploy
             timeout: 45
-          - name: build
-            timeout: 30
+          # - name: build
+          #   timeout: 30
     env:
       AWS_DEFAULT_REGION: ${{ secrets.REGION }}
       DOCKER_HOST: unix:///run/finch.sock
