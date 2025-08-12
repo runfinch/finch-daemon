@@ -1,4 +1,4 @@
-name: samcli-finch-vm
+name: samcli-vm
 
 on:
   pull_request:

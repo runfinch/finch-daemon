@@ -1,4 +1,4 @@
-name: samcli-parallel
+name: samcli-direct
 
 on:
   pull_request:
