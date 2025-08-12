@@ -46,8 +46,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test_step: ${{ 
-          !github.event.inputs.test_type || github.event.inputs.test_type == 'all' 
+        test_step: ${{
+          !github.event.inputs.test_type || github.event.inputs.test_type == 'all'
           ? fromJson('[
               {"name": "sync", "timeout": 40},
               {"name": "unit", "timeout": 15},
@@ -103,7 +103,7 @@ jobs:
           # Set DOCKER_CONFIG to point to Finch config folder
           export DOCKER_CONFIG=$HOME/.finch
           echo "DOCKER_CONFIG=$HOME/.finch" >> $GITHUB_ENV
-          
+
           # Set DOCKER_HOST to use Finch VM socket
           export DOCKER_HOST=unix:///Applications/Finch/lima/data/finch/sock/finch.sock
           echo "DOCKER_HOST=unix:///Applications/Finch/lima/data/finch/sock/finch.sock" >> $GITHUB_ENV
@@ -379,7 +379,7 @@ jobs:
           echo ""
           echo "=== FAILURES ==="
           grep "FAILED" deploy_output.txt || echo "No failures found"
-          
+
           echo ""
           echo "=== PASSES ==="
           grep "PASSED" deploy_output.txt || echo "No passes found"
@@ -484,7 +484,7 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        role: 
+        role:
           - ROLE_FINCH_VM       # main Finch VM account cleanup
           - ROLE_FINCH_VM_SYNC  # sync Finch VM account cleanup
     env:
@@ -502,16 +502,16 @@ jobs:
         timeout-minutes: 10
         run: |
           echo "=== Comprehensive cleanup ==="
-          
+
           # Set error handling to continue on failures
           set +e
-          
+
           # Function to safely run AWS commands with retries
           safe_aws_command() {
             local max_attempts=3
             local attempt=1
             local command="$@"
-            
+
             while [ $attempt -le $max_attempts ]; do
               echo "Attempt $attempt: $command"
               if eval "$command"; then
@@ -527,7 +527,7 @@ jobs:
             echo "Command failed after $max_attempts attempts: $command"
             return 1
           }
-          
+
           # 1. Clean up S3 buckets from SAM CLI test stacks (without deleting stacks)
           echo "=== Cleaning up S3 buckets from SAM CLI test stacks ==="
           TEST_STACK_PATTERNS=(
@@ -537,28 +537,28 @@ jobs:
             "samcli"
             "aws-sam-cli-managed"
           )
-          
+
           for pattern in "${TEST_STACK_PATTERNS[@]}"; do
             echo "Looking for stacks matching pattern: *$pattern*"
             STACKS=$(aws cloudformation list-stacks --region $AWS_DEFAULT_REGION --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE ROLLBACK_COMPLETE UPDATE_ROLLBACK_COMPLETE --query "StackSummaries[?contains(StackName, '$pattern')].[StackName]" --output text 2>/dev/null || true)
-            
+
             if [ -n "$STACKS" ]; then
               echo "Found stacks: $STACKS"
               for stack in $STACKS; do
                 echo "Processing stack: $stack (cleaning buckets only)"
-                
+
                 # Get S3 buckets from stack outputs and resources
                 echo "Finding S3 buckets in stack: $stack"
                 BUCKET_NAMES=$(aws cloudformation describe-stacks --stack-name "$stack" --region $AWS_DEFAULT_REGION --query 'Stacks[0].Outputs[?contains(OutputKey, `Bucket`) || contains(OutputKey, `bucket`)].OutputValue' --output text 2>/dev/null || true)
                 RESOURCE_BUCKETS=$(aws cloudformation describe-stack-resources --stack-name "$stack" --region $AWS_DEFAULT_REGION --query 'StackResources[?ResourceType==`AWS::S3::Bucket`].PhysicalResourceId' --output text 2>/dev/null || true)
-                
+
                 ALL_BUCKETS="$BUCKET_NAMES $RESOURCE_BUCKETS"
-                
+
                 # Clean up S3 buckets
                 for bucket in $ALL_BUCKETS; do
                   if [ -n "$bucket" ] && [ "$bucket" != "None" ]; then
                     echo "Cleaning S3 bucket: $bucket"
-                    
+
                     if aws s3api head-bucket --bucket "$bucket" 2>/dev/null; then
                       echo "Emptying S3 bucket: $bucket"
                       safe_aws_command "aws s3 rm s3://$bucket --recursive --quiet" || true
@@ -568,12 +568,12 @@ jobs:
                     fi
                   fi
                 done
-                
+
                 echo "✅ Stack $stack buckets cleaned (stack preserved for debugging)"
               done
             else
               echo "No stacks found for pattern: *$pattern*"
             fi
           done
-          
+
           echo "✅ Comprehensive cleanup completed (stacks preserved for debugging)"

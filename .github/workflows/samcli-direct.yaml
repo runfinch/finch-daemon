@@ -47,8 +47,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test_step: ${{ 
-          !github.event.inputs.test_type || github.event.inputs.test_type == 'all' 
+        test_step: ${{
+          !github.event.inputs.test_type || github.event.inputs.test_type == 'all'
           ? fromJson('[
               {"name": "sync", "timeout": 40},
               {"name": "unit", "timeout": 15},
@@ -65,7 +65,7 @@ jobs:
     env:
       AWS_DEFAULT_REGION: ${{ secrets.REGION }}
       DOCKER_HOST: unix:///run/finch.sock
-      BY_CANARY: true  # full aws access for tests 
+      BY_CANARY: true  # full aws access for tests
       SAM_CLI_DEV: 1
       SAM_CLI_TELEMETRY: 0
     steps:
@@ -389,7 +389,7 @@ jobs:
           echo ""
           echo "=== FAILURES ==="
           grep "FAILED" deploy_output.txt || echo "No failures found"
-          
+
           echo ""
           echo "=== PASSES ==="
           grep "PASSED" deploy_output.txt || echo "No passes found"
@@ -504,7 +504,7 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        role: 
+        role:
           - ROLE       # main account cleanup
           - ROLE_SYNC  # sync account cleanup
     env:
@@ -522,16 +522,16 @@ jobs:
         timeout-minutes: 10
         run: |
           echo "=== Comprehensive cleanup ==="
-          
+
           # Set error handling to continue on failures
           set +e
-          
+
           # Function to safely run AWS commands with retries
           safe_aws_command() {
             local max_attempts=3
             local attempt=1
             local command="$@"
-            
+
             while [ $attempt -le $max_attempts ]; do
               echo "Attempt $attempt: $command"
               if eval "$command"; then
@@ -547,7 +547,7 @@ jobs:
             echo "Command failed after $max_attempts attempts: $command"
             return 1
           }
-          
+
           # 1. Clean up S3 buckets from SAM CLI test stacks (without deleting stacks)
           echo "=== Cleaning up S3 buckets from SAM CLI test stacks ==="
           TEST_STACK_PATTERNS=(
@@ -557,62 +557,62 @@ jobs:
             "samcli"
             "aws-sam-cli-managed"
           )
-          
+
           for pattern in "${TEST_STACK_PATTERNS[@]}"; do
             echo "Looking for stacks matching pattern: *$pattern*"
             STACKS=$(aws cloudformation list-stacks --region $AWS_DEFAULT_REGION --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE ROLLBACK_COMPLETE UPDATE_ROLLBACK_COMPLETE --query "StackSummaries[?contains(StackName, '$pattern')].[StackName]" --output text 2>/dev/null || true)
-            
+
             if [ -n "$STACKS" ]; then
               echo "Found stacks: $STACKS"
               for stack in $STACKS; do
                 echo "Processing stack: $stack (cleaning buckets only)"
-                
+
                 # Get S3 buckets from stack outputs and resources
                 echo "Finding S3 buckets in stack: $stack"
                 BUCKET_NAMES=$(aws cloudformation describe-stacks --stack-name "$stack" --region $AWS_DEFAULT_REGION --query 'Stacks[0].Outputs[?contains(OutputKey, `Bucket`) || contains(OutputKey, `bucket`)].OutputValue' --output text 2>/dev/null || true)
                 RESOURCE_BUCKETS=$(aws cloudformation describe-stack-resources --stack-name "$stack" --region $AWS_DEFAULT_REGION --query 'StackResources[?ResourceType==`AWS::S3::Bucket`].PhysicalResourceId' --output text 2>/dev/null || true)
-                
+
                 ALL_BUCKETS="$BUCKET_NAMES $RESOURCE_BUCKETS"
-                
+
                 # Clean up S3 buckets
                 for bucket in $ALL_BUCKETS; do
                   if [ -n "$bucket" ] && [ "$bucket" != "None" ]; then
                     echo "Cleaning S3 bucket: $bucket"
-                    
+
                     if aws s3api head-bucket --bucket "$bucket" 2>/dev/null; then
                       echo "Emptying S3 bucket: $bucket"
-                      
+
                       # Delete all object versions
                       safe_aws_command "aws s3api list-object-versions --bucket '$bucket' --query 'Versions[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
                         if [ -n \"\$key\" ] && [ -n \"\$version\" ] && [ \"\$key\" != \"None\" ] && [ \"\$version\" != \"None\" ]; then
                           aws s3api delete-object --bucket '$bucket' --key \"\$key\" --version-id \"\$version\" || true
                         fi
                       done"
-                      
+
                       # Delete delete markers
                       safe_aws_command "aws s3api list-object-versions --bucket '$bucket' --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
                         if [ -n \"\$key\" ] && [ -n \"\$version\" ] && [ \"\$key\" != \"None\" ] && [ \"\$version\" != \"None\" ]; then
                           aws s3api delete-object --bucket '$bucket' --key \"\$key\" --version-id \"\$version\" || true
                         fi
                       done"
-                      
+
                       # Force delete remaining objects
                       safe_aws_command "aws s3 rm s3://$bucket --recursive --quiet" || true
-                      
+
                       echo "✅ S3 bucket $bucket emptied"
                     else
                       echo "S3 bucket $bucket does not exist or is not accessible"
                     fi
                   fi
                 done
-                
+
                 echo "✅ Stack $stack buckets cleaned (stack preserved for debugging)"
               done
             else
               echo "No stacks found for pattern: *$pattern*"
             fi
           done
-          
+
           # 2. Clean up Lambda functions (addressing sync test timing issues)
           echo "=== Cleaning up Lambda functions ==="
           LAMBDA_PATTERNS=(
@@ -620,11 +620,11 @@ jobs:
             "test-"
             "HelloWorld"
           )
-          
+
           for pattern in "${LAMBDA_PATTERNS[@]}"; do
             echo "Looking for Lambda functions matching pattern: *$pattern*"
             FUNCTIONS=$(aws lambda list-functions --region $AWS_DEFAULT_REGION --query "Functions[?contains(FunctionName, '$pattern')].FunctionName" --output text 2>/dev/null || true)
-            
+
             if [ -n "$FUNCTIONS" ]; then
               for func in $FUNCTIONS; do
                 echo "Deleting Lambda function: $func"
@@ -632,23 +632,23 @@ jobs:
               done
             fi
           done
-          
+
           # 3. Clean up API Gateway APIs
           echo "=== Cleaning up API Gateway APIs ==="
           APIS=$(aws apigateway get-rest-apis --region $AWS_DEFAULT_REGION --query 'items[?contains(name, `sam-app`) || contains(name, `test-`) || contains(name, `Test`)].id' --output text 2>/dev/null || true)
-          
+
           if [ -n "$APIS" ]; then
             for api in $APIS; do
               echo "Deleting API Gateway API: $api"
               safe_aws_command "aws apigateway delete-rest-api --rest-api-id '$api' --region $AWS_DEFAULT_REGION" || true
             done
           fi
-          
+
           # 4. Brief wait for AWS eventual consistency
           echo "Waiting 15 seconds for AWS eventual consistency..."
           sleep 15
-          
+
           # Reset error handling
           set -e
-          
+
           echo "✅ Comprehensive cleanup completed (stacks preserved for debugging)"
