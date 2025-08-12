@@ -85,7 +85,7 @@ func (w *NerdctlWrapper) RunBuild(ctx context.Context, client *containerd.Client
 	buildctlCmd := exec.Command(buildctlBinary, buildctlArgs...)
 	buildctlCmd.Env = os.Environ()
 	buildctlCmd.Env = append(buildctlCmd.Env, fmt.Sprintf("FINCH_BUILD_ID=%s", buildID))
-	buildctlCmd.Env = append(buildctlCmd.Env, fmt.Sprintf("FINCH_CREDENTIAL_SOCKET=%s",config.GetCredentialAddr()))
+	buildctlCmd.Env = append(buildctlCmd.Env, fmt.Sprintf("FINCH_CREDENTIAL_SOCKET=%s", config.GetCredentialAddr()))
 
 	var buildctlStdout io.Reader
 	if needsLoading {

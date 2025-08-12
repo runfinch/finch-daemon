@@ -385,3 +385,4 @@ func defineDockerConfig(uid int) error {
 		return true
 	})
 }
+// Test trigger

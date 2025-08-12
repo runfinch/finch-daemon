@@ -36,7 +36,20 @@ sudo tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v${CNI_VERSION}.tgz
 
 export PATH=$PATH:/usr/local/bin
 
+# Create BuildKit config directory and file to ensure finch namespace
+sudo mkdir -p /etc/buildkit
+sudo tee /etc/buildkit/buildkitd.toml > /dev/null << 'EOF'
+root = "/var/lib/buildkit"
+
+[worker.oci]
+  enabled = false
+
+[worker.containerd]
+  enabled = true
+  namespace = "finch"
+EOF
+
 sudo containerd &
-sudo buildkitd &
+sudo buildkitd --config /etc/buildkit/buildkitd.toml &
 
 sleep 2
