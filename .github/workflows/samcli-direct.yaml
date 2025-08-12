@@ -8,6 +8,7 @@ on:
   pull_request:
     branches:
       - main
+      - samcli-test
     paths:
       - '**.go'
       - 'go.mod'
