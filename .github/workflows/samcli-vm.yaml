@@ -167,56 +167,27 @@ jobs:
 
       - name: Configure Docker environment for SAM CLI
         run: |
-          # Set DOCKER_HOST to use finch command (which handles VM communication)
-          export DOCKER_HOST=unix:///Users/ec2-user/.finch/lima/data/finch/sock/docker.sock
-          echo "DOCKER_HOST=unix:///Users/ec2-user/.finch/lima/data/finch/sock/docker.sock" >> $GITHUB_ENV
-
-      - name: Install Finch
-        run: |
-          echo "Installing Finch as ec2-user..."
-          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install finch --cask'
-          mkdir -p /private/var/run/finch-lima
-          chown ec2-user:daemon /private/var/run/finch-lima
-
-      - name: Build and replace finch-daemon
-        run: |
-          echo "Building new finch-daemon..."
-          su ec2-user -c 'cd ${{ github.workspace }} && STATIC=1 GOPROXY=direct GOOS=linux GOARCH=arm64 make'
-          
-          echo "Replacing finch-daemon..."
-          su ec2-user -c 'finch vm remove -f'
-          cp -f ${{ github.workspace }}/bin/finch-daemon /Applications/Finch/finch-daemon/finch-daemon
-
-      - name: Initialize Finch VM
-        run: |
-          echo "Initializing Finch VM..."
-          su ec2-user -c 'finch vm init'
-          sleep 10
-        run: |
-          # Set DOCKER_CONFIG to point to Finch config folder
-          export DOCKER_CONFIG=$HOME/.finch
-          echo "DOCKER_CONFIG=$HOME/.finch" >> $GITHUB_ENV
-
           # Set DOCKER_HOST to use Finch VM socket
-          export DOCKER_HOST=unix:///Applications/Finch/lima/data/finch/sock/finch.sock
-          echo "DOCKER_HOST=unix:///Applications/Finch/lima/data/finch/sock/finch.sock" >> $GITHUB_ENV
+          echo "DOCKER_HOST=unix:///Users/ec2-user/.finch/lima/data/finch/sock/docker.sock" >> $GITHUB_ENV
+          echo "Docker environment configured for SAM CLI"
+        shell: bash
 
-      - name: Verify Finch VM is running
+      - name: Set up Python
         run: |
-          echo "=== Finch VM Status ==="
-          finch version || echo "Finch not available"
-          docker version || echo "Docker API not available"
-          ls -la /Applications/Finch/lima/data/finch/sock/ || echo "Socket directory not found"
+          echo "Setting up Python for SAM CLI..."
+          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install python@3.11'
+          su ec2-user -c 'source /Users/ec2-user/.brewrc && python3.11 -m pip install --upgrade pip'
+        shell: bash
 
       - name: Set up SAM CLI from source
         run: |
-          git clone https://github.com/aws/aws-sam-cli.git
-          cd aws-sam-cli
-          git checkout $(git describe --tags `git rev-list --tags --max-count=1`)  # Latest tag
-          git submodule update --init --recursive
-          python -m pip install --upgrade pip
-          make init
-          samdev --version
+          su ec2-user -c 'git clone https://github.com/aws/aws-sam-cli.git'
+          su ec2-user -c 'cd aws-sam-cli && git checkout $(git describe --tags `git rev-list --tags --max-count=1`)'
+          su ec2-user -c 'cd aws-sam-cli && git submodule update --init --recursive'
+          su ec2-user -c 'cd aws-sam-cli && python3.11 -m pip install --upgrade pip'
+          su ec2-user -c 'cd aws-sam-cli && make init'
+          su ec2-user -c 'cd aws-sam-cli && samdev --version'
+        shell: bash
 
       - name: Run sync tests
         if: matrix.test_step.name == 'sync'
