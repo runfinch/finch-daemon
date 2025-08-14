@@ -45,7 +45,7 @@ require (
 	github.com/vishvananda/netns v0.0.5
 	go.uber.org/mock v0.5.2
 	golang.org/x/net v0.42.0
-	golang.org/x/sys v0.34.0
+	golang.org/x/sys v0.35.0
 	google.golang.org/protobuf v1.36.6
 )
 
