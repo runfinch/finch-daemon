@@ -80,6 +80,12 @@ jobs:
           git config --global --add safe.directory "*"
         shell: bash
 
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
       - name: Configure Go for ec2-user
         run: |
           chown -R ec2-user:staff $GOPATH || true
@@ -150,12 +156,6 @@ jobs:
           aws-region: ${{ secrets.REGION }}
           role-duration-seconds: 2000
 
-      - name: Set up Go
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: false
-
       - name: Initialize Finch VM
         run: |
           echo "Initializing VM and checking version..."
@@ -191,29 +191,28 @@ jobs:
 
       - name: Run sync tests
         if: matrix.test_step.name == 'sync'
-        working-directory: aws-sam-cli
         timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
-          pip install pytest-rerunfailures
+          su ec2-user -c 'cd aws-sam-cli && python3.11 -m pip install pytest-rerunfailures'
           echo "=== SYNC TESTS - Started at $(date) ==="
 
-          python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 || true
+          su ec2-user -c 'cd aws-sam-cli && python3.11 -m pytest tests/integration/sync -k "image" -v --tb=short > sync_output.txt 2>&1 || true'
 
           echo ""
           echo "=== PASSES ==="
-          grep "PASSED" sync_output.txt || echo "No passes found"
+          grep "PASSED" /Users/ec2-user/aws-sam-cli/sync_output.txt || echo "No passes found"
 
           echo ""
           echo "=== FAILURES ==="
-          grep "FAILED" sync_output.txt || echo "No failures found"
+          grep "FAILED" /Users/ec2-user/aws-sam-cli/sync_output.txt || echo "No failures found"
 
           # Should pass completely pr test guide
-          if grep -q "FAILED" sync_output.txt; then
+          if grep -q "FAILED" /Users/ec2-user/aws-sam-cli/sync_output.txt; then
             echo "❌ Sync tests failed (should pass completely)"
-            grep "FAILED" sync_output.txt
+            grep "FAILED" /Users/ec2-user/aws-sam-cli/sync_output.txt
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
-            cat sync_output.txt
+            cat /Users/ec2-user/aws-sam-cli/sync_output.txt
             echo "=== NOTE ==="
             echo "This is a known flaky test with ~ % pass rate."
             echo "Please try again using an individual workflow trigger."
@@ -224,55 +223,51 @@ jobs:
 
           echo ""
           echo "=== PYTEST SUMMARY ==="
-          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" sync_output.txt | tail -1 || echo "No pytest summary found"
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" /Users/ec2-user/aws-sam-cli/sync_output.txt | tail -1 || echo "No pytest summary found"
 
       - name: Run unit tests
         if: matrix.test_step.name == 'unit'
-        working-directory: aws-sam-cli
         timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           echo "=== UNIT TESTS - Started at $(date) ==="
-          ulimit -n 65536
-
-          make test > unit_test_output.txt 2>&1 || true
+          su ec2-user -c 'cd aws-sam-cli && ulimit -n 65536 && make test > unit_test_output.txt 2>&1 || true'
 
           echo ""
           echo "=== PASSES ==="
-          grep "PASSED" unit_test_output.txt || echo "No passes found"
+          grep "PASSED" /Users/ec2-user/aws-sam-cli/unit_test_output.txt || echo "No passes found"
 
           echo ""
           echo "=== FAILURES ==="
-          grep "FAILED" unit_test_output.txt || echo "No failures found"
+          grep "FAILED" /Users/ec2-user/aws-sam-cli/unit_test_output.txt || echo "No failures found"
 
-          if grep -q "Required test coverage of.*reached" unit_test_output.txt; then
+          if grep -q "Required test coverage of.*reached" /Users/ec2-user/aws-sam-cli/unit_test_output.txt; then
             echo "✅ Unit tests completed with required coverage"
-            grep "Required test coverage of.*reached" unit_test_output.txt
+            grep "Required test coverage of.*reached" /Users/ec2-user/aws-sam-cli/unit_test_output.txt
           else
             echo "❌ Required test coverage not reached"
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
-            cat unit_test_output.txt
+            cat /Users/ec2-user/aws-sam-cli/unit_test_output.txt
           fi
 
           echo ""
           echo "=== PYTEST SUMMARY ==="
-          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" unit_test_output.txt | tail -1 || echo "No pytest summary found"
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" /Users/ec2-user/aws-sam-cli/unit_test_output.txt | tail -1 || echo "No pytest summary found"
 
       - name: Run package tests
         if: matrix.test_step.name == 'package'
-        working-directory: aws-sam-cli
         timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           echo "=== PACKAGE TESTS - Started at $(date) ==="
-          python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short > package_output.txt 2>&1 || true
+          su ec2-user -c 'cd aws-sam-cli && python3.11 -m pytest tests/integration/package/test_package_command_image.py -v --tb=short > package_output.txt 2>&1 || true'
 
           echo ""
           echo "=== PASSES ==="
-          grep "PASSED" package_output.txt || echo "No passes found"
+          grep "PASSED" /Users/ec2-user/aws-sam-cli/package_output.txt || echo "No passes found"
 
           echo ""
           echo "=== FAILURES ==="
-          grep "FAILED" package_output.txt || echo "No failures found"
+          grep "FAILED" /Users/ec2-user/aws-sam-cli/package_output.txt || echo "No failures found"
 
           # Expected failures from test guide
           cat > expected_package_failures.txt << 'EOF'
@@ -282,10 +277,10 @@ jobs:
           EOF
 
           # Extract actual failures
-          grep "FAILED" package_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_package_failures.txt || true
+          grep "FAILED" /Users/ec2-user/aws-sam-cli/package_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_package_failures.txt || true
 
           # Also check for nested stack failures (pattern match)
-          grep "FAILED.*test_package_template_with_image_repositories_nested_stack" package_output.txt >> actual_package_failures.txt || true
+          grep "FAILED.*test_package_template_with_image_repositories_nested_stack" /Users/ec2-user/aws-sam-cli/package_output.txt >> actual_package_failures.txt || true
 
           # Find unexpected failures (exclude nested stack pattern)
           UNEXPECTED=$(grep -v -f expected_package_failures.txt actual_package_failures.txt | grep -v "test_package_template_with_image_repositories_nested_stack" || true)
@@ -295,7 +290,7 @@ jobs:
             echo "$UNEXPECTED"
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
-            cat package_output.txt
+            cat /Users/ec2-user/aws-sam-cli/package_output.txt
             exit 1
           else
             echo "✅ All failures were expected"
@@ -303,23 +298,22 @@ jobs:
 
           echo ""
           echo "=== PYTEST SUMMARY ==="
-          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" package_output.txt | tail -1 || echo "No pytest summary found"
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" /Users/ec2-user/aws-sam-cli/package_output.txt | tail -1 || echo "No pytest summary found"
 
       - name: Run invoke tests
         if: matrix.test_step.name == 'invoke'
-        working-directory: aws-sam-cli
         timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           echo "=== INVOKE TESTS - Started at $(date) ==="
-          python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
+          su ec2-user -c 'cd aws-sam-cli && python3.11 -m pytest tests/integration/local/invoke -k "not Terraform" -v --tb=short > invoke_output.txt 2>&1 || true'
 
           echo ""
           echo "=== PASSES ==="
-          grep "PASSED" invoke_output.txt || echo "No passes found"
+          grep "PASSED" /Users/ec2-user/aws-sam-cli/invoke_output.txt || echo "No passes found"
 
           echo ""
           echo "=== FAILURES ==="
-          grep "FAILED" invoke_output.txt || echo "No failures found"
+          grep "FAILED" /Users/ec2-user/aws-sam-cli/invoke_output.txt || echo "No failures found"
 
           # Expected failures from test guide (12 total from different test classes)
           cat > expected_invoke_failures.txt << 'EOF'
@@ -333,7 +327,7 @@ jobs:
           EOF
 
           # Extract actual failures
-          grep "FAILED" invoke_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_invoke_failures.txt || true
+          grep "FAILED" /Users/ec2-user/aws-sam-cli/invoke_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_invoke_failures.txt || true
 
           # Find unexpected failures
           UNEXPECTED=$(grep -v -f expected_invoke_failures.txt actual_invoke_failures.txt 2>/dev/null || true)
@@ -343,7 +337,7 @@ jobs:
             echo "$UNEXPECTED"
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
-            cat invoke_output.txt
+            cat /Users/ec2-user/aws-sam-cli/invoke_output.txt
             exit 1
           else
             echo "✅ All failures were expected"
@@ -351,31 +345,30 @@ jobs:
 
           echo ""
           echo "=== PYTEST SUMMARY ==="
-          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" invoke_output.txt | tail -1 || echo "No pytest summary found"
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" /Users/ec2-user/aws-sam-cli/invoke_output.txt | tail -1 || echo "No pytest summary found"
 
       - name: Run start-lambda tests
         if: matrix.test_step.name == 'start-lambda'
-        working-directory: aws-sam-cli
         timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           echo "=== START-LAMBDA TESTS - Started at $(date) ==="
-          python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
+          su ec2-user -c 'cd aws-sam-cli && python3.11 -m pytest tests/integration/local/start_lambda -k "not Terraform" -v --tb=short > start_lambda_output.txt 2>&1 || true'
 
           echo ""
           echo "=== PASSES ==="
-          grep "PASSED" start_lambda_output.txt || echo "No passes found"
+          grep "PASSED" /Users/ec2-user/aws-sam-cli/start_lambda_output.txt || echo "No passes found"
 
           echo ""
           echo "=== FAILURES ==="
-          grep "FAILED" start_lambda_output.txt || echo "No failures found"
+          grep "FAILED" /Users/ec2-user/aws-sam-cli/start_lambda_output.txt || echo "No failures found"
 
           # Should pass completely per test guide
-          if grep -q "FAILED" start_lambda_output.txt; then
+          if grep -q "FAILED" /Users/ec2-user/aws-sam-cli/start_lambda_output.txt; then
             echo "❌ Start-lambda tests failed (should pass completely)"
-            grep "FAILED" start_lambda_output.txt
+            grep "FAILED" /Users/ec2-user/aws-sam-cli/start_lambda_output.txt
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
-            cat start_lambda_output.txt
+            cat /Users/ec2-user/aws-sam-cli/start_lambda_output.txt
             exit 1
           else
             echo "✅ All start-lambda tests passed as expected"
@@ -383,24 +376,22 @@ jobs:
 
           echo ""
           echo "=== PYTEST SUMMARY ==="
-          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_lambda_output.txt | tail -1 || echo "No pytest summary found"
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" /Users/ec2-user/aws-sam-cli/start_lambda_output.txt | tail -1 || echo "No pytest summary found"
 
       - name: Run start-api tests
         if: matrix.test_step.name == 'start-api'
-        working-directory: aws-sam-cli
         timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           echo "=== START-API TESTS - Started at $(date) ==="
-          ulimit -n 65536
-          python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 || true
+          su ec2-user -c 'cd aws-sam-cli && ulimit -n 65536 && python3.11 -m pytest tests/integration/local/start_api -k "not Terraform" -v --tb=short > start_api_output.txt 2>&1 || true'
 
           echo ""
           echo "=== PASSES ==="
-          grep "PASSED" start_api_output.txt || echo "No passes found"
+          grep "PASSED" /Users/ec2-user/aws-sam-cli/start_api_output.txt || echo "No passes found"
 
           echo ""
           echo "=== FAILURES ==="
-          grep "FAILED" start_api_output.txt || echo "No failures found"
+          grep "FAILED" /Users/ec2-user/aws-sam-cli/start_api_output.txt || echo "No failures found"
 
           # Expected failures - flaky tests that fail in CI but not locally
           cat > expected_start_api_failures.txt << 'EOF'
@@ -408,7 +399,7 @@ jobs:
           EOF
 
           # Extract actual failures
-          grep "FAILED" start_api_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_start_api_failures.txt || true
+          grep "FAILED" /Users/ec2-user/aws-sam-cli/start_api_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_start_api_failures.txt || true
 
           # Find unexpected failures
           UNEXPECTED=$(grep -v -f expected_start_api_failures.txt actual_start_api_failures.txt 2>/dev/null || true)
@@ -418,7 +409,7 @@ jobs:
             echo "$UNEXPECTED"
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
-            # cat start_api_output.txt
+            # cat /Users/ec2-user/aws-sam-cli/start_api_output.txt
             echo "Output removed due to extreme length."
             echo "=== NOTE ==="
             echo "This is a known flaky test with ~ % pass rate."
@@ -430,23 +421,22 @@ jobs:
 
           echo ""
           echo "=== PYTEST SUMMARY ==="
-          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" start_api_output.txt | tail -1 || echo "No pytest summary found"
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" /Users/ec2-user/aws-sam-cli/start_api_output.txt | tail -1 || echo "No pytest summary found"
 
       - name: Run deploy tests
         if: matrix.test_step.name == 'deploy'
-        working-directory: aws-sam-cli
         timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           echo "=== DEPLOY TESTS - Started at $(date) ==="
-          python -m pytest tests/integration/deploy -k 'image' -v --tb=short > deploy_output.txt 2>&1 || true
+          su ec2-user -c 'cd aws-sam-cli && python3.11 -m pytest tests/integration/deploy -k "image" -v --tb=short > deploy_output.txt 2>&1 || true'
 
           echo ""
           echo "=== FAILURES ==="
-          grep "FAILED" deploy_output.txt || echo "No failures found"
+          grep "FAILED" /Users/ec2-user/aws-sam-cli/deploy_output.txt || echo "No failures found"
 
           echo ""
           echo "=== PASSES ==="
-          grep "PASSED" deploy_output.txt || echo "No passes found"
+          grep "PASSED" /Users/ec2-user/aws-sam-cli/deploy_output.txt || echo "No passes found"
 
           # Expected passes - this test passes despite having an error in the output
           cat > expected_deploy_passes.txt << 'EOF'
@@ -454,7 +444,7 @@ jobs:
           EOF
 
           # Extract actual passes - test names appear on the line after PASSED
-          grep -A1 "PASSED" deploy_output.txt | grep "test_" | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_deploy_passes.txt || true
+          grep -A1 "PASSED" /Users/ec2-user/aws-sam-cli/deploy_output.txt | grep "test_" | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_deploy_passes.txt || true
 
           # Find unexpected passes (passes that aren't in our expected list)
           UNEXPECTED_PASSES=$(grep -v -f expected_deploy_passes.txt actual_deploy_passes.txt 2>/dev/null || true)
@@ -464,7 +454,7 @@ jobs:
             echo "$UNEXPECTED_PASSES"
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
-            cat deploy_output.txt
+            cat /Users/ec2-user/aws-sam-cli/deploy_output.txt
             exit 1
           else
             echo "✅ All failures and passes were expected (1 known pass with error, rest fail due to multi-arch)."
@@ -472,7 +462,14 @@ jobs:
 
           echo ""
           echo "=== PYTEST SUMMARY ==="
-          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" deploy_output.txt | tail -1 || echo "No pytest summary found"
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" /Users/ec2-user/aws-sam-cli/deploy_output.txt | tail -1 || echo "No pytest summary found"
+
+      - name: Stop Finch VM
+        run: |
+          echo "Stopping Finch VM as ec2-user..."
+          su ec2-user -c "source /Users/ec2-user/.brewrc && HOME=/Users/ec2-user finch vm stop"
+        shell: bash
+        if: always()
 
       # - name: Run build tests
       #   if: matrix.test_step.name == 'build'
