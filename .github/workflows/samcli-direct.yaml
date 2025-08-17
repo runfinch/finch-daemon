@@ -134,6 +134,11 @@ jobs:
           echo "=== FAILURES ==="
           grep "FAILED" unit_test_output.txt || echo "No failures found"
 
+          echo ""
+          echo "=== DEBUG: FULL UNIT OUTPUT ==="
+          cat unit_test_output.txt || echo "No output file found"
+          echo "=== END DEBUG OUTPUT ==="
+
           # Check if required coverage was reached
           if grep -q "Required test coverage of.*reached" unit_test_output.txt; then
             echo "✅ Unit tests completed with required coverage"
@@ -167,6 +172,11 @@ jobs:
           echo ""
           echo "=== FAILURES ==="
           grep "FAILED" sync_output.txt || echo "No failures found"
+
+          echo ""
+          echo "=== DEBUG: FULL SYNC OUTPUT ==="
+          cat sync_output.txt || echo "No output file found"
+          echo "=== END DEBUG OUTPUT ==="
 
           # Should pass completely pr test guide
           if grep -q "FAILED" sync_output.txt; then
@@ -202,6 +212,11 @@ jobs:
           echo ""
           echo "=== FAILURES ==="
           grep "FAILED" package_output.txt || echo "No failures found"
+
+          echo ""
+          echo "=== DEBUG: FULL PACKAGE OUTPUT ==="
+          cat package_output.txt || echo "No output file found"
+          echo "=== END DEBUG OUTPUT ==="
 
           # Expected failures from test guide
           cat > expected_package_failures.txt << 'EOF'
@@ -249,6 +264,11 @@ jobs:
           echo ""
           echo "=== FAILURES ==="
           grep "FAILED" invoke_output.txt || echo "No failures found"
+
+          echo ""
+          echo "=== DEBUG: FULL INVOKE OUTPUT ==="
+          cat invoke_output.txt || echo "No output file found"
+          echo "=== END DEBUG OUTPUT ==="
 
           # Expected failures from test guide (12 total from different test classes)
           cat > expected_invoke_failures.txt << 'EOF'
@@ -298,6 +318,11 @@ jobs:
           echo "=== FAILURES ==="
           grep "FAILED" start_lambda_output.txt || echo "No failures found"
 
+          echo ""
+          echo "=== DEBUG: FULL START-LAMBDA OUTPUT ==="
+          cat start_lambda_output.txt || echo "No output file found"
+          echo "=== END DEBUG OUTPUT ==="
+
           # Should pass completely per test guide
           if grep -q "FAILED" start_lambda_output.txt; then
             echo "❌ Start-lambda tests failed (should pass completely)"
@@ -330,6 +355,11 @@ jobs:
           echo ""
           echo "=== FAILURES ==="
           grep "FAILED" start_api_output.txt || echo "No failures found"
+
+          echo ""
+          echo "=== DEBUG: FULL START-API OUTPUT ==="
+          cat start_api_output.txt || echo "No output file found"
+          echo "=== END DEBUG OUTPUT ==="
 
           # Expected failures - flaky tests that fail in CI but not locally
           cat > expected_start_api_failures.txt << 'EOF'
@@ -381,6 +411,11 @@ jobs:
           echo "=== PASSES ==="
           grep "PASSED" deploy_output.txt || echo "No passes found"
 
+          echo ""
+          echo "=== DEBUG: FULL DEPLOY OUTPUT ==="
+          cat deploy_output.txt || echo "No output file found"
+          echo "=== END DEBUG OUTPUT ==="
+
           # Expected passes - this test passes despite having an error in the output
           cat > expected_deploy_passes.txt << 'EOF'
           test_deploy_guided_image_auto_0_aws_serverless_function_image_yaml
@@ -426,6 +461,11 @@ jobs:
           echo ""
           echo "=== FAILURES ==="
           grep "FAILED" build_output.txt || echo "No failures found"
+
+          echo ""
+          echo "=== DEBUG: FULL BUILD OUTPUT ==="
+          cat build_output.txt || echo "No output file found"
+          echo "=== END DEBUG OUTPUT ==="
 
           # Expected failures from test guide (nerdctl ancestor filter limitation)
           cat > expected_build_failures.txt << 'EOF'
