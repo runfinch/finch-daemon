@@ -165,8 +165,13 @@ jobs:
 
       - name: Install Docker CLI for SAM CLI compatibility
         run: |
-          echo "Installing Docker CLI for SAM CLI..."
-          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install docker'
+          echo "Checking Docker CLI installation..."
+          if ! su ec2-user -c 'which docker' > /dev/null 2>&1; then
+            echo "Installing Docker CLI..."
+            su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install --formula docker'
+          else
+            echo "Docker CLI already installed"
+          fi
         shell: bash
 
       - name: Configure Docker environment for SAM CLI
