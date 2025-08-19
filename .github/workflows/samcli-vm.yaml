@@ -78,6 +78,18 @@ jobs:
       - name: Install Rosetta 2
         run: su ec2-user -c 'echo "A" | /usr/sbin/softwareupdate --install-rosetta --agree-to-license || true'
 
+      - name: Set up Python  
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Configure Python for ec2-user
+        run: |
+          # Make Python accessible to ec2-user
+          chown -R ec2-user:staff $(python3.11 -c "import site; print(site.USER_BASE)") || true
+          # Or symlink to ec2-user's PATH
+          ln -sf $(which python3.11) /usr/local/bin/python3.11 || true
+
       - name: Configure Homebrew for ec2-user
         run: |
           echo "Creating .brewrc file for ec2-user..."
@@ -104,7 +116,7 @@ jobs:
         shell: bash
 
       - name: Checkout finch-daemon repo
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -124,12 +136,23 @@ jobs:
           chown ec2-user:daemon /private/var/run/finch-lima
         shell: bash
 
-      - name: Build and replace finch-daemon
+      # Build binaries
+      - name: Build binaries
         run: |
           echo "Building cross architecture binaries..."
           su ec2-user -c 'cd ${{ github.workspace }} && STATIC=1 GOPROXY=direct GOOS=linux GOARCH=arm64 make'
           su ec2-user -c 'finch vm remove -f'
           cp -f ${{ github.workspace }}/bin/finch-daemon /Applications/Finch/finch-daemon/finch-daemon
+        shell: bash
+
+      # Initialize VM and check version
+      - name: Check Finch version
+        run: |
+          echo "Initializing VM and checking version..."
+          su ec2-user -c 'finch vm init'
+          sleep 5  # Wait for services to be ready
+          echo "Checking Finch version..."
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch curl --unix-socket /var/run/finch.sock -X GET http:/v1.43/version'
         shell: bash
 
       - name: Configure AWS credentials
@@ -140,32 +163,25 @@ jobs:
           aws-region: ${{ secrets.REGION }}
           role-duration-seconds: 2000
 
-      - name: Initialize Finch VM
+      - name: Install Docker CLI for SAM CLI compatibility
         run: |
-          echo "Initializing VM and checking version..."
-          su ec2-user -c 'finch vm init'
-          sleep 5
-          echo "Checking Finch version..."
-          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch curl --unix-socket /var/run/finch.sock -X GET http:/v1.43/version'
+          echo "Installing Docker CLI for SAM CLI..."
+          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install docker'
         shell: bash
 
       - name: Configure Docker environment for SAM CLI
         run: |
-          # Find actual socket path
-          echo "=== Searching for Docker socket ==="
-          find /Users/ec2-user/.finch -name "*.sock" 2>/dev/null || echo "No .sock files found in .finch"
-          ls -la /Users/ec2-user/.finch/lima/data/finch/sock/ 2>/dev/null || echo "Sock directory not found"
+          # Find finch-daemon socket specifically
+          echo "=== Searching for finch-daemon socket ==="
+          FINCH_SOCKET=$(find /Users/ec2-user/.finch -name "finch.sock" 2>/dev/null | head -1)
           
-          # Set DOCKER_HOST to use Finch VM socket
-          echo "DOCKER_HOST=unix:///Users/ec2-user/.finch/lima/data/finch/sock/docker.sock" >> $GITHUB_ENV
-          echo "Docker environment configured for SAM CLI"
-        shell: bash
-
-      - name: Set up Python
-        run: |
-          echo "Setting up Python for SAM CLI..."
-          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install python@3.11'
-          su ec2-user -c 'source /Users/ec2-user/.brewrc && python3.11 -m pip install --upgrade pip'
+          if [ -n "$FINCH_SOCKET" ]; then
+            echo "DOCKER_HOST=unix://$FINCH_SOCKET" >> $GITHUB_ENV
+            echo "Found and using finch-daemon socket: $FINCH_SOCKET"
+          else
+            echo "No finch.sock found, using default path"
+            echo "DOCKER_HOST=unix:///Applications/Finch/lima/data/finch/sock/finch.sock" >> $GITHUB_ENV
+          fi
         shell: bash
 
       - name: Set up SAM CLI from source
@@ -178,14 +194,14 @@ jobs:
           su ec2-user -c 'cd aws-sam-cli && samdev --version'
         shell: bash
 
-      - name: Pre-cleanup for sync tests
-        if: matrix.test_step.name == 'sync'
-        run: |
-          echo "=== Pre-cleaning resources for sync tests ==="
-          # Clean up any existing stacks that might conflict
-          aws cloudformation list-stacks --region $AWS_DEFAULT_REGION --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE ROLLBACK_COMPLETE UPDATE_ROLLBACK_COMPLETE --query "StackSummaries[?contains(StackName, 'test-') || contains(StackName, 'sam-app')].StackName" --output text | xargs -r -n1 aws cloudformation delete-stack --region $AWS_DEFAULT_REGION --stack-name || true
-          # Wait briefly for deletions to start
-          sleep 30
+      # - name: Pre-cleanup for sync tests
+      #   if: matrix.test_step.name == 'sync'
+      #   run: |
+      #     echo "=== Pre-cleaning resources for sync tests ==="
+      #     # Clean up any existing stacks that might conflict
+      #     aws cloudformation list-stacks --region $AWS_DEFAULT_REGION --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE ROLLBACK_COMPLETE UPDATE_ROLLBACK_COMPLETE --query "StackSummaries[?contains(StackName, 'test-') || contains(StackName, 'sam-app')].StackName" --output text | xargs -r -n1 aws cloudformation delete-stack --region $AWS_DEFAULT_REGION --stack-name || true
+      #     # Wait briefly for deletions to start
+      #     sleep 30
 
       - name: Run sync tests
         if: matrix.test_step.name == 'sync'
@@ -495,13 +511,6 @@ jobs:
           echo ""
           echo "=== PYTEST SUMMARY ==="
           grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" /tmp/deploy_output.txt | tail -1 || echo "No pytest summary found"
-
-      - name: Stop Finch VM
-        run: |
-          echo "Stopping Finch VM as ec2-user..."
-          su ec2-user -c "source /Users/ec2-user/.brewrc && HOME=/Users/ec2-user finch vm stop"
-        shell: bash
-        if: always()
 
       # - name: Run build tests
       #   if: matrix.test_step.name == 'build'
