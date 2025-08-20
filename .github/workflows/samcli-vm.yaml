@@ -149,6 +149,9 @@ jobs:
       - name: Check Finch version
         run: |
           echo "Initializing VM and checking version..."
+          # Clean up any leftover network state
+          sudo pkill -f socket_vmnet || true
+          sudo rm -f /private/var/run/finch-lima/*.sock || true
           su ec2-user -c 'finch vm init'
           sleep 5  # Wait for services to be ready
           echo "Checking Finch version..."
