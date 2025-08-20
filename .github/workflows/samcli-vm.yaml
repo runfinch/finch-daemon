@@ -141,7 +141,7 @@ jobs:
         run: |
           echo "Building cross architecture binaries..."
           su ec2-user -c 'cd ${{ github.workspace }} && STATIC=1 GOPROXY=direct GOOS=linux GOARCH=arm64 make'
-          su ec2-user -c 'finch vm remove -f'
+          su ec2-user -c 'finch vm remove -f' || true
           cp -f ${{ github.workspace }}/bin/finch-daemon /Applications/Finch/finch-daemon/finch-daemon
         shell: bash
 
