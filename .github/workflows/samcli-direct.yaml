@@ -160,9 +160,9 @@ jobs:
         working-directory: aws-sam-cli
         timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
-          pip install pytest-rerunfailures
           echo "=== SYNC TESTS - Started at $(date) ==="
-
+          rm -rf .aws-sam/
+          docker system prune -f
           python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 || true
 
           echo ""
