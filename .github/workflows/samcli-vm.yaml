@@ -150,16 +150,17 @@ jobs:
           echo "Fixing Finch Lima directory ownership..."
           sudo mkdir -p /private/var/run/finch-lima
           sudo chown root:daemon /private/var/run/finch-lima
-          sudo chmod 755 /private/var/run/finch-lima
+          sudo chmod 775 /private/var/run/finch-lima
 
       # Initialize VM and check version
       - name: Check Finch version
         run: |
           echo "Initializing VM and checking version..."
           su ec2-user -c 'finch vm init'
-          sleep 5  # Wait for services to be ready
+          sleep 10  # Wait longer for services to be ready
           echo "Checking Finch version..."
-          # Fix AWS credentials in VM if needed
+          # Fix socket permissions and AWS credentials in VM
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch "sudo chmod 666 /var/run/finch.sock 2>/dev/null || true"'
           su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch "sudo mkdir -p /root/.aws && sudo ln -sf /home/ec2-user.linux/.aws/credentials /root/.aws/credentials 2>/dev/null || true"'
           su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch curl --unix-socket /var/run/finch.sock -X GET http:/v1.43/version'
         shell: bash
