@@ -47,14 +47,14 @@ var _ = Describe("Container Top API", func() {
 			req = mux.SetURLVars(req, map[string]string{"id": "id1"})
 
 			// Mock logger call
-			logger.EXPECT().Infof("calling nerdctl top with the following option : %s", "-ef")
+			logger.EXPECT().Debugf("calling nerdctl top with the following option : %s", "")
 
 			// Mock successful response with default ps output
 			defaultPsOutput := "UID PID PPID C STIME TTY TIME CMD\nroot 1 0 0 10:00 ? 00:00:00 sleep Infinity\n"
 			service.EXPECT().Top(gomock.Any(), "id1", gomock.Any()).DoAndReturn(
 				func(ctx context.Context, cid string, opts ncTypes.ContainerTopOptions) error {
-					Expect(opts.PsArgs).Should(Equal("-ef"))
-					_, err := opts.Stdout.Write([]byte(defaultPsOutput))
+					Expect(opts.PsArgs).Should(Equal(""))                // Empty string passed to service
+					_, err := opts.Stdout.Write([]byte(defaultPsOutput)) // Service returns output as if "-ef" was used
 					return err
 				})
 
@@ -73,7 +73,7 @@ var _ = Describe("Container Top API", func() {
 			req = mux.SetURLVars(req, map[string]string{"id": "id1"})
 
 			// Mock logger call
-			logger.EXPECT().Infof("calling nerdctl top with the following option : %s", "-o pid,ppid,cmd")
+			logger.EXPECT().Debugf("calling nerdctl top with the following option : %s", "-o pid,ppid,cmd")
 
 			customPsOutput := "PID PPID CMD\n1 0 sleep Infinity\n"
 			service.EXPECT().Top(gomock.Any(), "id1", gomock.Any()).DoAndReturn(
@@ -108,7 +108,7 @@ var _ = Describe("Container Top API", func() {
 			req = mux.SetURLVars(req, map[string]string{"id": "id1"})
 
 			// Mock logger call
-			logger.EXPECT().Infof("calling nerdctl top with the following option : %s", "-ef")
+			logger.EXPECT().Debugf("calling nerdctl top with the following option : %s", "")
 
 			service.EXPECT().Top(gomock.Any(), "id1", gomock.Any()).Return(errdefs.NewNotFound(fmt.Errorf("not found")))
 
@@ -123,7 +123,7 @@ var _ = Describe("Container Top API", func() {
 			req = mux.SetURLVars(req, map[string]string{"id": "id1"})
 
 			// Mock logger call
-			logger.EXPECT().Infof("calling nerdctl top with the following option : %s", "-ef")
+			logger.EXPECT().Debugf("calling nerdctl top with the following option : %s", "")
 
 			service.EXPECT().Top(gomock.Any(), "id1", gomock.Any()).Return(errdefs.NewConflict(fmt.Errorf("conflict")))
 
@@ -138,7 +138,7 @@ var _ = Describe("Container Top API", func() {
 			req = mux.SetURLVars(req, map[string]string{"id": "id1"})
 
 			// Mock logger call
-			logger.EXPECT().Infof("calling nerdctl top with the following option : %s", "--invalid")
+			logger.EXPECT().Debugf("calling nerdctl top with the following option : %s", "--invalid")
 
 			service.EXPECT().Top(gomock.Any(), "id1", gomock.Any()).Return(fmt.Errorf("unknown argument --invalid"))
 
@@ -153,7 +153,7 @@ var _ = Describe("Container Top API", func() {
 			req = mux.SetURLVars(req, map[string]string{"id": "id1"})
 
 			// Mock logger call
-			logger.EXPECT().Infof("calling nerdctl top with the following option : %s", "-ef")
+			logger.EXPECT().Debugf("calling nerdctl top with the following option : %s", "")
 
 			service.EXPECT().Top(gomock.Any(), "id1", gomock.Any()).Return(fmt.Errorf("unexpected error"))
 
@@ -168,7 +168,7 @@ var _ = Describe("Container Top API", func() {
 			req = mux.SetURLVars(req, map[string]string{"id": "id1"})
 
 			// Mock logger call
-			logger.EXPECT().Infof("calling nerdctl top with the following option : %s", "-ef")
+			logger.EXPECT().Debugf("calling nerdctl top with the following option : %s", "")
 
 			service.EXPECT().Top(gomock.Any(), "id1", gomock.Any()).DoAndReturn(
 				func(ctx context.Context, cid string, opts ncTypes.ContainerTopOptions) error {
@@ -181,5 +181,65 @@ var _ = Describe("Container Top API", func() {
 			Expect(rr.Body).Should(MatchJSON(`{"message": "invalid top output format"}`))
 			Expect(rr).Should(HaveHTTPStatus(http.StatusInternalServerError))
 		})
+	})
+})
+
+var _ = Describe("parseTopOutput", func() {
+	It("should parse standard process output correctly", func() {
+		input := []string{
+			"UID PID PPID C STIME TTY TIME CMD",
+			"root 1 0 0 10:00 ? 00:00:00 sleep infinity",
+			"root 7 1 0 10:01 ? 00:00:00 nginx -g daemon off",
+		}
+
+		titles, processes, err := parseTopOutput(input)
+		Expect(err).Should(BeNil())
+		Expect(titles).Should(Equal([]string{"UID", "PID", "PPID", "C", "STIME", "TTY", "TIME", "CMD"}))
+		Expect(processes).Should(Equal([][]string{
+			{"root", "1", "0", "0", "10:00", "?", "00:00:00", "sleep infinity"},
+			{"root", "7", "1", "0", "10:01", "?", "00:00:00", "nginx -g daemon off"},
+		}))
+	})
+
+	It("should handle command field with spaces correctly", func() {
+		input := []string{
+			"PID COMMAND",
+			"1 /usr/local/bin/python3 -m http.server 8080",
+		}
+
+		titles, processes, err := parseTopOutput(input)
+		Expect(err).Should(BeNil())
+		Expect(titles).Should(Equal([]string{"PID", "COMMAND"}))
+		Expect(processes).Should(Equal([][]string{
+			{"1", "/usr/local/bin/python3 -m http.server 8080"},
+		}))
+	})
+
+	It("should return error for empty titles", func() {
+		input := []string{
+			"",
+			"1 sleep infinity",
+		}
+		titles, processes, err := parseTopOutput(input)
+		Expect(err).Should(MatchError("no titles found"))
+		Expect(titles).Should(BeNil())
+		Expect(processes).Should(BeNil())
+	})
+
+	It("should handle empty process lines correctly", func() {
+		input := []string{
+			"PID CMD",
+			"",
+			"1 sleep infinity",
+			"",
+			"2 nginx",
+		}
+		titles, processes, err := parseTopOutput(input)
+		Expect(err).Should(BeNil())
+		Expect(titles).Should(Equal([]string{"PID", "CMD"}))
+		Expect(processes).Should(Equal([][]string{
+			{"1", "sleep infinity"},
+			{"2", "nginx"},
+		}))
 	})
 })

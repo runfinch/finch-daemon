@@ -25,24 +25,19 @@ func (h *handler) top(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	psArgs := r.URL.Query().Get("ps_args")
-	if psArgs == "" {
-		// Set default ps arguments if none provided
-		psArgs = "-ef"
-	}
-
 	ctx := namespaces.WithNamespace(r.Context(), h.Config.Namespace)
 
 	var buf bytes.Buffer
 
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
+	// PsArgs defaults to  "-ef" in nerdctl
 	options := ncTypes.ContainerTopOptions{
 		GOptions: globalOpt,
 		Stdout:   &buf,
-		PsArgs:   psArgs,
+		PsArgs:   r.URL.Query().Get("ps_args"),
 	}
 
-	h.logger.Infof("calling nerdctl top with the following option : %s", options.PsArgs)
+	h.logger.Debugf("calling nerdctl top with the following option : %s", options.PsArgs)
 	err := h.service.Top(ctx, cid, options)
 	if err != nil {
 		var code int
@@ -67,7 +62,6 @@ func (h *handler) top(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse titles
 	titles, processes, err := parseTopOutput(lines)
 	if err != nil {
 		response.JSON(w, http.StatusInternalServerError, response.NewErrorFromMsg("invalid top output format"))
@@ -82,6 +76,8 @@ func (h *handler) top(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, resp)
 }
 
+// parseTopOutput handles nerdctl's ps output by preserving command strings with spaces
+// (e.g. "nginx -g daemon off") while splitting other fields on whitespace.
 func parseTopOutput(lines []string) ([]string, [][]string, error) {
 	if len(lines) < 2 {
 		return nil, nil, fmt.Errorf("insufficient output lines")
