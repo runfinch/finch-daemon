@@ -50,7 +50,7 @@ jobs:
           # - name: build
           #   timeout: 30
     env:
-      AWS_DEFAULT_REGION: ${{ secrets.REGION }}
+      AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
       DOCKER_HOST: unix:///run/finch.sock
       BY_CANARY: true  # full aws access for tests
       SAM_CLI_DEV: 1
@@ -162,7 +162,6 @@ jobs:
         run: |
           echo "=== SYNC TESTS - Started at $(date) ==="
           rm -rf .aws-sam/
-          docker system prune -f
           python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 || true
 
           echo ""
@@ -535,14 +534,14 @@ jobs:
           - SAMCLI_DIRECT_ROLE_BASE  # main account cleanup
           - SAMCLI_DIRECT_ROLE_SYNC  # sync account cleanup
     env:
-      AWS_DEFAULT_REGION: us-east-1
+      AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
           role-to-assume: ${{ secrets[matrix.role] }}
           role-session-name: samcli-direct-cleanup-${{ matrix.role }}
-          aws-region: us-east-1
+          aws-region: ${{ secrets.REGION }}
           role-duration-seconds: 3600
 
       - name: Comprehensive AWS resource cleanup
