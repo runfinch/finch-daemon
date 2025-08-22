@@ -8,7 +8,7 @@ require (
 	github.com/containerd/containerd/v2 v2.1.4
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/fifo v1.1.0
-	github.com/containerd/go-cni v1.1.12
+	github.com/containerd/go-cni v1.1.13
 	github.com/containerd/log v0.1.0
 	github.com/containerd/nerdctl/v2 v2.1.3
 	github.com/containerd/platforms v1.0.0-rc.1
