@@ -65,6 +65,33 @@ func (s *service) Inspect(ctx context.Context, cid string, sizeFlag bool) (*type
 		Labels:       inspect.Config.Labels,
 	}
 
+	if inspect.HostConfig != nil {
+		cont.HostConfig = &types.ContainerHostConfig{
+			ContainerIDFile: inspect.HostConfig.ContainerIDFile,
+			LogConfig: types.LogConfig{
+				Type:   inspect.HostConfig.LogConfig.Driver,
+				Config: inspect.HostConfig.LogConfig.Opts,
+			},
+			PortBindings:   inspect.HostConfig.PortBindings,
+			IpcMode:        inspect.HostConfig.IpcMode,
+			PidMode:        inspect.HostConfig.PidMode,
+			ReadonlyRootfs: inspect.HostConfig.ReadonlyRootfs,
+			ShmSize:        inspect.HostConfig.ShmSize,
+			Sysctls:        inspect.HostConfig.Sysctls,
+			CPUSetMems:     inspect.HostConfig.CPUSetMems,
+			CPUSetCPUs:     inspect.HostConfig.CPUSetCPUs,
+			CPUShares:      int64(inspect.HostConfig.CPUShares),
+			CPUPeriod:      int64(inspect.HostConfig.CPUPeriod),
+			Memory:         inspect.HostConfig.Memory,
+			MemorySwap:     inspect.HostConfig.MemorySwap,
+			OomKillDisable: inspect.HostConfig.OomKillDisable,
+			// TODO: Uncomment these when https://github.com/runfinch/finch-daemon/pull/267 gets merged
+			// CPURealtimePeriod: inspect.HostConfig.CPURealtimePeriod,
+			// CPURealtimeRuntime: inspect.HostConfig.CPURealtimeRuntime,
+			// TODO: add blkio devices which requires a change in the dockercompat response from Nerdctl
+		}
+	}
+
 	l, err := c.Labels(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get container labels: %s", err)

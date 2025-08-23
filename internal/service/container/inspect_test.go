@@ -9,9 +9,10 @@ import (
 
 	containerd "github.com/containerd/containerd/v2/client"
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
-	"go.uber.org/mock/gomock"
+	"github.com/docker/go-connections/nat"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/api/handlers/container"
 	"github.com/runfinch/finch-daemon/api/types"
@@ -86,11 +87,80 @@ var _ = Describe("Container Inspect API ", func() {
 
 			ncClient.EXPECT().InspectContainer(gomock.Any(), con, sizeFlag).Return(
 				&inspect, nil)
-			
+
 			con.EXPECT().Labels(gomock.Any()).Return(nil, nil)
 			result, err := service.Inspect(ctx, cid, sizeFlag)
 
 			Expect(*result).Should(Equal(ret))
+			Expect(err).Should(BeNil())
+		})
+		It("should return inspect object with HostConfig if it is present in nerdctl's response", func() {
+			inspectWithHostConfig := inspect
+			inspectWithHostConfig.HostConfig = &dockercompat.HostConfig{
+				ContainerIDFile: "test-container-id-file",
+				// dockercompat.loggerLogConfig is not exported
+				PortBindings: nat.PortMap{
+					"80/tcp": []nat.PortBinding{
+						{
+							HostIP:   "localhost",
+							HostPort: "8080",
+						},
+					},
+				},
+				ShmSize:        0,
+				IpcMode:        "testIpcMode",
+				PidMode:        "testPidMode",
+				ReadonlyRootfs: false,
+				Sysctls: map[string]string{
+					"test": "test",
+				},
+				CPUSetMems:     "testCPUSetMems",
+				CPUSetCPUs:     "testCPUSetCPUs",
+				CPUShares:      0,
+				CPUPeriod:      0,
+				Memory:         0,
+				MemorySwap:     0,
+				OomKillDisable: false,
+			}
+
+			retWithHostConfig := ret
+			retWithHostConfig.HostConfig = &types.ContainerHostConfig{
+				ContainerIDFile: "test-container-id-file",
+				PortBindings: nat.PortMap{
+					"80/tcp": []nat.PortBinding{
+						{
+							HostIP:   "localhost",
+							HostPort: "8080",
+						},
+					},
+				},
+				ShmSize:        0,
+				IpcMode:        "testIpcMode",
+				PidMode:        "testPidMode",
+				ReadonlyRootfs: false,
+				Sysctls: map[string]string{
+					"test": "test",
+				},
+				CPUSetMems:     "testCPUSetMems",
+				CPUSetCPUs:     "testCPUSetCPUs",
+				CPUShares:      0,
+				CPUPeriod:      0,
+				Memory:         0,
+				MemorySwap:     0,
+				OomKillDisable: false,
+			}
+
+			// search container method returns one container
+			cdClient.EXPECT().SearchContainer(gomock.Any(), cid).Return(
+				[]containerd.Container{con}, nil)
+
+			ncClient.EXPECT().InspectContainer(gomock.Any(), con, false).Return(
+				&inspectWithHostConfig, nil)
+
+			con.EXPECT().Labels(gomock.Any()).Return(nil, nil)
+			result, err := service.Inspect(ctx, cid, false)
+
+			Expect(*result).Should(Equal(retWithHostConfig))
 			Expect(err).Should(BeNil())
 		})
 		It("should return NotFound error if container was not found", func() {
@@ -155,7 +225,7 @@ var _ = Describe("Container Inspect API ", func() {
 
 			ncClient.EXPECT().InspectContainer(gomock.Any(), con, sizeFlag).Return(
 				&inspectWithSize, nil)
-			
+
 			con.EXPECT().Labels(gomock.Any()).Return(nil, nil)
 			result, err := service.Inspect(ctx, cid, sizeFlag)
 			Expect(err).Should(BeNil())
@@ -173,7 +243,7 @@ var _ = Describe("Container Inspect API ", func() {
 
 			ncClient.EXPECT().InspectContainer(gomock.Any(), con, sizeFlag).Return(
 				&inspect, nil)
-			
+
 			con.EXPECT().Labels(gomock.Any()).Return(nil, nil)
 			result, err := service.Inspect(ctx, cid, sizeFlag)
 			Expect(err).Should(BeNil())
