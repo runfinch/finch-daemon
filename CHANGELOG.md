@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.20.0](https://github.com/runfinch/finch-daemon/compare/v0.19.1...v0.20.0) (2025-08-24)
+
+
+### Build System or External Dependencies
+
+* **deps:** Bump github.com/containerd/containerd/v2 ([e0bf796](https://github.com/runfinch/finch-daemon/commit/e0bf796e8fc97ed2e9abe8de3104061ad43a0e71))
+* **deps:** Bump github.com/containerd/containerd/v2 from 2.1.3 to 2.1.4 ([#298](https://github.com/runfinch/finch-daemon/issues/298)) ([e0bf796](https://github.com/runfinch/finch-daemon/commit/e0bf796e8fc97ed2e9abe8de3104061ad43a0e71))
+* **deps:** Bump github.com/containerd/go-cni from 1.1.12 to 1.1.13 ([#310](https://github.com/runfinch/finch-daemon/issues/310)) ([8fc5617](https://github.com/runfinch/finch-daemon/commit/8fc5617de61505920b82e77c87b3990eb5a46e51))
+* **deps:** Bump github.com/docker/cli ([b332913](https://github.com/runfinch/finch-daemon/commit/b332913b2afe10e382628bfcf269feb69b6804c9))
+* **deps:** Bump github.com/docker/cli from 28.3.2+incompatible to 28.3.3+incompatible ([#295](https://github.com/runfinch/finch-daemon/issues/295)) ([b332913](https://github.com/runfinch/finch-daemon/commit/b332913b2afe10e382628bfcf269feb69b6804c9))
+* **deps:** Bump github.com/docker/docker ([d781e7a](https://github.com/runfinch/finch-daemon/commit/d781e7a3119a373af1da88d31b4448479612e60e))
+* **deps:** Bump github.com/docker/docker from 28.3.2+incompatible to 28.3.3+incompatible ([#291](https://github.com/runfinch/finch-daemon/issues/291)) ([d781e7a](https://github.com/runfinch/finch-daemon/commit/d781e7a3119a373af1da88d31b4448479612e60e))
+* **deps:** bump github.com/go-viper/mapstructure/v2 ([bc87ea3](https://github.com/runfinch/finch-daemon/commit/bc87ea3b350776a9cff769b79da9eedbe0127f26))
+* **deps:** bump github.com/go-viper/mapstructure/v2 from 2.3.0 to 2.4.0 ([#316](https://github.com/runfinch/finch-daemon/issues/316)) ([bc87ea3](https://github.com/runfinch/finch-daemon/commit/bc87ea3b350776a9cff769b79da9eedbe0127f26))
+* **deps:** Bump github.com/moby/moby ([e83ee35](https://github.com/runfinch/finch-daemon/commit/e83ee35e90b02604cb7f7988cdc4df2ac62d9820))
+* **deps:** Bump github.com/moby/moby from 28.3.2+incompatible to 28.3.3+incompatible ([#294](https://github.com/runfinch/finch-daemon/issues/294)) ([e83ee35](https://github.com/runfinch/finch-daemon/commit/e83ee35e90b02604cb7f7988cdc4df2ac62d9820))
+* **deps:** Bump github.com/onsi/ginkgo/v2 from 2.23.4 to 2.25.1 ([#317](https://github.com/runfinch/finch-daemon/issues/317)) ([a1593ab](https://github.com/runfinch/finch-daemon/commit/a1593abd337bd95850665f636713a5ff6bd1e318))
+* **deps:** Bump github.com/open-policy-agent/opa from 1.6.0 to 1.7.1 ([#299](https://github.com/runfinch/finch-daemon/issues/299)) ([0565571](https://github.com/runfinch/finch-daemon/commit/05655716444c193295353328205f3b36e29814d3))
+* **deps:** Bump golang.org/x/net from 0.42.0 to 0.43.0 ([#302](https://github.com/runfinch/finch-daemon/issues/302)) ([6fc924a](https://github.com/runfinch/finch-daemon/commit/6fc924ae4662d11df9effb562651b7acfcbabb8d))
+* **deps:** Bump golang.org/x/sys from 0.34.0 to 0.35.0 ([#308](https://github.com/runfinch/finch-daemon/issues/308)) ([0d49824](https://github.com/runfinch/finch-daemon/commit/0d498240e7ec5d33faeb1aff4aa324f55ccc80a8))
+* **deps:** bump google.golang.org/protobuf from 1.36.6 to 1.36.8 ([#315](https://github.com/runfinch/finch-daemon/issues/315)) ([689c09e](https://github.com/runfinch/finch-daemon/commit/689c09ec94b7940fe2cdcb289dc66be7eb570541))
+
+
+### Features
+
+* Add container top support ([#204](https://github.com/runfinch/finch-daemon/issues/204)) ([922fe22](https://github.com/runfinch/finch-daemon/commit/922fe22e89ecdc7c4cb95414d9dba7d1c8643cb9))
+* add finch vm testing ([4cbe576](https://github.com/runfinch/finch-daemon/commit/4cbe5769d3b29e7b68d89be5479705c7aef6d287))
+* Upgrade nerdctl to 2.1.3 and handle backward compatiblilty issues ([#293](https://github.com/runfinch/finch-daemon/issues/293)) ([61ce02b](https://github.com/runfinch/finch-daemon/commit/61ce02ba1d3ff355fa6885e04f807971a0ba32ee))
+
+
+### Bug Fixes
+
+* container stat test flakiness ([#303](https://github.com/runfinch/finch-daemon/issues/303)) ([68703a4](https://github.com/runfinch/finch-daemon/commit/68703a4d9e93741fe93c5b37e4a110ca9c67d914))
+
 ## [0.19.1](https://github.com/runfinch/finch-daemon/compare/v0.19.0...v0.19.1) (2025-07-28)
 
 
