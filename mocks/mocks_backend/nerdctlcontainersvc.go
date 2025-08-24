@@ -49,6 +49,20 @@ func (m *MockNerdctlContainerSvc) EXPECT() *MockNerdctlContainerSvcMockRecorder 
 	return m.recorder
 }
 
+// ContainerTop mocks base method.
+func (m *MockNerdctlContainerSvc) ContainerTop(ctx context.Context, cid string, options types.ContainerTopOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ContainerTop", ctx, cid, options)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ContainerTop indicates an expected call of ContainerTop.
+func (mr *MockNerdctlContainerSvcMockRecorder) ContainerTop(ctx, cid, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerTop", reflect.TypeOf((*MockNerdctlContainerSvc)(nil).ContainerTop), ctx, cid, options)
+}
+
 // ContainerWait mocks base method.
 func (m *MockNerdctlContainerSvc) ContainerWait(ctx context.Context, cid string, options types.ContainerWaitOptions) error {
 	m.ctrl.T.Helper()
