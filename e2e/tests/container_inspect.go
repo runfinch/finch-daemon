@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/docker/go-connections/nat"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
@@ -72,6 +73,65 @@ func ContainerInspect(opt *option.Option) {
 			Expect(err).Should(BeNil())
 			Expect(got.SizeRw).ShouldNot(BeNil())
 			Expect(got.SizeRootFs).ShouldNot(BeNil())
+		})
+
+		It("should return hostconfig in inspect response", func() {
+			res, err := uClient.Get(client.ConvertToFinchUrl(version, fmt.Sprintf("/containers/%s/json", containerId)))
+			Expect(err).Should(BeNil())
+			Expect(res.StatusCode).Should(Equal(http.StatusOK))
+			var got types.Container
+			err = json.NewDecoder(res.Body).Decode(&got)
+			Expect(err).Should(BeNil())
+			Expect(got.HostConfig).ShouldNot(BeNil())
+			Expect(got.HostConfig.PidMode).Should(BeEmpty())
+			Expect(got.HostConfig.IpcMode).Should(BeEmpty())
+			Expect(got.HostConfig.ReadonlyRootfs).Should(BeFalse())
+		})
+
+		It("should contain port mappings in hostconfig if container is created with one", func() {
+			hostPort := "8001"
+			ctrPort := "8000"
+			hostPort2 := "9001"
+			ctrPort2 := "9000"
+
+			tcpPort := nat.Port(fmt.Sprintf("%s/tcp", ctrPort))
+			tcpPortBinding := nat.PortBinding{HostIP: "0.0.0.0", HostPort: hostPort}
+			udpPort := nat.Port(fmt.Sprintf("%s/udp", ctrPort2))
+			udpPortBinding := nat.PortBinding{HostIP: "0.0.0.0", HostPort: hostPort2}
+
+			createOptions := types.ContainerCreateRequest{}
+			createOptions.Image = defaultImage
+			createOptions.Cmd = []string{"sleep", "Infinity"}
+			createOptions.HostConfig.PortBindings = nat.PortMap{
+				tcpPort: []nat.PortBinding{tcpPortBinding},
+				udpPort: []nat.PortBinding{udpPortBinding},
+			}
+
+			// create and start container with port mapping
+			containerCreateUrl := client.ConvertToFinchUrl(version, "/containers/create")
+			portMapContainerName := testContainerName + "-portmap"
+			statusCode, ctr := createContainer(uClient, containerCreateUrl, portMapContainerName, createOptions)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+			command.Run(opt, "start", portMapContainerName)
+
+			// inspect container
+			res, err := uClient.Get(client.ConvertToFinchUrl(version, fmt.Sprintf("/containers/%s/json", ctr.ID)))
+			Expect(err).Should(BeNil())
+			Expect(res.StatusCode).Should(Equal(http.StatusOK))
+			var got types.Container
+			err = json.NewDecoder(res.Body).Decode(&got)
+			Expect(err).Should(BeNil())
+
+			// verify port mappings
+			Expect(got.HostConfig).ShouldNot(BeNil())
+			Expect(got.HostConfig.PortBindings).ShouldNot(BeNil())
+			Expect(got.HostConfig.PortBindings).Should(HaveLen(2))
+			Expect(got.HostConfig.PortBindings[tcpPort]).Should(HaveLen(1))
+			Expect(got.HostConfig.PortBindings[tcpPort]).Should(HaveLen(1))
+			Expect(got.HostConfig.PortBindings[tcpPort][0]).Should(Equal(tcpPortBinding))
+			Expect(got.HostConfig.PortBindings[udpPort]).Should(HaveLen(1))
+			Expect(got.HostConfig.PortBindings[udpPort][0]).Should(Equal(udpPortBinding))
 		})
 
 		It("should return 404 error when container does not exist", func() {
