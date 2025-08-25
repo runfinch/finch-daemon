@@ -33,21 +33,13 @@ jobs:
       matrix:
         test_step:
           - name: sync
-            timeout: 40
           - name: unit
-            timeout: 15
           - name: package
-            timeout: 10
           - name: start-lambda
-            timeout: 15
           - name: invoke
-            timeout: 25
           - name: start-api
-            timeout: 35
           - name: deploy
-            timeout: 45
           # - name: build
-          #   timeout: 30
     env:
       AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
       BY_CANARY: true
@@ -213,7 +205,6 @@ jobs:
 
       - name: Run sync tests
         if: matrix.test_step.name == 'sync'
-        timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           su ec2-user -c 'cd aws-sam-cli && python3.11 -m pip install pytest-rerunfailures'
           echo "=== SYNC TESTS - Started at $(date) ==="
@@ -255,7 +246,6 @@ jobs:
 
       - name: Run unit tests
         if: matrix.test_step.name == 'unit'
-        timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           echo "=== UNIT TESTS - Started at $(date) ==="
           touch /tmp/unit_test_output.txt
@@ -291,7 +281,6 @@ jobs:
 
       - name: Run package tests
         if: matrix.test_step.name == 'package'
-        timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           echo "=== PACKAGE TESTS - Started at $(date) ==="
           touch /tmp/package_output.txt
@@ -344,7 +333,6 @@ jobs:
 
       - name: Run invoke tests
         if: matrix.test_step.name == 'invoke'
-        timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           echo "=== INVOKE TESTS - Started at $(date) ==="
           touch /tmp/invoke_output.txt
@@ -398,7 +386,6 @@ jobs:
 
       - name: Run start-lambda tests
         if: matrix.test_step.name == 'start-lambda'
-        timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           echo "=== START-LAMBDA TESTS - Started at $(date) ==="
           touch /tmp/start_lambda_output.txt
@@ -436,7 +423,6 @@ jobs:
 
       - name: Run start-api tests
         if: matrix.test_step.name == 'start-api'
-        timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           echo "=== START-API TESTS - Started at $(date) ==="
           touch /tmp/start_api_output.txt
@@ -487,7 +473,6 @@ jobs:
 
       - name: Run deploy tests
         if: matrix.test_step.name == 'deploy'
-        timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           echo "=== DEPLOY TESTS - Started at $(date) ==="
           touch /tmp/deploy_output.txt
