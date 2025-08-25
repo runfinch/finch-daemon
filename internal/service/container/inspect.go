@@ -65,32 +65,7 @@ func (s *service) Inspect(ctx context.Context, cid string, sizeFlag bool) (*type
 		Labels:       inspect.Config.Labels,
 	}
 
-	if inspect.HostConfig != nil {
-		cont.HostConfig = &types.ContainerHostConfig{
-			ContainerIDFile: inspect.HostConfig.ContainerIDFile,
-			LogConfig: types.LogConfig{
-				Type:   inspect.HostConfig.LogConfig.Driver,
-				Config: inspect.HostConfig.LogConfig.Opts,
-			},
-			PortBindings:   inspect.HostConfig.PortBindings,
-			IpcMode:        inspect.HostConfig.IpcMode,
-			PidMode:        inspect.HostConfig.PidMode,
-			ReadonlyRootfs: inspect.HostConfig.ReadonlyRootfs,
-			ShmSize:        inspect.HostConfig.ShmSize,
-			Sysctls:        inspect.HostConfig.Sysctls,
-			CPUSetMems:     inspect.HostConfig.CPUSetMems,
-			CPUSetCPUs:     inspect.HostConfig.CPUSetCPUs,
-			CPUShares:      int64(inspect.HostConfig.CPUShares),
-			CPUPeriod:      int64(inspect.HostConfig.CPUPeriod),
-			Memory:         inspect.HostConfig.Memory,
-			MemorySwap:     inspect.HostConfig.MemorySwap,
-			OomKillDisable: inspect.HostConfig.OomKillDisable,
-			// TODO: Uncomment these when https://github.com/runfinch/finch-daemon/pull/267 gets merged
-			// CPURealtimePeriod: inspect.HostConfig.CPURealtimePeriod,
-			// CPURealtimeRuntime: inspect.HostConfig.CPURealtimeRuntime,
-			// TODO: add blkio devices which requires a change in the dockercompat response from Nerdctl
-		}
-	}
+	cont.HostConfig = getHostConfigFromDockerCompat(inspect.HostConfig)
 
 	l, err := c.Labels(ctx)
 	if err != nil {
@@ -108,6 +83,47 @@ func (s *service) Inspect(ctx context.Context, cid string, sizeFlag bool) (*type
 	}
 
 	return &cont, nil
+}
+
+func getHostConfigFromDockerCompat(c *dockercompat.HostConfig) *types.ContainerHostConfig {
+	if c == nil {
+		return nil
+	}
+
+	hostConfigDevices := []types.DeviceMapping{}
+	for _, device := range c.Devices {
+		hostConfigDevices = append(hostConfigDevices, types.DeviceMapping{
+			PathOnHost:        device.PathOnHost,
+			PathInContainer:   device.PathInContainer,
+			CgroupPermissions: device.CgroupPermissions,
+		})
+	}
+
+	return &types.ContainerHostConfig{
+		ContainerIDFile: c.ContainerIDFile,
+		LogConfig: types.LogConfig{
+			Type:   c.LogConfig.Driver,
+			Config: c.LogConfig.Opts,
+		},
+		PortBindings:   c.PortBindings,
+		IpcMode:        c.IpcMode,
+		PidMode:        c.PidMode,
+		ReadonlyRootfs: c.ReadonlyRootfs,
+		ShmSize:        c.ShmSize,
+		Sysctls:        c.Sysctls,
+		CPUSetMems:     c.CPUSetMems,
+		CPUSetCPUs:     c.CPUSetCPUs,
+		CPUShares:      int64(c.CPUShares),
+		CPUPeriod:      int64(c.CPUPeriod),
+		Memory:         c.Memory,
+		MemorySwap:     c.MemorySwap,
+		OomKillDisable: c.OomKillDisable,
+		Devices:        hostConfigDevices,
+		// TODO: Uncomment these when https://github.com/runfinch/finch-daemon/pull/267 gets merged
+		// CPURealtimePeriod: inspect.HostConfig.CPURealtimePeriod,
+		// CPURealtimeRuntime: inspect.HostConfig.CPURealtimeRuntime,
+		// TODO: add blkio devices which requires a change in the dockercompat response from Nerdctl
+	}
 }
 
 // updateNetworkSettings updates the settings in the network to match that

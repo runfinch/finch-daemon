@@ -87,14 +87,13 @@ var _ = Describe("Container Inspect API ", func() {
 
 			ncClient.EXPECT().InspectContainer(gomock.Any(), con, sizeFlag).Return(
 				&inspect, nil)
-
 			con.EXPECT().Labels(gomock.Any()).Return(nil, nil)
 			result, err := service.Inspect(ctx, cid, sizeFlag)
 
 			Expect(*result).Should(Equal(ret))
 			Expect(err).Should(BeNil())
 		})
-		It("should return inspect object with HostConfig if it is present in nerdctl's response", func() {
+		It("should return inspect object with HostConfig", func() {
 			inspectWithHostConfig := inspect
 			inspectWithHostConfig.HostConfig = &dockercompat.HostConfig{
 				ContainerIDFile: "test-container-id-file",
@@ -121,6 +120,13 @@ var _ = Describe("Container Inspect API ", func() {
 				Memory:         0,
 				MemorySwap:     0,
 				OomKillDisable: false,
+				Devices: []dockercompat.DeviceMapping{
+					{
+						PathOnHost:        "",
+						PathInContainer:   "",
+						CgroupPermissions: "",
+					},
+				},
 			}
 
 			retWithHostConfig := ret
@@ -148,6 +154,13 @@ var _ = Describe("Container Inspect API ", func() {
 				Memory:         0,
 				MemorySwap:     0,
 				OomKillDisable: false,
+				Devices: []types.DeviceMapping{
+					{
+						PathOnHost:        "",
+						PathInContainer:   "",
+						CgroupPermissions: "",
+					},
+				},
 			}
 
 			// search container method returns one container
@@ -225,7 +238,6 @@ var _ = Describe("Container Inspect API ", func() {
 
 			ncClient.EXPECT().InspectContainer(gomock.Any(), con, sizeFlag).Return(
 				&inspectWithSize, nil)
-
 			con.EXPECT().Labels(gomock.Any()).Return(nil, nil)
 			result, err := service.Inspect(ctx, cid, sizeFlag)
 			Expect(err).Should(BeNil())
@@ -243,7 +255,6 @@ var _ = Describe("Container Inspect API ", func() {
 
 			ncClient.EXPECT().InspectContainer(gomock.Any(), con, sizeFlag).Return(
 				&inspect, nil)
-
 			con.EXPECT().Labels(gomock.Any()).Return(nil, nil)
 			result, err := service.Inspect(ctx, cid, sizeFlag)
 			Expect(err).Should(BeNil())
