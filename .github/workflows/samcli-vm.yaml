@@ -27,7 +27,6 @@ permissions:
 jobs:
   samcli-vm-test:
     runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
-    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -135,6 +134,9 @@ jobs:
           su ec2-user -c 'cd ${{ github.workspace }} && STATIC=1 GOPROXY=direct GOOS=linux GOARCH=arm64 make'
           su ec2-user -c 'finch vm remove -f' || true
           cp -f ${{ github.workspace }}/bin/finch-daemon /Applications/Finch/finch-daemon/finch-daemon
+          # Restart finch-daemon with new binary
+          su ec2-user -c 'finch vm stop' || true
+          su ec2-user -c 'finch vm start' || true
         shell: bash
 
       # Initialize VM and check version
@@ -171,14 +173,20 @@ jobs:
 
       - name: Configure Docker environment for SAM CLI
         run: |
-          # Find finch-daemon socket specifically
-          echo "=== Searching for finch-daemon socket ==="
-          FINCH_SOCKET=$(find /Users/ec2-user/.finch -name "finch.sock" 2>/dev/null | head -1)
+          # Wait for finch-daemon to be ready and find socket
+          echo "=== Waiting for finch-daemon socket ==="
+          for i in {1..30}; do
+            FINCH_SOCKET=$(su ec2-user -c 'find /Users/ec2-user/.finch -name "finch.sock" 2>/dev/null' | head -1)
+            if [ -n "$FINCH_SOCKET" ] && [ -S "$FINCH_SOCKET" ]; then
+              echo "DOCKER_HOST=unix://$FINCH_SOCKET" >> $GITHUB_ENV
+              echo "Found finch-daemon socket: $FINCH_SOCKET"
+              break
+            fi
+            echo "Waiting for socket... attempt $i/30"
+            sleep 2
+          done
           
-          if [ -n "$FINCH_SOCKET" ]; then
-            echo "DOCKER_HOST=unix://$FINCH_SOCKET" >> $GITHUB_ENV
-            echo "Found and using finch-daemon socket: $FINCH_SOCKET"
-          else
+          if [ -z "$FINCH_SOCKET" ]; then
             echo "No finch.sock found, using default path"
             echo "DOCKER_HOST=unix:///Applications/Finch/lima/data/finch/sock/finch.sock" >> $GITHUB_ENV
           fi
