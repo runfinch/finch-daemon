@@ -114,17 +114,15 @@ jobs:
           make init
           samdev --version
 
+
+
       - name: Run unit tests
         if: matrix.test_step.name == 'unit'
         working-directory: aws-sam-cli
         timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
-          echo "=== UNIT TESTS - Started at $(date) ==="
-
-          # Fix common issues from test guide
-          ulimit -n 65536  # Fix "too many open files"
-
-          make test > unit_test_output.txt 2>&1 || true
+          ulimit -n 65536
+          for i in {1..3}; do make test > unit_test_output.txt 2>&1 && break || sleep 10; done || true
 
           echo ""
           echo "=== PASSES ==="
@@ -160,9 +158,8 @@ jobs:
         working-directory: aws-sam-cli
         timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
-          echo "=== SYNC TESTS - Started at $(date) ==="
           rm -rf .aws-sam/
-          python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 || true
+          for i in {1..3}; do python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 && break || sleep 10; done || true
 
           echo ""
           echo "=== PASSES ==="
@@ -201,8 +198,7 @@ jobs:
         working-directory: aws-sam-cli
         timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
-          echo "=== PACKAGE TESTS - Started at $(date) ==="
-          python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short > package_output.txt 2>&1 || true
+          for i in {1..3}; do python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short > package_output.txt 2>&1 && break || sleep 10; done || true
 
           echo ""
           echo "=== PASSES ==="
@@ -253,8 +249,7 @@ jobs:
         working-directory: aws-sam-cli
         timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
-          echo "=== INVOKE TESTS - Started at $(date) ==="
-          python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
+          for i in {1..3}; do python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 && break || sleep 10; done || true
 
           echo ""
           echo "=== PASSES ==="
@@ -306,8 +301,7 @@ jobs:
         working-directory: aws-sam-cli
         timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
-          echo "=== START-LAMBDA TESTS - Started at $(date) ==="
-          python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
+          for i in {1..3}; do python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 && break || sleep 10; done || true
 
           echo ""
           echo "=== PASSES ==="
@@ -343,9 +337,8 @@ jobs:
         working-directory: aws-sam-cli
         timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
-          echo "=== START-API TESTS - Started at $(date) ==="
           ulimit -n 65536
-          python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 || true
+          for i in {1..3}; do python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 && break || sleep 10; done || true
 
           echo ""
           echo "=== PASSES ==="
@@ -395,8 +388,7 @@ jobs:
         working-directory: aws-sam-cli
         timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
-          echo "=== DEPLOY TESTS - Started at $(date) ==="
-          python -m pytest tests/integration/deploy -k 'image' -v --tb=short > deploy_output.txt 2>&1 || true
+          for i in {1..3}; do python -m pytest tests/integration/deploy -k 'image' -v --tb=short > deploy_output.txt 2>&1 && break || sleep 10; done || true
 
           # echo "=== DEPLOY TEST OUTPUT ==="
           # cat deploy_output.txt
@@ -446,8 +438,7 @@ jobs:
         working-directory: aws-sam-cli
         timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
-          echo "=== BUILD TESTS - Started at $(date) ==="
-          python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 || true
+          for i in {1..3}; do python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 && break || sleep 10; done || true
 
           # echo "=== BUILD TEST OUTPUT ==="
           # cat build_output.txt

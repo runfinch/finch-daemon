@@ -199,7 +199,7 @@ jobs:
           su ec2-user -c 'cd aws-sam-cli && git submodule update --init --recursive'
           su ec2-user -c 'cd aws-sam-cli && python3.11 -m pip install --upgrade pip --user'
           su ec2-user -c 'cd aws-sam-cli && SAM_CLI_DEV=1 python3.11 -m pip install -e ".[dev]" --user'
-          su ec2-user -c 'cd aws-sam-cli && samdev --version'
+          su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && samdev --version'
         shell: bash
 
       # - name: Pre-cleanup for sync tests
