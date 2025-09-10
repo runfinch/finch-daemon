@@ -171,27 +171,6 @@ jobs:
           fi
         shell: bash
 
-      - name: Configure Docker environment for SAM CLI
-        run: |
-          # Wait for finch-daemon to be ready and find socket
-          echo "=== Waiting for finch-daemon socket ==="
-          for i in {1..30}; do
-            FINCH_SOCKET=$(su ec2-user -c 'find /Users/ec2-user/.finch -name "finch.sock" 2>/dev/null' | head -1)
-            if [ -n "$FINCH_SOCKET" ] && [ -S "$FINCH_SOCKET" ]; then
-              echo "DOCKER_HOST=unix://$FINCH_SOCKET" >> $GITHUB_ENV
-              echo "Found finch-daemon socket: $FINCH_SOCKET"
-              break
-            fi
-            echo "Waiting for socket... attempt $i/30"
-            sleep 2
-          done
-          
-          if [ -z "$FINCH_SOCKET" ]; then
-            echo "No finch.sock found, using default path"
-            echo "DOCKER_HOST=unix:///Applications/Finch/lima/data/finch/sock/finch.sock" >> $GITHUB_ENV
-          fi
-        shell: bash
-
       - name: Set up SAM CLI from source
         run: |
           su ec2-user -c 'git clone https://github.com/aws/aws-sam-cli.git'
@@ -200,6 +179,8 @@ jobs:
           su ec2-user -c 'cd aws-sam-cli && python3.11 -m pip install --upgrade pip --user'
           su ec2-user -c 'cd aws-sam-cli && SAM_CLI_DEV=1 python3.11 -m pip install -e ".[dev]" --user'
           su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && samdev --version'
+          # Set Docker host to finch socket
+          echo "DOCKER_HOST=unix:///Users/ec2-user/.finch/finch.sock" >> $GITHUB_ENV
         shell: bash
 
       # - name: Pre-cleanup for sync tests
@@ -214,11 +195,8 @@ jobs:
       - name: Run sync tests
         if: matrix.test_step.name == 'sync'
         run: |
-          su ec2-user -c 'cd aws-sam-cli && python3.11 -m pip install pytest-rerunfailures'
           echo "=== SYNC TESTS - Started at $(date) ==="
-          touch /tmp/sync_output.txt
-          chown ec2-user:staff /tmp/sync_output.txt
-          su ec2-user -c 'cd aws-sam-cli && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/sync -k "image" -v --tb=short' > /tmp/sync_output.txt 2>&1 || true
+          su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/sync -k "image" -v --tb=short' > /tmp/sync_output.txt 2>&1 || true
 
           echo ""
           echo "=== PASSES ==="
@@ -258,7 +236,7 @@ jobs:
           echo "=== UNIT TESTS - Started at $(date) ==="
           touch /tmp/unit_test_output.txt
           chown ec2-user:staff /tmp/unit_test_output.txt
-          su ec2-user -c 'cd aws-sam-cli && ulimit -n 65536 && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 make test' > /tmp/unit_test_output.txt 2>&1 || true
+          su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && ulimit -n 65536 && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 make test' > /tmp/unit_test_output.txt 2>&1 || true
 
           echo ""
           echo "=== PASSES ==="
@@ -293,7 +271,7 @@ jobs:
           echo "=== PACKAGE TESTS - Started at $(date) ==="
           touch /tmp/package_output.txt
           chown ec2-user:staff /tmp/package_output.txt
-          su ec2-user -c 'cd aws-sam-cli && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/package/test_package_command_image.py -v --tb=short' > /tmp/package_output.txt 2>&1 || true
+          su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/package/test_package_command_image.py -v --tb=short' > /tmp/package_output.txt 2>&1 || true
 
           echo ""
           echo "=== PASSES ==="
@@ -345,7 +323,7 @@ jobs:
           echo "=== INVOKE TESTS - Started at $(date) ==="
           touch /tmp/invoke_output.txt
           chown ec2-user:staff /tmp/invoke_output.txt
-          su ec2-user -c 'cd aws-sam-cli && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/local/invoke -k "not Terraform" -v --tb=short' > /tmp/invoke_output.txt 2>&1 || true
+          su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/local/invoke -k "not Terraform" -v --tb=short' > /tmp/invoke_output.txt 2>&1 || true
 
           echo ""
           echo "=== PASSES ==="
@@ -398,7 +376,7 @@ jobs:
           echo "=== START-LAMBDA TESTS - Started at $(date) ==="
           touch /tmp/start_lambda_output.txt
           chown ec2-user:staff /tmp/start_lambda_output.txt
-          su ec2-user -c 'cd aws-sam-cli && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/local/start_lambda -k "not Terraform" -v --tb=short' > /tmp/start_lambda_output.txt 2>&1 || true
+          su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/local/start_lambda -k "not Terraform" -v --tb=short' > /tmp/start_lambda_output.txt 2>&1 || true
 
           echo ""
           echo "=== PASSES ==="
@@ -435,7 +413,7 @@ jobs:
           echo "=== START-API TESTS - Started at $(date) ==="
           touch /tmp/start_api_output.txt
           chown ec2-user:staff /tmp/start_api_output.txt
-          su ec2-user -c 'cd aws-sam-cli && ulimit -n 65536 && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/local/start_api -k "not Terraform" -v --tb=short' > /tmp/start_api_output.txt 2>&1 || true
+          su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && ulimit -n 65536 && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/local/start_api -k "not Terraform" -v --tb=short' > /tmp/start_api_output.txt 2>&1 || true
 
           echo ""
           echo "=== PASSES ==="
@@ -485,7 +463,7 @@ jobs:
           echo "=== DEPLOY TESTS - Started at $(date) ==="
           touch /tmp/deploy_output.txt
           chown ec2-user:staff /tmp/deploy_output.txt
-          su ec2-user -c 'cd aws-sam-cli && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/deploy -k "image" -v --tb=short' > /tmp/deploy_output.txt 2>&1 || true
+          su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/deploy -k "image" -v --tb=short' > /tmp/deploy_output.txt 2>&1 || true
 
           echo ""
           echo "=== FAILURES ==="
