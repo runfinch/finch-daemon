@@ -198,7 +198,7 @@ jobs:
         working-directory: aws-sam-cli
         # timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
-          for i in {1..3}; do python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short > package_output.txt 2>&1 && break || sleep 10; done || true
+          python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short > package_output.txt 2>&1 || true
 
           echo ""
           echo "=== PASSES ==="
@@ -249,7 +249,7 @@ jobs:
         working-directory: aws-sam-cli
         # timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
-          for i in {1..3}; do python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 && break || sleep 10; done || true
+          python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
 
           echo ""
           echo "=== PASSES ==="
@@ -301,7 +301,7 @@ jobs:
         working-directory: aws-sam-cli
         # timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
-          for i in {1..3}; do python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 && break || sleep 10; done || true
+          python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
 
           echo ""
           echo "=== PASSES ==="
@@ -388,7 +388,7 @@ jobs:
         working-directory: aws-sam-cli
         # timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
-          for i in {1..3}; do python -m pytest tests/integration/deploy -k 'image' -v --tb=short > deploy_output.txt 2>&1 && break || sleep 10; done || true
+          python -m pytest tests/integration/deploy -k 'image' -v --tb=short > deploy_output.txt 2>&1 || true
 
           # echo "=== DEPLOY TEST OUTPUT ==="
           # cat deploy_output.txt
