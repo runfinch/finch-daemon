@@ -338,7 +338,7 @@ jobs:
         # timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           ulimit -n 65536
-          for i in {1..3}; do python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 && break || sleep 10; done || true
+          python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 || true
 
           echo ""
           echo "=== PASSES ==="
