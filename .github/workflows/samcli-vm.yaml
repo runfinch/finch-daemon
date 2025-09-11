@@ -295,7 +295,7 @@ jobs:
           EOF
 
           # Extract actual failures
-          grep "FAILED" /tmp/package_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_package_failures.txt || true
+          grep "FAILED" /tmp/package_output.txt | sed 's/.*::\([^[:space:]]*\).*/\1/' > actual_package_failures.txt || true
 
           # Also check for nested stack failures (pattern match)
           grep "FAILED.*test_package_template_with_image_repositories_nested_stack" /tmp/package_output.txt >> actual_package_failures.txt || true
@@ -351,7 +351,7 @@ jobs:
           EOF
 
           # Extract actual failures
-          grep "FAILED" /tmp/invoke_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_invoke_failures.txt || true
+          grep "FAILED" /tmp/invoke_output.txt | sed 's/.*::\([^[:space:]]*\).*/\1/' > actual_invoke_failures.txt || true
 
           # Find unexpected failures
           UNEXPECTED=$(grep -v -f expected_invoke_failures.txt actual_invoke_failures.txt 2>/dev/null || true)
@@ -435,7 +435,7 @@ jobs:
           EOF
 
           # Extract actual failures
-          grep "FAILED" /tmp/start_api_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_start_api_failures.txt || true
+          grep "FAILED" /tmp/start_api_output.txt | sed 's/.*::\([^[:space:]]*\).*/\1/' > actual_start_api_failures.txt || true
 
           # Find unexpected failures
           UNEXPECTED=$(grep -v -f expected_start_api_failures.txt actual_start_api_failures.txt 2>/dev/null || true)
@@ -485,7 +485,7 @@ jobs:
           EOF
 
           # Extract actual passes - test names appear on the line after PASSED
-          grep -A1 "PASSED" /tmp/deploy_output.txt | grep "test_" | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_deploy_passes.txt || true
+          grep -A1 "PASSED" /tmp/deploy_output.txt | grep "test_" | sed 's/.*::\([^[:space:]]*\).*/\1/' > actual_deploy_passes.txt || true
 
           # Find unexpected passes (passes that aren't in our expected list)
           UNEXPECTED_PASSES=$(grep -v -f expected_deploy_passes.txt actual_deploy_passes.txt 2>/dev/null || true)
@@ -551,7 +551,7 @@ jobs:
       #     EOF
 
       #     # Extract actual failures
-      #     grep "FAILED" build_output.txt | sed 's/.*::\(test_[a-zA-Z0-9_]*\).*/\1/' > actual_build_failures.txt || true
+      #     grep "FAILED" build_output.txt | sed 's/.*::\([^[:space:]]*\).*/\1/' > actual_build_failures.txt || true
 
       #     # Find unexpected failures
       #     UNEXPECTED=$(grep -v -f expected_build_failures.txt actual_build_failures.txt 2>/dev/null || true)
