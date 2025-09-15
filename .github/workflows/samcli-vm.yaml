@@ -26,10 +26,11 @@ permissions:
 
 jobs:
   samcli-vm-test:
-    runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
+    runs-on: codebuild-finch-daemon-arm64-${{ matrix.account }}-instance-${{ github.run_id }}-${{ github.run_attempt }}
     strategy:
       fail-fast: false
       matrix:
+        account: [0, 2]
         test_step:
           - name: sync
           - name: unit
