@@ -32,7 +32,7 @@ jobs:
       matrix:
         test_step:
           - name: sync
-            account: 0
+            account: 2
           - name: unit
             account: 2
           - name: package
@@ -44,7 +44,7 @@ jobs:
           - name: start-api
             account: 2
           - name: deploy
-            account: 0
+            account: 2
           # - name: build
           #   account: 2
     env:
