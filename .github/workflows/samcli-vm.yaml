@@ -26,20 +26,27 @@ permissions:
 
 jobs:
   samcli-vm-test:
-    runs-on: codebuild-finch-daemon-arm64-${{ matrix.account }}-instance-${{ github.run_id }}-${{ github.run_attempt }}
+    runs-on: codebuild-finch-daemon-arm64-${{ matrix.test_step.account }}-instance-${{ github.run_id }}-${{ github.run_attempt }}
     strategy:
       fail-fast: false
       matrix:
-        account: [0, 2]
         test_step:
           - name: sync
+            account: 0
           - name: unit
+            account: 2
           - name: package
+            account: 2
           - name: start-lambda
+            account: 2
           - name: invoke
+            account: 2
           - name: start-api
+            account: 2
           - name: deploy
+            account: 0
           # - name: build
+          #   account: 2
     env:
       AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
       BY_CANARY: true
