@@ -34,7 +34,7 @@ jobs:
           - name: sync
             account: 2
           - name: unit
-            account: 2
+            account: 1
           - name: package
             account: 2
           - name: start-lambda
