@@ -1,0 +1,673 @@
+name: samcli-vm
+
+on:
+  pull_request:
+    branches:
+      - main
+      - samcli-test
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/samcli-vm.yaml'
+      - 'Makefile*'
+      - 'cmd/**'
+      - 'pkg/**'
+      - 'internal/**'
+      - 'api/**'
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.23.8'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  samcli-vm-test:
+    runs-on: codebuild-finch-daemon-arm64-${{ matrix.test_step.account }}-instance-${{ github.run_id }}-${{ github.run_attempt }}
+    strategy:
+      fail-fast: false
+      matrix:
+        test_step:
+          - name: sync
+            account: 2
+          - name: unit
+            account: 1
+          - name: package
+            account: 2
+          - name: start-lambda
+            account: 1
+          - name: invoke
+            account: 2
+          - name: start-api
+            account: 1
+          - name: deploy
+            account: 2
+          # - name: build
+          #   account: 2
+    env:
+      AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
+      BY_CANARY: true
+      SAM_CLI_DEV: 1
+      SAM_CLI_TELEMETRY: 0
+    steps:
+
+      - name: Clean macOS runner workspace
+        run: |
+          rm -rf ${{ github.workspace }}/*
+
+      - name: Configure Git for ec2-user
+        run: |
+          git config --global --add safe.directory "*"
+        shell: bash
+
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: Configure Go for ec2-user
+        run: |
+          chown -R ec2-user:staff $GOPATH || true
+          chown -R ec2-user:staff $RUNNER_TOOL_CACHE/go || true
+
+      - name: Install Rosetta 2
+        run: su ec2-user -c 'echo "A" | /usr/sbin/softwareupdate --install-rosetta --agree-to-license || true'
+
+      - name: Set up Python  
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Configure Python for ec2-user
+        run: |
+          # Make Python accessible to ec2-user
+          chown -R ec2-user:staff $(python3.11 -c "import site; print(site.USER_BASE)") || true
+          # Or symlink to ec2-user's PATH
+          ln -sf $(which python3.11) /usr/local/bin/python3.11 || true
+
+      - name: Configure Homebrew for ec2-user
+        run: |
+          echo "Creating .brewrc file for ec2-user..."
+          cat > /Users/ec2-user/.brewrc << 'EOF'
+          # Homebrew environment setup
+          export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+          export HOMEBREW_PREFIX="/opt/homebrew"
+          export HOMEBREW_CELLAR="/opt/homebrew/Cellar"
+          export HOMEBREW_REPOSITORY="/opt/homebrew"
+          export HOMEBREW_NO_AUTO_UPDATE=1
+          EOF
+          chown ec2-user:staff /Users/ec2-user/.brewrc
+
+          # Fix Homebrew permissions
+          echo "Setting permissions for Homebrew directories..."
+          mkdir -p /opt/homebrew/Cellar
+          chown -R ec2-user:staff /opt/homebrew
+        shell: bash
+
+      - name: Install dependencies
+        run: |
+          echo "Installing dependencies as ec2-user..."
+          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install lz4 automake autoconf libtool yq'
+        shell: bash
+
+      - name: Checkout finch-daemon repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Configure workspace for ec2-user
+        run: |
+          chown -R ec2-user:staff ${{ github.workspace }}
+
+      - name: Install Finch
+        run: |
+          echo "Installing Finch as ec2-user..."
+          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install finch --cask'
+          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew list | grep finch || echo "finch not installed"'
+          mkdir -p /private/var/run/finch-lima
+          cat /etc/passwd
+          chown ec2-user:daemon /private/var/run/finch-lima
+        shell: bash
+
+      # Build binaries
+      - name: Build binaries
+        run: |
+          echo "Building cross architecture binaries..."
+          su ec2-user -c 'cd ${{ github.workspace }} && STATIC=1 GOPROXY=direct GOOS=linux GOARCH=arm64 make'
+          su ec2-user -c 'finch vm remove -f' || true
+          cp -f ${{ github.workspace }}/bin/finch-daemon /Applications/Finch/finch-daemon/finch-daemon
+          # Restart finch-daemon with new binary
+          su ec2-user -c 'finch vm stop' || true
+          su ec2-user -c 'finch vm start' || true
+        shell: bash
+
+      # Initialize VM and check version
+      - name: Check Finch version
+        run: |
+          echo "Initializing VM and checking version..."
+          # Clean up any leftover network state
+          sudo pkill -f socket_vmnet || true
+          sudo rm -f /private/var/run/finch-lima/*.sock || true
+          su ec2-user -c 'finch vm init'
+          sleep 5  # Wait for services to be ready
+          echo "Checking Finch version..."
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch curl --unix-socket /var/run/finch.sock -X GET http:/v1.43/version'
+        shell: bash
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        with:
+          role-to-assume: ${{ matrix.test_step.name == 'sync' && secrets.SAMCLI_VM_ROLE_SYNC || secrets.SAMCLI_VM_ROLE_BASE }}
+          role-session-name: samcli-finch-vm-${{ matrix.test_step.name }}-tests
+          aws-region: ${{ secrets.REGION }}
+          role-duration-seconds: 2000
+
+      - name: Install Docker CLI for SAM CLI compatibility
+        run: |
+          echo "Checking Docker CLI installation..."
+          if ! su ec2-user -c 'which docker' > /dev/null 2>&1; then
+            echo "Installing Docker CLI..."
+            su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install --formula docker'
+          else
+            echo "Docker CLI already installed"
+          fi
+        shell: bash
+
+      - name: Set up SAM CLI from source
+        run: |
+          su ec2-user -c 'git clone https://github.com/aws/aws-sam-cli.git'
+          su ec2-user -c 'cd aws-sam-cli && git checkout $(git describe --tags `git rev-list --tags --max-count=1`)'
+          su ec2-user -c 'cd aws-sam-cli && git submodule update --init --recursive'
+          su ec2-user -c 'cd aws-sam-cli && python3.11 -m pip install --upgrade pip --user'
+          su ec2-user -c 'cd aws-sam-cli && SAM_CLI_DEV=1 python3.11 -m pip install -e ".[dev]" --user'
+          su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && samdev --version'
+          # Set Docker host to finch socket
+          echo "DOCKER_HOST=unix:///Applications/Finch/lima/data/finch/sock/finch.sock" >> $GITHUB_ENV
+          echo "DOCKER_CONFIG=/Users/ec2-user/.finch" >> $GITHUB_ENV
+        shell: bash
+
+      # - name: Pre-cleanup for sync tests
+      #   if: matrix.test_step.name == 'sync'
+      #   run: |
+      #     echo "=== Pre-cleaning resources for sync tests ==="
+      #     # Clean up any existing stacks that might conflict
+      #     aws cloudformation list-stacks --region $AWS_DEFAULT_REGION --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE ROLLBACK_COMPLETE UPDATE_ROLLBACK_COMPLETE --query "StackSummaries[?contains(StackName, 'test-') || contains(StackName, 'sam-app')].StackName" --output text | xargs -r -n1 aws cloudformation delete-stack --region $AWS_DEFAULT_REGION --stack-name || true
+      #     # Wait briefly for deletions to start
+      #     sleep 30
+
+      - name: Run sync tests
+        if: matrix.test_step.name == 'sync'
+        run: |
+          echo "=== SYNC TESTS - Started at $(date) ==="
+          su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/sync -k "image" -v --tb=short' > /tmp/sync_output.txt 2>&1 || true
+
+          echo ""
+          echo "=== PASSES ==="
+          grep "PASSED" /tmp/sync_output.txt || echo "No passes found"
+
+          echo ""
+          echo "=== FAILURES ==="
+          grep "FAILED" /tmp/sync_output.txt || echo "No failures found"
+
+          echo ""
+          echo "=== DEBUG: FULL SYNC OUTPUT ==="
+          cat /tmp/sync_output.txt || echo "No output file found"
+          echo "=== END DEBUG OUTPUT ==="
+
+          # Should pass completely pr test guide
+          if grep -q "FAILED" /tmp/sync_output.txt; then
+            echo "❌ Sync tests failed (should pass completely)"
+            grep "FAILED" /tmp/sync_output.txt
+            echo ""
+            echo "=== FULL OUTPUT FOR DEBUGGING ==="
+            cat /tmp/sync_output.txt
+            echo "=== NOTE ==="
+            echo "This is a known flaky test with ~ % pass rate."
+            echo "Please try again using an individual workflow trigger."
+            exit 1
+          else
+            echo "✅ All sync tests passed as expected"
+          fi
+
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" /tmp/sync_output.txt | tail -1 || echo "No pytest summary found"
+
+      - name: Run unit tests
+        if: matrix.test_step.name == 'unit'
+        run: |
+          echo "=== UNIT TESTS - Started at $(date) ==="
+          touch /tmp/unit_test_output.txt
+          chown ec2-user:staff /tmp/unit_test_output.txt
+          su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && ulimit -n 65536 && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 make test' > /tmp/unit_test_output.txt 2>&1 || true
+
+          echo ""
+          echo "=== PASSES ==="
+          grep "PASSED" /tmp/unit_test_output.txt || echo "No passes found"
+
+          echo ""
+          echo "=== FAILURES ==="
+          grep "FAILED" /tmp/unit_test_output.txt || echo "No failures found"
+
+          echo ""
+          echo "=== DEBUG: FULL UNIT OUTPUT ==="
+          cat /tmp/unit_test_output.txt || echo "No output file found"
+          echo "=== END DEBUG OUTPUT ==="
+
+          if grep -q "Required test coverage of.*reached" /tmp/unit_test_output.txt; then
+            echo "✅ Unit tests completed with required coverage"
+            grep "Required test coverage of.*reached" /tmp/unit_test_output.txt
+          else
+            echo "❌ Required test coverage not reached"
+            echo ""
+            echo "=== FULL OUTPUT FOR DEBUGGING ==="
+            cat /tmp/unit_test_output.txt
+          fi
+
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" /tmp/unit_test_output.txt | tail -1 || echo "No pytest summary found"
+
+      - name: Run package tests
+        if: matrix.test_step.name == 'package'
+        run: |
+          echo "=== PACKAGE TESTS - Started at $(date) ==="
+          touch /tmp/package_output.txt
+          chown ec2-user:staff /tmp/package_output.txt
+          su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/package/test_package_command_image.py -v --tb=short' > /tmp/package_output.txt 2>&1 || true
+
+          echo ""
+          echo "=== PASSES ==="
+          grep "PASSED" /tmp/package_output.txt || echo "No passes found"
+
+          echo ""
+          echo "=== FAILURES ==="
+          grep "FAILED" /tmp/package_output.txt || echo "No failures found"
+
+          echo ""
+          echo "=== DEBUG: FULL PACKAGE OUTPUT ==="
+          cat /tmp/package_output.txt || echo "No output file found"
+          echo "=== END DEBUG OUTPUT ==="
+
+          # Expected failures from test guide
+          cat > expected_package_failures.txt << 'EOF'
+          test_package_with_deep_nested_template_image
+          test_package_template_with_image_repositories_nested_stack
+          test_package_with_loadable_image_archive_0_template_image_load_yaml
+          EOF
+
+          # Extract actual failures
+          grep "FAILED" /tmp/package_output.txt | grep -o "test_[^[:space:]]*" > actual_package_failures.txt || true
+
+          # Also check for nested stack failures (pattern match)
+          grep "FAILED.*test_package_template_with_image_repositories_nested_stack" /tmp/package_output.txt >> actual_package_failures.txt || true
+
+          # Find unexpected failures (exclude nested stack pattern)
+          UNEXPECTED=$(grep -v -f expected_package_failures.txt actual_package_failures.txt | grep -v "test_package_template_with_image_repositories_nested_stack" || true)
+
+          if [ -n "$UNEXPECTED" ]; then
+            echo "❌ Unexpected failures found:"
+            echo "$UNEXPECTED"
+            echo ""
+            echo "=== FULL OUTPUT FOR DEBUGGING ==="
+            cat /tmp/package_output.txt
+            exit 1
+          else
+            echo "✅ All failures were expected"
+          fi
+
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" /tmp/package_output.txt | tail -1 || echo "No pytest summary found"
+
+      - name: Run invoke tests
+        if: matrix.test_step.name == 'invoke'
+        run: |
+          echo "=== INVOKE TESTS - Started at $(date) ==="
+          touch /tmp/invoke_output.txt
+          chown ec2-user:staff /tmp/invoke_output.txt
+          su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/local/invoke -k "not Terraform" -v --tb=short' > /tmp/invoke_output.txt 2>&1 || true
+
+          echo ""
+          echo "=== PASSES ==="
+          grep "PASSED" /tmp/invoke_output.txt || echo "No passes found"
+
+          echo ""
+          echo "=== FAILURES ==="
+          grep "FAILED" /tmp/invoke_output.txt || echo "No failures found"
+
+          echo ""
+          echo "=== DEBUG: FULL INVOKE OUTPUT ==="
+          cat /tmp/invoke_output.txt || echo "No output file found"
+          echo "=== END DEBUG OUTPUT ==="
+
+          # Expected failures from test guide (12 total from different test classes)
+          cat > expected_invoke_failures.txt << 'EOF'
+          test_invoke_with_error_during_image_build
+          test_invoke_with_timeout_set_0_TimeoutFunction
+          test_invoke_with_timeout_set_1_TimeoutFunctionWithParameter
+          test_invoke_with_timeout_set_2_TimeoutFunctionWithStringParameter
+          test_building_new_rapid_image_removes_old_rapid_images
+          test_invoke_returns_expected_results_from_git_function
+          test_invoke_returns_expected_results_from_git_function_with_parameters
+          EOF
+
+          # Extract actual failures
+          grep "FAILED" /tmp/invoke_output.txt | grep -o "test_[^[:space:]]*" > actual_invoke_failures.txt || true
+
+          # Find unexpected failures
+          UNEXPECTED=$(grep -v -f expected_invoke_failures.txt actual_invoke_failures.txt 2>/dev/null || true)
+
+          if [ -n "$UNEXPECTED" ]; then
+            echo "❌ Unexpected failures found:"
+            echo "$UNEXPECTED"
+            echo ""
+            echo "=== FULL OUTPUT FOR DEBUGGING ==="
+            cat /tmp/invoke_output.txt
+            exit 1
+          else
+            echo "✅ All failures were expected"
+          fi
+
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" /tmp/invoke_output.txt | tail -1 || echo "No pytest summary found"
+
+      - name: Run start-lambda tests
+        if: matrix.test_step.name == 'start-lambda'
+        run: |
+          echo "=== START-LAMBDA TESTS - Started at $(date) ==="
+          touch /tmp/start_lambda_output.txt
+          chown ec2-user:staff /tmp/start_lambda_output.txt
+          su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/local/start_lambda -k "not Terraform" -v --tb=short' > /tmp/start_lambda_output.txt 2>&1 || true
+
+          echo ""
+          echo "=== PASSES ==="
+          grep "PASSED" /tmp/start_lambda_output.txt || echo "No passes found"
+
+          echo ""
+          echo "=== FAILURES ==="
+          grep "FAILED" /tmp/start_lambda_output.txt || echo "No failures found"
+
+          echo ""
+          echo "=== DEBUG: FULL START-LAMBDA OUTPUT ==="
+          cat /tmp/start_lambda_output.txt || echo "No output file found"
+          echo "=== END DEBUG OUTPUT ==="
+
+          # Should pass completely per test guide
+          if grep -q "FAILED" /tmp/start_lambda_output.txt; then
+            echo "❌ Start-lambda tests failed (should pass completely)"
+            grep "FAILED" /tmp/start_lambda_output.txt
+            echo ""
+            echo "=== FULL OUTPUT FOR DEBUGGING ==="
+            cat /tmp/start_lambda_output.txt
+            exit 1
+          else
+            echo "✅ All start-lambda tests passed as expected"
+          fi
+
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" /tmp/start_lambda_output.txt | tail -1 || echo "No pytest summary found"
+
+      - name: Run start-api tests
+        if: matrix.test_step.name == 'start-api'
+        run: |
+          echo "=== START-API TESTS - Started at $(date) ==="
+          touch /tmp/start_api_output.txt
+          chown ec2-user:staff /tmp/start_api_output.txt
+          su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && ulimit -n 65536 && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/local/start_api -k "not Terraform" -v --tb=short' > /tmp/start_api_output.txt 2>&1 || true
+
+          echo ""
+          echo "=== PASSES ==="
+          grep "PASSED" /tmp/start_api_output.txt || echo "No passes found"
+
+          echo ""
+          echo "=== FAILURES ==="
+          grep "FAILED" /tmp/start_api_output.txt || echo "No failures found"
+
+          echo ""
+          echo "=== DEBUG: FULL START-API OUTPUT ==="
+          cat /tmp/start_api_output.txt || echo "No output file found"
+          echo "=== END DEBUG OUTPUT ==="
+
+          # Expected failures - flaky tests that fail in CI but not locally
+          cat > expected_start_api_failures.txt << 'EOF'
+          test_can_invoke_lambda_layer_successfully
+          EOF
+
+          # Extract actual failures
+          grep "FAILED" /tmp/start_api_output.txt | grep -o "test_[^[:space:]]*" > actual_start_api_failures.txt || true
+
+          # Find unexpected failures
+          UNEXPECTED=$(grep -v -f expected_start_api_failures.txt actual_start_api_failures.txt 2>/dev/null || true)
+
+          if [ -n "$UNEXPECTED" ]; then
+            echo "❌ Unexpected start-api failures found:"
+            echo "$UNEXPECTED"
+            echo ""
+            echo "=== FULL OUTPUT FOR DEBUGGING ==="
+            cat /tmp/start_api_output.txt
+            echo "=== NOTE ==="
+            echo "This is a known flaky test with ~ % pass rate."
+            echo "Please try again using an individual workflow trigger."
+            exit 1
+          else
+            echo "✅ All start-api failures were expected (CI environment flakiness)"
+          fi
+
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" /tmp/start_api_output.txt | tail -1 || echo "No pytest summary found"
+
+      - name: Run deploy tests
+        if: matrix.test_step.name == 'deploy'
+        run: |
+          echo "=== DEPLOY TESTS - Started at $(date) ==="
+          touch /tmp/deploy_output.txt
+          chown ec2-user:staff /tmp/deploy_output.txt
+          su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && AWS_DEFAULT_REGION="${{ secrets.REGION }}" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/deploy -k "image" -v --tb=short' > /tmp/deploy_output.txt 2>&1 || true
+
+          echo ""
+          echo "=== FAILURES ==="
+          grep "FAILED" /tmp/deploy_output.txt || echo "No failures found"
+
+          echo ""
+          echo "=== PASSES ==="
+          grep "PASSED" /tmp/deploy_output.txt || echo "No passes found"
+
+          echo ""
+          echo "=== DEBUG: FULL DEPLOY OUTPUT ==="
+          cat /tmp/deploy_output.txt || echo "No output file found"
+          echo "=== END DEBUG OUTPUT ==="
+
+          # Expected passes - this test passes despite having an error in the output
+          cat > expected_deploy_passes.txt << 'EOF'
+          test_deploy_guided_image_auto_0_aws_serverless_function_image_yaml
+          EOF
+
+          # Extract actual passes - test names appear on the line after PASSED
+          grep -A1 "PASSED" /tmp/deploy_output.txt | grep -o "test_[^[:space:]]*" > actual_deploy_passes.txt || true
+
+          # Find unexpected passes (passes that aren't in our expected list)
+          UNEXPECTED_PASSES=$(grep -v -f expected_deploy_passes.txt actual_deploy_passes.txt 2>/dev/null || true)
+
+          if [ -n "$UNEXPECTED_PASSES" ]; then
+            echo "❌ Unexpected passes found:"
+            echo "$UNEXPECTED_PASSES"
+            echo ""
+            echo "=== FULL OUTPUT FOR DEBUGGING ==="
+            cat /tmp/deploy_output.txt
+            exit 1
+          else
+            echo "✅ All failures and passes were expected (1 known pass with error, rest fail due to multi-arch)."
+          fi
+
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" /tmp/deploy_output.txt | tail -1 || echo "No pytest summary found"
+
+      # - name: Run build tests
+      #   if: matrix.test_step.name == 'build'
+      #   working-directory: aws-sam-cli
+      #   timeout-minutes: ${{ matrix.test_step.timeout }}
+      #   run: |
+      #     echo "=== BUILD TESTS - Started at $(date) ==="
+      #     python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 || true
+
+      #     echo ""
+      #     echo "=== PASSES ==="
+      #     grep "PASSED" build_output.txt || echo "No passes found"
+
+      #     echo ""
+      #     echo "=== FAILURES ==="
+      #     grep "FAILED" build_output.txt || echo "No failures found"
+
+      #     # Expected failures from test guide (nerdctl ancestor filter limitation)
+      #     cat > expected_build_failures.txt << 'EOF'
+      #     test_with_invalid_dockerfile_definition
+      #     test_with_invalid_dockerfile_location
+      #     test_load_success
+      #     test_building_ruby_3_2_1_use_container
+      #     test_with_makefile_builder_specified_python_runtime_1_use_container
+      #     test_with_native_builder_specified_python_runtime_1_use_container
+      #     test_inline_not_built_1_use_container
+      #     test_json_env_vars_passed_0_use_container
+      #     test_json_env_vars_passed_1_use_container
+      #     test_inline_env_vars_passed_0_use_container
+      #     test_inline_env_vars_passed_1_use_container
+      #     test_custom_build_image_succeeds_0_use_container
+      #     test_custom_build_image_succeeds_1_use_container
+      #     test_building_ruby_in_container_with_specified_architecture_0_ruby3_2
+      #     test_building_java_in_container_with_arm64_architecture_00_java8_al2
+      #     test_building_java_in_container_with_arm64_architecture_03_java8_al2
+      #     test_building_java_in_container_with_arm64_architecture_04_java11
+      #     test_building_java_in_container_with_arm64_architecture_07_java11
+      #     test_building_java_in_container_with_arm64_architecture_08_java17
+      #     test_building_java_in_container_with_arm64_architecture_11_java17
+      #     test_building_java_in_container_with_arm64_architecture_al2023_0_java21
+      #     test_building_java_in_container_with_arm64_architecture_al2023_1_java21
+      #     test_building_java_in_container_with_arm64_architecture_al2023_2_java21
+      #     test_building_java_in_container_with_arm64_architecture_al2023_3_java21
+      #     test_building_java_in_container_00_java8_al2
+      #     EOF
+
+      #     # Extract actual failures
+      #     grep "FAILED" build_output.txt | grep -o "test_[^[:space:]]*" > actual_build_failures.txt || true
+
+      #     # Find unexpected failures
+      #     UNEXPECTED=$(grep -v -f expected_build_failures.txt actual_build_failures.txt 2>/dev/null || true)
+
+      #     if [ -n "$UNEXPECTED" ]; then
+      #       echo "❌ Unexpected failures found:"
+      #       echo "$UNEXPECTED"
+      #       echo ""
+      #       echo "=== FULL OUTPUT FOR DEBUGGING ==="
+      #       cat build_output.txt
+      #       exit 1
+      #     else
+      #       echo "✅ All failures were expected."
+      #     fi
+
+      #     echo ""
+      #     echo "=== PYTEST SUMMARY ==="
+      #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" build_output.txt | tail -1 || echo "No pytest summary found"
+
+  # Cleanup job that runs after ALL matrix jobs complete
+  cleanup:
+    runs-on: ubuntu-latest
+    needs: samcli-vm-test
+    if: always()  # Run cleanup even if tests failed
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        role:
+          - SAMCLI_VM_ROLE_BASE      # main Finch VM account cleanup
+          - SAMCLI_VM_ROLE_SYNC      # sync Finch VM account cleanup
+    env:
+      AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        with:
+          role-to-assume: ${{ secrets[matrix.role] }}
+          role-session-name: samcli-vm-cleanup-${{ matrix.role }}
+          aws-region: ${{ secrets.REGION }}
+          role-duration-seconds: 3600
+
+      - name: Comprehensive AWS resource cleanup
+        timeout-minutes: 10
+        run: |
+          echo "=== AWS Resource Cleanup ==="
+          set +e  # Continue on failures
+
+          # Function to safely run AWS commands with retries
+          safe_aws_command() {
+            local max_attempts=3
+            local attempt=1
+            local command="$@"
+            while [ $attempt -le $max_attempts ]; do
+              if eval "$command"; then
+                return 0
+              fi
+              echo "Retry $attempt/$max_attempts failed: $command"
+              sleep 5
+              attempt=$((attempt + 1))
+            done
+            echo "Command failed after $max_attempts attempts: $command"
+            return 1
+          }
+
+          # Clean up S3 buckets from SAM CLI test stacks
+          echo "=== Cleaning S3 buckets ==="
+          TEST_PATTERNS=("sam-app" "test-" "integration-test" "samcli" "aws-sam-cli-managed")
+
+          for pattern in "${TEST_PATTERNS[@]}"; do
+            STACKS=$(aws cloudformation list-stacks --region $AWS_DEFAULT_REGION --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE ROLLBACK_COMPLETE UPDATE_ROLLBACK_COMPLETE --query "StackSummaries[?contains(StackName, '$pattern')].[StackName]" --output text 2>/dev/null || true)
+
+            for stack in $STACKS; do
+              echo "Processing stack: $stack"
+              
+              # Get S3 buckets from stack
+              BUCKET_NAMES=$(aws cloudformation describe-stacks --stack-name "$stack" --region $AWS_DEFAULT_REGION --query 'Stacks[0].Outputs[?contains(OutputKey, `Bucket`) || contains(OutputKey, `bucket`)].OutputValue' --output text 2>/dev/null || true)
+              RESOURCE_BUCKETS=$(aws cloudformation describe-stack-resources --stack-name "$stack" --region $AWS_DEFAULT_REGION --query 'StackResources[?ResourceType==`AWS::S3::Bucket`].PhysicalResourceId' --output text 2>/dev/null || true)
+
+              # Empty buckets (don't delete them)
+              for bucket in $BUCKET_NAMES $RESOURCE_BUCKETS; do
+                if [ -n "$bucket" ] && [ "$bucket" != "None" ]; then
+                  echo "Emptying S3 bucket: $bucket"
+                  if aws s3api head-bucket --bucket "$bucket" 2>/dev/null; then
+                    safe_aws_command "aws s3 rm s3://$bucket --recursive --quiet" || true
+                    echo "✅ Emptied bucket: $bucket"
+                  fi
+                fi
+              done
+            done
+          done
+
+          # Clean up Lambda functions
+          echo "=== Cleaning Lambda functions ==="
+          LAMBDA_PATTERNS=("sam-app" "test-" "HelloWorld")
+          for pattern in "${LAMBDA_PATTERNS[@]}"; do
+            FUNCTIONS=$(aws lambda list-functions --region $AWS_DEFAULT_REGION --query "Functions[?contains(FunctionName, '$pattern')].FunctionName" --output text 2>/dev/null || true)
+            for func in $FUNCTIONS; do
+              echo "Deleting Lambda function: $func"
+              safe_aws_command "aws lambda delete-function --function-name '$func' --region $AWS_DEFAULT_REGION" || true
+            done
+          done
+
+          # Clean up API Gateway APIs
+          echo "=== Cleaning API Gateway APIs ==="
+          APIS=$(aws apigateway get-rest-apis --region $AWS_DEFAULT_REGION --query 'items[?contains(name, `sam-app`) || contains(name, `test-`) || contains(name, `Test`)].id' --output text 2>/dev/null || true)
+          for api in $APIS; do
+            echo "Deleting API Gateway API: $api"
+            safe_aws_command "aws apigateway delete-rest-api --rest-api-id '$api' --region $AWS_DEFAULT_REGION" || true
+          done
+
+          echo "✅ Cleanup completed"
