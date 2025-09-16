@@ -38,11 +38,11 @@ jobs:
           - name: package
             account: 2
           - name: start-lambda
-            account: 2
+            account: 1
           - name: invoke
             account: 2
           - name: start-api
-            account: 2
+            account: 1
           - name: deploy
             account: 2
           # - name: build
