@@ -27,9 +27,11 @@ permissions:
 jobs:
   samcli-vm-test:
     runs-on: codebuild-finch-daemon-arm64-${{ matrix.test_step.account }}-instance-${{ github.run_id }}-${{ github.run_attempt }}
+    timeout-minutes: 60 # start-api is the longest running at ~ 54 minutes
     strategy:
       fail-fast: false
       matrix:
+        # account number allows distribution across codebuild fleets in different accounts
         test_step:
           - name: sync
             account: 2
@@ -45,11 +47,11 @@ jobs:
             account: 1
           - name: deploy
             account: 2
-          # - name: build
+          # - name: build # not run due to ancestor filter used in tests being unsupported by nerdctl
           #   account: 2
     env:
       AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
-      BY_CANARY: true
+      BY_CANARY: true # allows full testing
       SAM_CLI_DEV: 1
       SAM_CLI_TELEMETRY: 0
     steps:
@@ -135,7 +137,6 @@ jobs:
           chown ec2-user:daemon /private/var/run/finch-lima
         shell: bash
 
-      # Build binaries
       - name: Build binaries
         run: |
           echo "Building cross architecture binaries..."
@@ -147,7 +148,6 @@ jobs:
           su ec2-user -c 'finch vm start' || true
         shell: bash
 
-      # Initialize VM and check version
       - name: Check Finch version
         run: |
           echo "Initializing VM and checking version..."
@@ -166,7 +166,7 @@ jobs:
           role-to-assume: ${{ matrix.test_step.name == 'sync' && secrets.SAMCLI_VM_ROLE_SYNC || secrets.SAMCLI_VM_ROLE_BASE }}
           role-session-name: samcli-finch-vm-${{ matrix.test_step.name }}-tests
           aws-region: ${{ secrets.REGION }}
-          role-duration-seconds: 2000
+          role-duration-seconds: 4000
 
       - name: Install Docker CLI for SAM CLI compatibility
         run: |
@@ -192,15 +192,6 @@ jobs:
           echo "DOCKER_CONFIG=/Users/ec2-user/.finch" >> $GITHUB_ENV
         shell: bash
 
-      # - name: Pre-cleanup for sync tests
-      #   if: matrix.test_step.name == 'sync'
-      #   run: |
-      #     echo "=== Pre-cleaning resources for sync tests ==="
-      #     # Clean up any existing stacks that might conflict
-      #     aws cloudformation list-stacks --region $AWS_DEFAULT_REGION --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE ROLLBACK_COMPLETE UPDATE_ROLLBACK_COMPLETE --query "StackSummaries[?contains(StackName, 'test-') || contains(StackName, 'sam-app')].StackName" --output text | xargs -r -n1 aws cloudformation delete-stack --region $AWS_DEFAULT_REGION --stack-name || true
-      #     # Wait briefly for deletions to start
-      #     sleep 30
-
       - name: Run sync tests
         if: matrix.test_step.name == 'sync'
         run: |
@@ -215,11 +206,6 @@ jobs:
           echo "=== FAILURES ==="
           grep "FAILED" /tmp/sync_output.txt || echo "No failures found"
 
-          echo ""
-          echo "=== DEBUG: FULL SYNC OUTPUT ==="
-          cat /tmp/sync_output.txt || echo "No output file found"
-          echo "=== END DEBUG OUTPUT ==="
-
           # Should pass completely pr test guide
           if grep -q "FAILED" /tmp/sync_output.txt; then
             echo "❌ Sync tests failed (should pass completely)"
@@ -227,9 +213,6 @@ jobs:
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
             cat /tmp/sync_output.txt
-            echo "=== NOTE ==="
-            echo "This is a known flaky test with ~ % pass rate."
-            echo "Please try again using an individual workflow trigger."
             exit 1
           else
             echo "✅ All sync tests passed as expected"
@@ -256,10 +239,6 @@ jobs:
           grep "FAILED" /tmp/unit_test_output.txt || echo "No failures found"
 
           echo ""
-          echo "=== DEBUG: FULL UNIT OUTPUT ==="
-          cat /tmp/unit_test_output.txt || echo "No output file found"
-          echo "=== END DEBUG OUTPUT ==="
-
           if grep -q "Required test coverage of.*reached" /tmp/unit_test_output.txt; then
             echo "✅ Unit tests completed with required coverage"
             grep "Required test coverage of.*reached" /tmp/unit_test_output.txt
@@ -268,6 +247,7 @@ jobs:
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
             cat /tmp/unit_test_output.txt
+            exit 1
           fi
 
           echo ""
@@ -289,11 +269,6 @@ jobs:
           echo ""
           echo "=== FAILURES ==="
           grep "FAILED" /tmp/package_output.txt || echo "No failures found"
-
-          echo ""
-          echo "=== DEBUG: FULL PACKAGE OUTPUT ==="
-          cat /tmp/package_output.txt || echo "No output file found"
-          echo "=== END DEBUG OUTPUT ==="
 
           # Expected failures from test guide
           cat > expected_package_failures.txt << 'EOF'
@@ -341,11 +316,6 @@ jobs:
           echo ""
           echo "=== FAILURES ==="
           grep "FAILED" /tmp/invoke_output.txt || echo "No failures found"
-
-          echo ""
-          echo "=== DEBUG: FULL INVOKE OUTPUT ==="
-          cat /tmp/invoke_output.txt || echo "No output file found"
-          echo "=== END DEBUG OUTPUT ==="
 
           # Expected failures from test guide (12 total from different test classes)
           cat > expected_invoke_failures.txt << 'EOF'
@@ -395,11 +365,6 @@ jobs:
           echo "=== FAILURES ==="
           grep "FAILED" /tmp/start_lambda_output.txt || echo "No failures found"
 
-          echo ""
-          echo "=== DEBUG: FULL START-LAMBDA OUTPUT ==="
-          cat /tmp/start_lambda_output.txt || echo "No output file found"
-          echo "=== END DEBUG OUTPUT ==="
-
           # Should pass completely per test guide
           if grep -q "FAILED" /tmp/start_lambda_output.txt; then
             echo "❌ Start-lambda tests failed (should pass completely)"
@@ -431,11 +396,6 @@ jobs:
           echo ""
           echo "=== FAILURES ==="
           grep "FAILED" /tmp/start_api_output.txt || echo "No failures found"
-
-          echo ""
-          echo "=== DEBUG: FULL START-API OUTPUT ==="
-          cat /tmp/start_api_output.txt || echo "No output file found"
-          echo "=== END DEBUG OUTPUT ==="
 
           # Expected failures - flaky tests that fail in CI but not locally
           cat > expected_start_api_failures.txt << 'EOF'
@@ -482,11 +442,6 @@ jobs:
           echo "=== PASSES ==="
           grep "PASSED" /tmp/deploy_output.txt || echo "No passes found"
 
-          echo ""
-          echo "=== DEBUG: FULL DEPLOY OUTPUT ==="
-          cat /tmp/deploy_output.txt || echo "No output file found"
-          echo "=== END DEBUG OUTPUT ==="
-
           # Expected passes - this test passes despite having an error in the output
           cat > expected_deploy_passes.txt << 'EOF'
           test_deploy_guided_image_auto_0_aws_serverless_function_image_yaml
@@ -513,161 +468,97 @@ jobs:
           echo "=== PYTEST SUMMARY ==="
           grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" /tmp/deploy_output.txt | tail -1 || echo "No pytest summary found"
 
-      # - name: Run build tests
-      #   if: matrix.test_step.name == 'build'
-      #   working-directory: aws-sam-cli
-      #   timeout-minutes: ${{ matrix.test_step.timeout }}
-      #   run: |
-      #     echo "=== BUILD TESTS - Started at $(date) ==="
-      #     python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 || true
+      # not being run as we expect failures due to use of the ancestor filter, which is currently unsupported in nerdctl
+      - name: Run build tests
+        if: matrix.test_step.name == 'build'
+        working-directory: aws-sam-cli
+        timeout-minutes: ${{ matrix.test_step.timeout }}
+        run: |
+          echo "=== BUILD TESTS - Started at $(date) ==="
+          python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 || true
 
-      #     echo ""
-      #     echo "=== PASSES ==="
-      #     grep "PASSED" build_output.txt || echo "No passes found"
+          echo ""
+          echo "=== PASSES ==="
+          grep "PASSED" build_output.txt || echo "No passes found"
 
-      #     echo ""
-      #     echo "=== FAILURES ==="
-      #     grep "FAILED" build_output.txt || echo "No failures found"
+          echo ""
+          echo "=== FAILURES ==="
+          grep "FAILED" build_output.txt || echo "No failures found"
 
-      #     # Expected failures from test guide (nerdctl ancestor filter limitation)
-      #     cat > expected_build_failures.txt << 'EOF'
-      #     test_with_invalid_dockerfile_definition
-      #     test_with_invalid_dockerfile_location
-      #     test_load_success
-      #     test_building_ruby_3_2_1_use_container
-      #     test_with_makefile_builder_specified_python_runtime_1_use_container
-      #     test_with_native_builder_specified_python_runtime_1_use_container
-      #     test_inline_not_built_1_use_container
-      #     test_json_env_vars_passed_0_use_container
-      #     test_json_env_vars_passed_1_use_container
-      #     test_inline_env_vars_passed_0_use_container
-      #     test_inline_env_vars_passed_1_use_container
-      #     test_custom_build_image_succeeds_0_use_container
-      #     test_custom_build_image_succeeds_1_use_container
-      #     test_building_ruby_in_container_with_specified_architecture_0_ruby3_2
-      #     test_building_java_in_container_with_arm64_architecture_00_java8_al2
-      #     test_building_java_in_container_with_arm64_architecture_03_java8_al2
-      #     test_building_java_in_container_with_arm64_architecture_04_java11
-      #     test_building_java_in_container_with_arm64_architecture_07_java11
-      #     test_building_java_in_container_with_arm64_architecture_08_java17
-      #     test_building_java_in_container_with_arm64_architecture_11_java17
-      #     test_building_java_in_container_with_arm64_architecture_al2023_0_java21
-      #     test_building_java_in_container_with_arm64_architecture_al2023_1_java21
-      #     test_building_java_in_container_with_arm64_architecture_al2023_2_java21
-      #     test_building_java_in_container_with_arm64_architecture_al2023_3_java21
-      #     test_building_java_in_container_00_java8_al2
-      #     EOF
+          # Expected failures from test guide (nerdctl ancestor filter limitation)
+          cat > expected_build_failures.txt << 'EOF'
+          test_with_invalid_dockerfile_definition
+          test_with_invalid_dockerfile_location
+          test_load_success
+          test_building_ruby_3_2_1_use_container
+          test_with_makefile_builder_specified_python_runtime_1_use_container
+          test_with_native_builder_specified_python_runtime_1_use_container
+          test_inline_not_built_1_use_container
+          test_json_env_vars_passed_0_use_container
+          test_json_env_vars_passed_1_use_container
+          test_inline_env_vars_passed_0_use_container
+          test_inline_env_vars_passed_1_use_container
+          test_custom_build_image_succeeds_0_use_container
+          test_custom_build_image_succeeds_1_use_container
+          test_building_ruby_in_container_with_specified_architecture_0_ruby3_2
+          test_building_java_in_container_with_arm64_architecture_00_java8_al2
+          test_building_java_in_container_with_arm64_architecture_03_java8_al2
+          test_building_java_in_container_with_arm64_architecture_04_java11
+          test_building_java_in_container_with_arm64_architecture_07_java11
+          test_building_java_in_container_with_arm64_architecture_08_java17
+          test_building_java_in_container_with_arm64_architecture_11_java17
+          test_building_java_in_container_with_arm64_architecture_al2023_0_java21
+          test_building_java_in_container_with_arm64_architecture_al2023_1_java21
+          test_building_java_in_container_with_arm64_architecture_al2023_2_java21
+          test_building_java_in_container_with_arm64_architecture_al2023_3_java21
+          test_building_java_in_container_00_java8_al2
+          EOF
 
-      #     # Extract actual failures
-      #     grep "FAILED" build_output.txt | grep -o "test_[^[:space:]]*" > actual_build_failures.txt || true
+          # Extract actual failures
+          grep "FAILED" build_output.txt | grep -o "test_[^[:space:]]*" > actual_build_failures.txt || true
 
-      #     # Find unexpected failures
-      #     UNEXPECTED=$(grep -v -f expected_build_failures.txt actual_build_failures.txt 2>/dev/null || true)
+          # Find unexpected failures
+          UNEXPECTED=$(grep -v -f expected_build_failures.txt actual_build_failures.txt 2>/dev/null || true)
 
-      #     if [ -n "$UNEXPECTED" ]; then
-      #       echo "❌ Unexpected failures found:"
-      #       echo "$UNEXPECTED"
-      #       echo ""
-      #       echo "=== FULL OUTPUT FOR DEBUGGING ==="
-      #       cat build_output.txt
-      #       exit 1
-      #     else
-      #       echo "✅ All failures were expected."
-      #     fi
+          if [ -n "$UNEXPECTED" ]; then
+            echo "❌ Unexpected failures found:"
+            echo "$UNEXPECTED"
+            echo ""
+            echo "=== FULL OUTPUT FOR DEBUGGING ==="
+            cat build_output.txt
+            exit 1
+          else
+            echo "✅ All failures were expected."
+          fi
 
-      #     echo ""
-      #     echo "=== PYTEST SUMMARY ==="
-      #     grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" build_output.txt | tail -1 || echo "No pytest summary found"
+          echo ""
+          echo "=== PYTEST SUMMARY ==="
+          grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" build_output.txt | tail -1 || echo "No pytest summary found"
 
-  # Cleanup job that runs after ALL matrix jobs complete
+  # ensuring resources are clean post-test
   cleanup:
     runs-on: ubuntu-latest
     needs: samcli-vm-test
-    if: always()  # Run cleanup even if tests failed
-    timeout-minutes: 15
+    if: always()
     strategy:
       matrix:
         role:
-          - SAMCLI_VM_ROLE_BASE      # main Finch VM account cleanup
-          - SAMCLI_VM_ROLE_SYNC      # sync Finch VM account cleanup
-    env:
-      AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
+          - SAMCLI_VM_ROLE_BASE
+          - SAMCLI_VM_ROLE_SYNC
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df
         with:
           role-to-assume: ${{ secrets[matrix.role] }}
-          role-session-name: samcli-vm-cleanup-${{ matrix.role }}
+          role-session-name: cleanup-${{ matrix.role }}
           aws-region: ${{ secrets.REGION }}
-          role-duration-seconds: 3600
 
-      - name: Comprehensive AWS resource cleanup
-        timeout-minutes: 10
+      - name: Clean test resources
         run: |
-          echo "=== AWS Resource Cleanup ==="
-          set +e  # Continue on failures
-
-          # Function to safely run AWS commands with retries
-          safe_aws_command() {
-            local max_attempts=3
-            local attempt=1
-            local command="$@"
-            while [ $attempt -le $max_attempts ]; do
-              if eval "$command"; then
-                return 0
-              fi
-              echo "Retry $attempt/$max_attempts failed: $command"
-              sleep 5
-              attempt=$((attempt + 1))
-            done
-            echo "Command failed after $max_attempts attempts: $command"
-            return 1
-          }
-
-          # Clean up S3 buckets from SAM CLI test stacks
-          echo "=== Cleaning S3 buckets ==="
-          TEST_PATTERNS=("sam-app" "test-" "integration-test" "samcli" "aws-sam-cli-managed")
-
-          for pattern in "${TEST_PATTERNS[@]}"; do
-            STACKS=$(aws cloudformation list-stacks --region $AWS_DEFAULT_REGION --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE ROLLBACK_COMPLETE UPDATE_ROLLBACK_COMPLETE --query "StackSummaries[?contains(StackName, '$pattern')].[StackName]" --output text 2>/dev/null || true)
-
-            for stack in $STACKS; do
-              echo "Processing stack: $stack"
-              
-              # Get S3 buckets from stack
-              BUCKET_NAMES=$(aws cloudformation describe-stacks --stack-name "$stack" --region $AWS_DEFAULT_REGION --query 'Stacks[0].Outputs[?contains(OutputKey, `Bucket`) || contains(OutputKey, `bucket`)].OutputValue' --output text 2>/dev/null || true)
-              RESOURCE_BUCKETS=$(aws cloudformation describe-stack-resources --stack-name "$stack" --region $AWS_DEFAULT_REGION --query 'StackResources[?ResourceType==`AWS::S3::Bucket`].PhysicalResourceId' --output text 2>/dev/null || true)
-
-              # Empty buckets (don't delete them)
-              for bucket in $BUCKET_NAMES $RESOURCE_BUCKETS; do
-                if [ -n "$bucket" ] && [ "$bucket" != "None" ]; then
-                  echo "Emptying S3 bucket: $bucket"
-                  if aws s3api head-bucket --bucket "$bucket" 2>/dev/null; then
-                    safe_aws_command "aws s3 rm s3://$bucket --recursive --quiet" || true
-                    echo "✅ Emptied bucket: $bucket"
-                  fi
-                fi
-              done
-            done
+          # Empty SAM CLI managed buckets
+          aws s3 rm s3://aws-sam-cli-managed-default-samclisourcebucket-* --recursive --quiet 2>/dev/null || true
+          
+          # Delete test stacks (starts with "test-")
+          for stack in $(aws cloudformation list-stacks --query "StackSummaries[?starts_with(StackName, 'test-')].StackName" --output text 2>/dev/null); do
+            aws cloudformation delete-stack --stack-name "$stack" 2>/dev/null || true
           done
-
-          # Clean up Lambda functions
-          echo "=== Cleaning Lambda functions ==="
-          LAMBDA_PATTERNS=("sam-app" "test-" "HelloWorld")
-          for pattern in "${LAMBDA_PATTERNS[@]}"; do
-            FUNCTIONS=$(aws lambda list-functions --region $AWS_DEFAULT_REGION --query "Functions[?contains(FunctionName, '$pattern')].FunctionName" --output text 2>/dev/null || true)
-            for func in $FUNCTIONS; do
-              echo "Deleting Lambda function: $func"
-              safe_aws_command "aws lambda delete-function --function-name '$func' --region $AWS_DEFAULT_REGION" || true
-            done
-          done
-
-          # Clean up API Gateway APIs
-          echo "=== Cleaning API Gateway APIs ==="
-          APIS=$(aws apigateway get-rest-apis --region $AWS_DEFAULT_REGION --query 'items[?contains(name, `sam-app`) || contains(name, `test-`) || contains(name, `Test`)].id' --output text 2>/dev/null || true)
-          for api in $APIS; do
-            echo "Deleting API Gateway API: $api"
-            safe_aws_command "aws apigateway delete-rest-api --rest-api-id '$api' --region $AWS_DEFAULT_REGION" || true
-          done
-
-          echo "✅ Cleanup completed"
