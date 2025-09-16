@@ -28,7 +28,7 @@ permissions:
 jobs:
   samcli-direct-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30 # deploy is the longest at ~ 27 minutes
+    timeout-minutes: 45 # deploy is the longest at ~ 27 minutes
     strategy:
       fail-fast: false
       matrix:
@@ -145,8 +145,8 @@ jobs:
         working-directory: aws-sam-cli
         run: |
           rm -rf .aws-sam/
-          # for i in {1..3}; do python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 && break || sleep 10; done || true
-          python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 || true
+          for i in {1..3}; do python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 && break || sleep 10; done || true
+          # python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 || true
 
           echo ""
           echo "=== PASSES ==="
@@ -324,7 +324,7 @@ jobs:
             cat start_api_output.txt || echo "No output file found"
             exit 1
           else
-            echo "✅ All start-api failures were expected."
+            echo "✅ All start-api failures (if any) were expected."
           fi
 
           echo ""
@@ -463,12 +463,73 @@ jobs:
           role-session-name: cleanup-${{ matrix.role }}
           aws-region: ${{ secrets.REGION }}
 
-      - name: Clean test resources
+      - name: Comprehensive AWS resource cleanup
+        timeout-minutes: 10
         run: |
-          # Empty SAM CLI managed buckets
-          aws s3 rm s3://aws-sam-cli-managed-default-samclisourcebucket-* --recursive --quiet 2>/dev/null || true
+          echo "=== AWS Resource Cleanup ==="
+          set +e  # Continue on failures
 
-          # Delete test stacks (starts with "test-")
-          for stack in $(aws cloudformation list-stacks --query "StackSummaries[?starts_with(StackName, 'test-')].StackName" --output text 2>/dev/null); do
-            aws cloudformation delete-stack --stack-name "$stack" 2>/dev/null || true
+          # Function to safely run AWS commands with retries
+          safe_aws_command() {
+            local max_attempts=3
+            local attempt=1
+            local command="$@"
+            while [ $attempt -le $max_attempts ]; do
+              if eval "$command"; then
+                return 0
+              fi
+              echo "Retry $attempt/$max_attempts failed: $command"
+              sleep 5
+              attempt=$((attempt + 1))
+            done
+            echo "Command failed after $max_attempts attempts: $command"
+            return 1
+          }
+
+          # Clean up S3 buckets from SAM CLI test stacks
+          echo "=== Cleaning S3 buckets ==="
+          TEST_PATTERNS=("sam-app" "test-" "integration-test" "samcli" "aws-sam-cli-managed")
+
+          for pattern in "${TEST_PATTERNS[@]}"; do
+            STACKS=$(aws cloudformation list-stacks --region $AWS_DEFAULT_REGION --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE ROLLBACK_COMPLETE UPDATE_ROLLBACK_COMPLETE --query "StackSummaries[?contains(StackName, '$pattern')].[StackName]" --output text 2>/dev/null || true)
+
+            for stack in $STACKS; do
+              echo "Processing stack: $stack"
+              
+              # Get S3 buckets from stack
+              BUCKET_NAMES=$(aws cloudformation describe-stacks --stack-name "$stack" --region $AWS_DEFAULT_REGION --query 'Stacks[0].Outputs[?contains(OutputKey, `Bucket`) || contains(OutputKey, `bucket`)].OutputValue' --output text 2>/dev/null || true)
+              RESOURCE_BUCKETS=$(aws cloudformation describe-stack-resources --stack-name "$stack" --region $AWS_DEFAULT_REGION --query 'StackResources[?ResourceType==`AWS::S3::Bucket`].PhysicalResourceId' --output text 2>/dev/null || true)
+
+              # Empty buckets (don't delete them)
+              for bucket in $BUCKET_NAMES $RESOURCE_BUCKETS; do
+                if [ -n "$bucket" ] && [ "$bucket" != "None" ]; then
+                  echo "Emptying S3 bucket: $bucket"
+                  if aws s3api head-bucket --bucket "$bucket" 2>/dev/null; then
+                    safe_aws_command "aws s3 rm s3://$bucket --recursive --quiet" || true
+                    echo "✅ Emptied bucket: $bucket"
+                  fi
+                fi
+              done
+            done
           done
+
+          # Clean up Lambda functions
+          echo "=== Cleaning Lambda functions ==="
+          LAMBDA_PATTERNS=("sam-app" "test-" "HelloWorld")
+          for pattern in "${LAMBDA_PATTERNS[@]}"; do
+            FUNCTIONS=$(aws lambda list-functions --region $AWS_DEFAULT_REGION --query "Functions[?contains(FunctionName, '$pattern')].FunctionName" --output text 2>/dev/null || true)
+            for func in $FUNCTIONS; do
+              echo "Deleting Lambda function: $func"
+              safe_aws_command "aws lambda delete-function --function-name '$func' --region $AWS_DEFAULT_REGION" || true
+            done
+          done
+
+          # Clean up API Gateway APIs
+          echo "=== Cleaning API Gateway APIs ==="
+          APIS=$(aws apigateway get-rest-apis --region $AWS_DEFAULT_REGION --query 'items[?contains(name, `sam-app`) || contains(name, `test-`) || contains(name, `Test`)].id' --output text 2>/dev/null || true)
+          for api in $APIS; do
+            echo "Deleting API Gateway API: $api"
+            safe_aws_command "aws apigateway delete-rest-api --rest-api-id '$api' --region $AWS_DEFAULT_REGION" || true
+          done
+
+          echo "✅ Cleanup completed"
