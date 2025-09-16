@@ -28,31 +28,23 @@ permissions:
 jobs:
   samcli-direct-test:
     runs-on: ubuntu-latest
-    # timeout-minutes: 120
+    timeout-minutes: 30 # deploy is the longest at ~ 27 minutes
     strategy:
       fail-fast: false
       matrix:
         test_step:
           - name: sync
-            # timeout: 40
           - name: unit
-            # timeout: 15
           - name: package
-            # timeout: 10
           - name: start-lambda
-            # timeout: 15
           - name: invoke
-            # timeout: 25
           - name: start-api
-            # timeout: 35
           - name: deploy
-            # timeout: 45
-          # - name: build
-          #   timeout: 30
+          # - name: build # not run due to ancestor filter used in tests being unsupported by nerdctl
     env:
       AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
       DOCKER_HOST: unix:///run/finch.sock
-      BY_CANARY: true  # full aws access for tests
+      BY_CANARY: true # allows full testing
       SAM_CLI_DEV: 1
       SAM_CLI_TELEMETRY: 0
     steps:
@@ -60,10 +52,14 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
-          role-to-assume: ${{ matrix.test_step.name == 'sync' && secrets.SAMCLI_DIRECT_ROLE_SYNC || secrets.SAMCLI_DIRECT_ROLE_BASE }}
+          # account isolation for sync (observed competing resource use)
+          role-to-assume: >-
+            ${{ matrix.test_step.name == 'sync' &&
+                secrets.SAMCLI_DIRECT_ROLE_SYNC ||
+                secrets.SAMCLI_DIRECT_ROLE_BASE }}
           role-session-name: samcli-${{ matrix.test_step.name }}-tests
           aws-region: ${{ secrets.REGION }}
-          role-duration-seconds: 4000
+          role-duration-seconds: 2000
 
       - name: Set up Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
@@ -114,15 +110,12 @@ jobs:
           make init
           samdev --version
 
-
-
       - name: Run unit tests
         if: matrix.test_step.name == 'unit'
         working-directory: aws-sam-cli
-        # timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           ulimit -n 65536
-          for i in {1..3}; do make test > unit_test_output.txt 2>&1 && break || sleep 10; done || true
+          make test > unit_test_output.txt 2>&1 || true
 
           echo ""
           echo "=== PASSES ==="
@@ -132,12 +125,6 @@ jobs:
           echo "=== FAILURES ==="
           grep "FAILED" unit_test_output.txt || echo "No failures found"
 
-          echo ""
-          echo "=== DEBUG: FULL UNIT OUTPUT ==="
-          cat unit_test_output.txt || echo "No output file found"
-          echo "=== END DEBUG OUTPUT ==="
-
-          # Check if required coverage was reached
           if grep -q "Required test coverage of.*reached" unit_test_output.txt; then
             echo "✅ Unit tests completed with required coverage"
             grep "Required test coverage of.*reached" unit_test_output.txt
@@ -145,21 +132,21 @@ jobs:
             echo "❌ Required test coverage not reached"
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
-            cat unit_test_output.txt
+            cat unit_test_output.txt || echo "No output file found"
+            exit 1
           fi
 
           echo ""
           echo "=== PYTEST SUMMARY ==="
           grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" unit_test_output.txt | tail -1 || echo "No pytest summary found"
 
-      # SYNC TESTS - COMMENTED OUT (uncomment to enable)
       - name: Run sync tests
         if: matrix.test_step.name == 'sync'
         working-directory: aws-sam-cli
-        # timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           rm -rf .aws-sam/
-          for i in {1..3}; do python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 && break || sleep 10; done || true
+          # for i in {1..3}; do python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 && break || sleep 10; done || true
+          python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1 || true
 
           echo ""
           echo "=== PASSES ==="
@@ -169,21 +156,12 @@ jobs:
           echo "=== FAILURES ==="
           grep "FAILED" sync_output.txt || echo "No failures found"
 
-          echo ""
-          echo "=== DEBUG: FULL SYNC OUTPUT ==="
-          cat sync_output.txt || echo "No output file found"
-          echo "=== END DEBUG OUTPUT ==="
-
-          # Should pass completely pr test guide
           if grep -q "FAILED" sync_output.txt; then
             echo "❌ Sync tests failed (should pass completely)"
             grep "FAILED" sync_output.txt
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
-            cat sync_output.txt
-            echo "=== NOTE ==="
-            echo "This is a known flaky test with TBD% pass rate."
-            echo "Please try again using an individual workflow trigger."
+            cat sync_output.txt || echo "No output file found"
             exit 1
           else
             echo "✅ All sync tests passed as expected"
@@ -196,7 +174,6 @@ jobs:
       - name: Run package tests
         if: matrix.test_step.name == 'package'
         working-directory: aws-sam-cli
-        # timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short > package_output.txt 2>&1 || true
 
@@ -208,12 +185,6 @@ jobs:
           echo "=== FAILURES ==="
           grep "FAILED" package_output.txt || echo "No failures found"
 
-          echo ""
-          echo "=== DEBUG: FULL PACKAGE OUTPUT ==="
-          cat package_output.txt || echo "No output file found"
-          echo "=== END DEBUG OUTPUT ==="
-
-          # Expected failures from test guide
           cat > expected_package_failures.txt << 'EOF'
           test_package_with_deep_nested_template_image
           test_package_template_with_image_repositories_nested_stack
@@ -234,10 +205,10 @@ jobs:
             echo "$UNEXPECTED"
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
-            cat package_output.txt
+            cat package_output.txt || echo "No output file found"
             exit 1
           else
-            echo "✅ All failures were expected"
+            echo "✅ All failures were expected."
           fi
 
           echo ""
@@ -247,7 +218,6 @@ jobs:
       - name: Run invoke tests
         if: matrix.test_step.name == 'invoke'
         working-directory: aws-sam-cli
-        # timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
 
@@ -259,12 +229,6 @@ jobs:
           echo "=== FAILURES ==="
           grep "FAILED" invoke_output.txt || echo "No failures found"
 
-          echo ""
-          echo "=== DEBUG: FULL INVOKE OUTPUT ==="
-          cat invoke_output.txt || echo "No output file found"
-          echo "=== END DEBUG OUTPUT ==="
-
-          # Expected failures from test guide (12 total from different test classes)
           cat > expected_invoke_failures.txt << 'EOF'
           test_invoke_with_error_during_image_build
           test_invoke_with_timeout_set_0_TimeoutFunction
@@ -286,10 +250,10 @@ jobs:
             echo "$UNEXPECTED"
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
-            cat invoke_output.txt
+            cat invoke_output.txt || echo "No output file found"
             exit 1
           else
-            echo "✅ All failures were expected"
+            echo "✅ All failures were expected."
           fi
 
           echo ""
@@ -299,7 +263,6 @@ jobs:
       - name: Run start-lambda tests
         if: matrix.test_step.name == 'start-lambda'
         working-directory: aws-sam-cli
-        # timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short > start_lambda_output.txt 2>&1 || true
 
@@ -311,18 +274,13 @@ jobs:
           echo "=== FAILURES ==="
           grep "FAILED" start_lambda_output.txt || echo "No failures found"
 
-          echo ""
-          echo "=== DEBUG: FULL START-LAMBDA OUTPUT ==="
-          cat start_lambda_output.txt || echo "No output file found"
-          echo "=== END DEBUG OUTPUT ==="
-
           # Should pass completely per test guide
           if grep -q "FAILED" start_lambda_output.txt; then
             echo "❌ Start-lambda tests failed (should pass completely)"
             grep "FAILED" start_lambda_output.txt
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
-            # cat start_lambda_output.txt
+            cat start_lambda_output.txt || echo "No output file found"
             exit 1
           else
             echo "✅ All start-lambda tests passed as expected"
@@ -335,7 +293,6 @@ jobs:
       - name: Run start-api tests
         if: matrix.test_step.name == 'start-api'
         working-directory: aws-sam-cli
-        # timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           ulimit -n 65536
           python -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short > start_api_output.txt 2>&1 || true
@@ -347,11 +304,6 @@ jobs:
           echo ""
           echo "=== FAILURES ==="
           grep "FAILED" start_api_output.txt || echo "No failures found"
-
-          echo ""
-          echo "=== DEBUG: FULL START-API OUTPUT ==="
-          cat start_api_output.txt || echo "No output file found"
-          echo "=== END DEBUG OUTPUT ==="
 
           # Expected failures - flaky tests that fail in CI but not locally
           cat > expected_start_api_failures.txt << 'EOF'
@@ -369,14 +321,10 @@ jobs:
             echo "$UNEXPECTED"
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
-            # cat start_api_output.txt
-            echo "Output removed due to extreme length."
-            echo "=== NOTE ==="
-            echo "This is a known flaky test with TBD% pass rate."
-            echo "Please try again using an individual workflow trigger."
+            cat start_api_output.txt || echo "No output file found"
             exit 1
           else
-            echo "✅ All start-api failures were expected (CI environment flakiness)"
+            echo "✅ All start-api failures were expected."
           fi
 
           echo ""
@@ -386,7 +334,6 @@ jobs:
       - name: Run deploy tests
         if: matrix.test_step.name == 'deploy'
         working-directory: aws-sam-cli
-        # timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
           python -m pytest tests/integration/deploy -k 'image' -v --tb=short > deploy_output.txt 2>&1 || true
 
@@ -401,11 +348,6 @@ jobs:
           echo ""
           echo "=== PASSES ==="
           grep "PASSED" deploy_output.txt || echo "No passes found"
-
-          echo ""
-          echo "=== DEBUG: FULL DEPLOY OUTPUT ==="
-          cat deploy_output.txt || echo "No output file found"
-          echo "=== END DEBUG OUTPUT ==="
 
           # Expected passes - this test passes despite having an error in the output
           cat > expected_deploy_passes.txt << 'EOF'
@@ -423,7 +365,7 @@ jobs:
             echo "$UNEXPECTED_PASSES"
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
-            cat deploy_output.txt
+            cat deploy_output.txt || echo "No output file found"
             exit 1
           else
             echo "✅ All failures and passes were expected (1 known pass with error, rest fail due to multi-arch)."
@@ -433,17 +375,13 @@ jobs:
           echo "=== PYTEST SUMMARY ==="
           grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" deploy_output.txt | tail -1 || echo "No pytest summary found"
 
+      # not being run as we expect failures due to use of the ancestor filter, which is currently unsupported in nerdctl
       - name: Run build tests
         if: matrix.test_step.name == 'build'
         working-directory: aws-sam-cli
-        timeout-minutes: ${{ matrix.test_step.timeout }}
         run: |
-          for i in {1..3}; do python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 && break || sleep 10; done || true
-
-          # echo "=== BUILD TEST OUTPUT ==="
-          # cat build_output.txt
-          # echo "=== END BUILD TEST OUTPUT ==="
-
+          python -m pytest tests/integration/buildcmd -k '(container or image) and not sar and not terraform' -v --tb=short > build_output.txt 2>&1 || true
+          
           echo ""
           echo "=== PASSES ==="
           grep "PASSED" build_output.txt || echo "No passes found"
@@ -452,12 +390,6 @@ jobs:
           echo "=== FAILURES ==="
           grep "FAILED" build_output.txt || echo "No failures found"
 
-          echo ""
-          echo "=== DEBUG: FULL BUILD OUTPUT ==="
-          cat build_output.txt || echo "No output file found"
-          echo "=== END DEBUG OUTPUT ==="
-
-          # Expected failures from test guide (nerdctl ancestor filter limitation)
           cat > expected_build_failures.txt << 'EOF'
           test_with_invalid_dockerfile_definition
           test_with_invalid_dockerfile_location
@@ -497,7 +429,7 @@ jobs:
             echo "$UNEXPECTED"
             echo ""
             echo "=== FULL OUTPUT FOR DEBUGGING ==="
-            cat build_output.txt
+            cat build_output.txt || echo "No output file found"
             exit 1
           else
             echo "✅ All failures were expected."
@@ -513,95 +445,30 @@ jobs:
           echo "=== FINCH-DAEMON OUTPUT ==="
           cat finch-daemon.log || echo "No log file found"
 
-  # Cleanup job that runs after ALL matrix jobs complete
+  # ensuring resources are clean post-test
   cleanup:
     runs-on: ubuntu-latest
     needs: samcli-direct-test
-    if: always()  # Run cleanup even if tests failed
-    timeout-minutes: 15
+    if: always()
     strategy:
       matrix:
         role:
-          - SAMCLI_DIRECT_ROLE_BASE  # main account cleanup
-          - SAMCLI_DIRECT_ROLE_SYNC  # sync account cleanup
-    env:
-      AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
+          - SAMCLI_DIRECT_ROLE_BASE
+          - SAMCLI_DIRECT_ROLE_SYNC
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df
         with:
           role-to-assume: ${{ secrets[matrix.role] }}
-          role-session-name: samcli-direct-cleanup-${{ matrix.role }}
+          role-session-name: cleanup-${{ matrix.role }}
           aws-region: ${{ secrets.REGION }}
-          role-duration-seconds: 3600
 
-      - name: Comprehensive AWS resource cleanup
-        timeout-minutes: 10
+      - name: Clean test resources
         run: |
-          echo "=== AWS Resource Cleanup ==="
-          set +e  # Continue on failures
+          # Empty SAM CLI managed buckets
+          aws s3 rm s3://aws-sam-cli-managed-default-samclisourcebucket-* --recursive --quiet 2>/dev/null || true
 
-          # Function to safely run AWS commands with retries
-          safe_aws_command() {
-            local max_attempts=3
-            local attempt=1
-            local command="$@"
-            while [ $attempt -le $max_attempts ]; do
-              if eval "$command"; then
-                return 0
-              fi
-              echo "Retry $attempt/$max_attempts failed: $command"
-              sleep 5
-              attempt=$((attempt + 1))
-            done
-            echo "Command failed after $max_attempts attempts: $command"
-            return 1
-          }
-
-          # Clean up S3 buckets from SAM CLI test stacks
-          echo "=== Cleaning S3 buckets ==="
-          TEST_PATTERNS=("sam-app" "test-" "integration-test" "samcli" "aws-sam-cli-managed")
-
-          for pattern in "${TEST_PATTERNS[@]}"; do
-            STACKS=$(aws cloudformation list-stacks --region $AWS_DEFAULT_REGION --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE ROLLBACK_COMPLETE UPDATE_ROLLBACK_COMPLETE --query "StackSummaries[?contains(StackName, '$pattern')].[StackName]" --output text 2>/dev/null || true)
-
-            for stack in $STACKS; do
-              echo "Processing stack: $stack"
-              
-              # Get S3 buckets from stack
-              BUCKET_NAMES=$(aws cloudformation describe-stacks --stack-name "$stack" --region $AWS_DEFAULT_REGION --query 'Stacks[0].Outputs[?contains(OutputKey, `Bucket`) || contains(OutputKey, `bucket`)].OutputValue' --output text 2>/dev/null || true)
-              RESOURCE_BUCKETS=$(aws cloudformation describe-stack-resources --stack-name "$stack" --region $AWS_DEFAULT_REGION --query 'StackResources[?ResourceType==`AWS::S3::Bucket`].PhysicalResourceId' --output text 2>/dev/null || true)
-
-              # Empty buckets (don't delete them)
-              for bucket in $BUCKET_NAMES $RESOURCE_BUCKETS; do
-                if [ -n "$bucket" ] && [ "$bucket" != "None" ]; then
-                  echo "Emptying S3 bucket: $bucket"
-                  if aws s3api head-bucket --bucket "$bucket" 2>/dev/null; then
-                    safe_aws_command "aws s3 rm s3://$bucket --recursive --quiet" || true
-                    echo "✅ Emptied bucket: $bucket"
-                  fi
-                fi
-              done
-            done
+          # Delete test stacks (starts with "test-")
+          for stack in $(aws cloudformation list-stacks --query "StackSummaries[?starts_with(StackName, 'test-')].StackName" --output text 2>/dev/null); do
+            aws cloudformation delete-stack --stack-name "$stack" 2>/dev/null || true
           done
-
-          # Clean up Lambda functions
-          echo "=== Cleaning Lambda functions ==="
-          LAMBDA_PATTERNS=("sam-app" "test-" "HelloWorld")
-          for pattern in "${LAMBDA_PATTERNS[@]}"; do
-            FUNCTIONS=$(aws lambda list-functions --region $AWS_DEFAULT_REGION --query "Functions[?contains(FunctionName, '$pattern')].FunctionName" --output text 2>/dev/null || true)
-            for func in $FUNCTIONS; do
-              echo "Deleting Lambda function: $func"
-              safe_aws_command "aws lambda delete-function --function-name '$func' --region $AWS_DEFAULT_REGION" || true
-            done
-          done
-
-          # Clean up API Gateway APIs
-          echo "=== Cleaning API Gateway APIs ==="
-          APIS=$(aws apigateway get-rest-apis --region $AWS_DEFAULT_REGION --query 'items[?contains(name, `sam-app`) || contains(name, `test-`) || contains(name, `Test`)].id' --output text 2>/dev/null || true)
-          for api in $APIS; do
-            echo "Deleting API Gateway API: $api"
-            safe_aws_command "aws apigateway delete-rest-api --rest-api-id '$api' --region $AWS_DEFAULT_REGION" || true
-          done
-
-          echo "✅ Cleanup completed"
