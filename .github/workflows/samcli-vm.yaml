@@ -133,7 +133,8 @@ jobs:
           su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install finch --cask'
           su ec2-user -c 'source /Users/ec2-user/.brewrc && brew list | grep finch || echo "finch not installed"'
           mkdir -p /private/var/run/finch-lima
-          chown root:wheel /private/var/run/finch-lima
+          cat /etc/passwd
+          chown ec2-user:daemon /private/var/run/finch-lima
         shell: bash
 
       - name: Build binaries
@@ -186,6 +187,10 @@ jobs:
           su ec2-user -c 'cd aws-sam-cli && python3.11 -m pip install --upgrade pip --user'
           su ec2-user -c 'cd aws-sam-cli && SAM_CLI_DEV=1 python3.11 -m pip install -e ".[dev]" --user'
           su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && samdev --version'
+          
+          # Patch SAM CLI for VM mode - add force=True to docker image remove calls
+          su ec2-user -c 'cd aws-sam-cli && sed -i "" "s/docker_client\.images\.remove(image\.id)/docker_client.images.remove(image.id, force=True)/g" tests/integration/local/invoke/test_integrations_cli.py'
+          
           # Set Docker host to finch socket
           echo "DOCKER_HOST=unix:///Applications/Finch/lima/data/finch/sock/finch.sock" >> $GITHUB_ENV
           echo "DOCKER_CONFIG=/Users/ec2-user/.finch" >> $GITHUB_ENV

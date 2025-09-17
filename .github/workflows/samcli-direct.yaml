@@ -147,7 +147,7 @@ jobs:
         run: |
 
           success=false
-          for i in {1..5}; do
+          for i in {1..3}; do
             echo "=== Sync Test Run $i/5 ==="
             rm -rf .aws-sam/
             if python -m pytest tests/integration/sync -k 'image' -v --tb=short > sync_output.txt 2>&1; then
