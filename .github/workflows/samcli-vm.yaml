@@ -36,15 +36,15 @@ jobs:
           - name: sync
             account: 2
           - name: unit
-            account: 1
+            account: 2
           - name: package
             account: 2
           - name: start-lambda
-            account: 1
+            account: 2
           - name: invoke
             account: 2
           - name: start-api
-            account: 1
+            account: 2
           - name: deploy
             account: 2
           # - name: build # not run due to ancestor filter used in tests being unsupported by nerdctl
