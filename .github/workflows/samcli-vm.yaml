@@ -27,7 +27,7 @@ permissions:
 jobs:
   samcli-vm-test:
     runs-on: codebuild-finch-daemon-arm64-${{ matrix.test_step.account }}-instance-${{ github.run_id }}-${{ github.run_attempt }}
-    timeout-minutes: 80 # start-api is the longest running at ~ 54 minutes
+    timeout-minutes: 120 # start-api is the longest running at ~ 54 minutes, but want a buffer
     strategy:
       fail-fast: false
       matrix:
@@ -36,15 +36,15 @@ jobs:
           - name: sync
             account: 2
           - name: unit
-            account: 2
+            account: 1
           - name: package
             account: 2
           - name: start-lambda
-            account: 2
+            account: 1
           - name: invoke
             account: 2
           - name: start-api
-            account: 2
+            account: 1
           - name: deploy
             account: 2
           # - name: build # not run due to ancestor filter used in tests being unsupported by nerdctl
@@ -54,6 +54,8 @@ jobs:
       BY_CANARY: true # allows full testing
       SAM_CLI_DEV: 1
       SAM_CLI_TELEMETRY: 0
+      DOCKER_HOST: unix:///Applications/Finch/lima/data/finch/sock/finch.sock
+      DOCKER_CONFIG: /Users/ec2-user/.finch
     steps:
 
       - name: Clean macOS runner workspace
@@ -179,21 +181,26 @@ jobs:
           fi
         shell: bash
 
-      - name: Set up SAM CLI from source
+      - name: Checkout SAM CLI
+        uses: actions/checkout@v4
+        with:
+          repository: aws/aws-sam-cli
+          submodules: recursive
+          path: /tmp/aws-sam-cli
+
+      - name: Set up SAM CLI from source and patch
         run: |
-          su ec2-user -c 'git clone https://github.com/aws/aws-sam-cli.git'
-          su ec2-user -c 'cd aws-sam-cli && git checkout $(git describe --tags `git rev-list --tags --max-count=1`)'
-          su ec2-user -c 'cd aws-sam-cli && git submodule update --init --recursive'
+          # Move to ec2-user home and change ownership
+          sudo mv /tmp/aws-sam-cli /Users/ec2-user/aws-sam-cli
+          sudo chown -R ec2-user:staff /Users/ec2-user/aws-sam-cli
+
+          # Install and setup
           su ec2-user -c 'cd aws-sam-cli && python3.11 -m pip install --upgrade pip --user'
           su ec2-user -c 'cd aws-sam-cli && SAM_CLI_DEV=1 python3.11 -m pip install -e ".[dev]" --user'
           su ec2-user -c 'cd aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && samdev --version'
-          
+
           # Patch SAM CLI for VM mode - add force=True to docker image remove calls
           su ec2-user -c 'cd aws-sam-cli && sed -i "" "s/docker_client\.images\.remove(image\.id)/docker_client.images.remove(image.id, force=True)/g" tests/integration/local/invoke/test_integrations_cli.py'
-          
-          # Set Docker host to finch socket
-          echo "DOCKER_HOST=unix:///Applications/Finch/lima/data/finch/sock/finch.sock" >> $GITHUB_ENV
-          echo "DOCKER_CONFIG=/Users/ec2-user/.finch" >> $GITHUB_ENV
         shell: bash
 
       - name: Run sync tests

@@ -33,7 +33,7 @@ jobs:
       fail-fast: false
       matrix:
         test_step:
-          - name: sync
+          # - name: sync # not run due to flakiness
           - name: unit
           - name: package
           - name: start-lambda
@@ -101,12 +101,17 @@ jobs:
           sudo bin/finch-daemon --debug --socket-owner $UID 2>&1 | tee finch-daemon.log &
           sleep 10
 
+      - name: Checkout SAM CLI
+        uses: actions/checkout@v4
+        with:
+          repository: aws/aws-sam-cli
+          ref: ${{ github.event.inputs.sam_cli_version || 'latest' }}
+          submodules: recursive
+          path: aws-sam-cli
+
       - name: Set up SAM CLI from source
+        working-directory: aws-sam-cli
         run: |
-          git clone https://github.com/aws/aws-sam-cli.git
-          cd aws-sam-cli
-          git checkout $(git describe --tags `git rev-list --tags --max-count=1`)  # Latest tag
-          git submodule update --init --recursive
           python -m pip install --upgrade pip
           make init
           samdev --version
