@@ -186,12 +186,12 @@ jobs:
         with:
           repository: aws/aws-sam-cli
           submodules: recursive
-          path: /tmp/aws-sam-cli
+          path: aws-sam-cli
 
       - name: Set up SAM CLI from source and patch
         run: |
           # Move to ec2-user home and change ownership
-          sudo mv /tmp/aws-sam-cli /Users/ec2-user/aws-sam-cli
+          sudo mv aws-sam-cli /Users/ec2-user/aws-sam-cli
           sudo chown -R ec2-user:staff /Users/ec2-user/aws-sam-cli
 
           # Install and setup
