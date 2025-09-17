@@ -132,9 +132,15 @@ jobs:
           echo "Installing Finch as ec2-user..."
           su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install finch --cask'
           su ec2-user -c 'source /Users/ec2-user/.brewrc && brew list | grep finch || echo "finch not installed"'
+          
+          # Fix Lima directory permissions for networking
           mkdir -p /private/var/run/finch-lima
-          cat /etc/passwd
-          chown ec2-user:daemon /private/var/run/finch-lima
+          chown root:wheel /private/var/run/finch-lima
+          chmod 755 /private/var/run/finch-lima
+          
+          # Fix AWS directory permissions
+          mkdir -p /root/.aws
+          chmod 755 /root/.aws
         shell: bash
 
       - name: Build binaries
