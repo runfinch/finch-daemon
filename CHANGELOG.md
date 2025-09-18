@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.0](https://github.com/runfinch/finch-daemon/compare/v0.20.0...v0.21.0) (2025-09-18)
+
+
+### Features
+
+* add HostConfig to container inspect response ([#324](https://github.com/runfinch/finch-daemon/issues/324)) ([7148cd8](https://github.com/runfinch/finch-daemon/commit/7148cd8313f26a92da5dfcc9fe586ee4961c5566))
+
 ## [0.20.0](https://github.com/runfinch/finch-daemon/compare/v0.19.1...v0.20.0) (2025-08-24)
 
 
