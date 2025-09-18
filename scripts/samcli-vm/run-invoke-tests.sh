@@ -14,15 +14,17 @@ echo ""
 echo "=== FAILURES ==="
 grep "FAILED" /tmp/invoke_output.txt || echo "No failures found"
 
-# Expected failures from test guide (12 total from different test classes)
+# test_invoke_with_error_during_image_build: Build error message differs from expected.
+# test_invoke_with_timeout_set_X_TimeoutFunction: Returns timeout message instead of empty string,
+#         but matches actual Lambda service behavior.
+# test_building_new_rapid_image_removes_old_rapid_images: Cannot remove images with same digest,
+#         Docker creates different IDs for each.
 cat > expected_invoke_failures.txt << 'EOF'
 test_invoke_with_error_during_image_build
 test_invoke_with_timeout_set_0_TimeoutFunction
 test_invoke_with_timeout_set_1_TimeoutFunctionWithParameter
 test_invoke_with_timeout_set_2_TimeoutFunctionWithStringParameter
 test_building_new_rapid_image_removes_old_rapid_images
-test_invoke_returns_expected_results_from_git_function
-test_invoke_returns_expected_results_from_git_function_with_parameters
 EOF
 
 # Extract actual failures
