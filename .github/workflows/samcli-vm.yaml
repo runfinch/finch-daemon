@@ -186,7 +186,7 @@ jobs:
           submodules: recursive
           path: aws-sam-cli
 
-      - name: Set up SAM CLI from source and patch
+      - name: Set up SAM CLI from source
         run: |
           # Move to ec2-user home and change ownership
           sudo rm -rf /Users/ec2-user/aws-sam-cli || true
@@ -197,9 +197,20 @@ jobs:
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && python3.11 -m pip install --upgrade pip --user'
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && SAM_CLI_DEV=1 python3.11 -m pip install -e ".[dev]" --user'
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && samdev --version'
+        shell: bash
 
-          # Patch SAM CLI for VM mode - surgical patch for TestLayerVersionBase tearDown only
+      - name: Patch SAM CLI for invoke workaround
+        if: matrix.test_step.name == 'invoke'        
+        run: |
+          # Step 1: Add force=True to TestLayerVersionBase tearDown
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && sed -i "" '\''/class TestLayerVersionBase(InvokeIntegBase):/,/^class /{ /def tearDown(self):/,/^    def /s/docker_client\.images\.remove(image\.id)/docker_client.images.remove(image.id, force=True)/g; }'\'' tests/integration/local/invoke/test_integrations_cli.py'
+
+          # Step 2: Add exception handling to all force=True calls
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && sed -i "" "/docker_client\.images\.remove(image\.id, force=True)/c\\
+                  try:\\
+                      docker_client.images.remove(image.id, force=True)\\
+                  except docker.errors.ImageNotFound:\\
+                      pass" tests/integration/local/invoke/test_integrations_cli.py'
         shell: bash
 
       - name: Run sync tests
