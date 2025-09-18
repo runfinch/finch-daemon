@@ -38,7 +38,6 @@ jobs:
           - name: start-lambda
           - name: invoke
           - name: start-api
-          - name: deploy
     env:
       AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
       DOCKER_HOST: unix:///run/finch.sock
