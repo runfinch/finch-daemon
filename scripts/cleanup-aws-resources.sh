@@ -47,23 +47,15 @@ for pattern in "${TEST_PATTERNS[@]}"; do
   done
 done
 
-# Clean up Lambda functions
-echo "=== Cleaning Lambda functions ==="
-LAMBDA_PATTERNS=("sam-app" "test-" "HelloWorld")
-for pattern in "${LAMBDA_PATTERNS[@]}"; do
-  FUNCTIONS=$(aws lambda list-functions --region $AWS_DEFAULT_REGION --query "Functions[?contains(FunctionName, '$pattern')].FunctionName" --output text 2>/dev/null || true)
-  for func in $FUNCTIONS; do
-    echo "Deleting Lambda function: $func"
-    safe_aws_command "aws lambda delete-function --function-name '$func' --region $AWS_DEFAULT_REGION" || true
+# Clean up ECR repositories
+echo "=== Cleaning ECR repositories ==="
+ECR_PATTERNS=("sam-app" "test-" "integration-test")
+for pattern in "${ECR_PATTERNS[@]}"; do
+  REPOS=$(aws ecr describe-repositories --region $AWS_DEFAULT_REGION --query "repositories[?contains(repositoryName, '$pattern')].repositoryName" --output text 2>/dev/null || true)
+  for repo in $REPOS; do
+    echo "Deleting ECR repository: $repo"
+    safe_aws_command "aws ecr delete-repository --repository-name '$repo' --force --region $AWS_DEFAULT_REGION" || true
   done
-done
-
-# Clean up API Gateway APIs
-echo "=== Cleaning API Gateway APIs ==="
-APIS=$(aws apigateway get-rest-apis --region $AWS_DEFAULT_REGION --query 'items[?contains(name, `sam-app`) || contains(name, `test-`) || contains(name, `Test`)].id' --output text 2>/dev/null || true)
-for api in $APIS; do
-  echo "Deleting API Gateway API: $api"
-  safe_aws_command "aws apigateway delete-rest-api --rest-api-id '$api' --region $AWS_DEFAULT_REGION" || true
 done
 
 echo "✅ Cleanup completed"
