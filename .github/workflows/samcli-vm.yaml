@@ -189,6 +189,7 @@ jobs:
       - name: Set up SAM CLI from source and patch
         run: |
           # Move to ec2-user home and change ownership
+          sudo rm -rf /Users/ec2-user/aws-sam-cli || true
           sudo mv aws-sam-cli /Users/ec2-user/aws-sam-cli
           sudo chown -R ec2-user:staff /Users/ec2-user/aws-sam-cli
 
