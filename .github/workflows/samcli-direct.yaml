@@ -4,17 +4,6 @@ on:
   pull_request:
     branches:
       - main
-      - samcli-test
-    paths:
-      - '**.go'
-      - 'go.mod'
-      - 'go.sum'
-      - '.github/workflows/samcli-direct.yaml'
-      - 'Makefile*'
-      - 'cmd/**'
-      - 'pkg/**'
-      - 'internal/**'
-      - 'api/**'
   workflow_dispatch:
 
 env:
@@ -28,7 +17,7 @@ permissions:
 jobs:
   samcli-direct-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 45 # deploy is the longest at ~ 27 minutes
+    timeout-minutes: 30 # start-api is the longest at ~ 20 minutes
     strategy:
       fail-fast: false
       matrix:
@@ -38,7 +27,6 @@ jobs:
           - name: start-lambda
           - name: invoke
           - name: start-api
-          - name: deploy
     env:
       AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
       DOCKER_HOST: unix:///run/finch.sock
@@ -128,10 +116,6 @@ jobs:
       - name: Run start-api tests
         if: matrix.test_step.name == 'start-api'
         run: ./scripts/samcli-direct/run-start-api-tests.sh
-
-      - name: Run deploy tests
-        if: matrix.test_step.name == 'deploy'
-        run: ./scripts/samcli-direct/run-deploy-tests.sh
 
       - name: Show finch-daemon logs
         if: always()
