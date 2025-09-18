@@ -198,8 +198,8 @@ jobs:
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && SAM_CLI_DEV=1 python3.11 -m pip install -e ".[dev]" --user'
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && samdev --version'
 
-          # Patch SAM CLI for VM mode (use full path)
-          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && sed -i "" "s/docker_client\.images\.remove(image\.id)/docker_client.images.remove(image.id, force=True)/g" tests/integration/local/invoke/test_integrations_cli.py'
+          # Patch SAM CLI for VM mode - surgical patch for TestLayerVersionBase tearDown only
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && sed -i "" '\''/class TestLayerVersionBase(InvokeIntegBase):/,/^class /{ /def tearDown(self):/,/^    def /s/docker_client\.images\.remove(image\.id)/docker_client.images.remove(image.id, force=True)/g; }'\'' tests/integration/local/invoke/test_integrations_cli.py'
         shell: bash
 
       - name: Run sync tests
