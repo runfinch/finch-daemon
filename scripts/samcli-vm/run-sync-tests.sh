@@ -13,7 +13,7 @@ echo ""
 echo "=== FAILURES ==="
 grep "FAILED" /tmp/sync_output.txt || echo "No failures found"
 
-# Should pass completely pr test guide
+# Should pass completely per test guide
 if grep -q "FAILED" /tmp/sync_output.txt; then
   echo "❌ Sync tests failed (should pass completely)"
   grep "FAILED" /tmp/sync_output.txt
