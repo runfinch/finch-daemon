@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # Set versions
 RUNC_VERSION=1.3.0
 NERDCTL_VERSION=2.1.2
