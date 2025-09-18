@@ -74,7 +74,7 @@ jobs:
 
       - name: Install finch-daemon dependencies
         run: |
-          ./setup-test-env.sh
+          ./scripts/setup-test-env.sh
           sleep 10
 
       - name: Build and start finch-daemon
