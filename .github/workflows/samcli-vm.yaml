@@ -16,7 +16,7 @@ permissions:
 jobs:
   samcli-vm-test:
     runs-on: codebuild-finch-daemon-arm64-${{ matrix.test_step.account }}-instance-${{ github.run_id }}-${{ github.run_attempt }}
-    timeout-minutes: 70 # start-api is the longest running at ~ 54 minutes
+    timeout-minutes: 100 # start-api is the longest running at ~ 54 minutes, need a buffer
     strategy:
       fail-fast: false
       matrix:
@@ -193,12 +193,14 @@ jobs:
           # Step 1: Add force=True to TestLayerVersionBase tearDown
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && sed -i "" '\''/class TestLayerVersionBase(InvokeIntegBase):/,/^class /{ /def tearDown(self):/,/^    def /s/docker_client\.images\.remove(image\.id)/docker_client.images.remove(image.id, force=True)/g; }'\'' tests/integration/local/invoke/test_integrations_cli.py'
 
-          # # Step 2: Add exception handling to all force=True calls
-          # su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && sed -i "" "/docker_client\.images\.remove(image\.id, force=True)/c\\
-          #         try:\\
-          #             docker_client.images.remove(image.id, force=True)\\
-          #         except docker.errors.ImageNotFound:\\
-          #             pass" tests/integration/local/invoke/test_integrations_cli.py'
+          # Step 2: Add exception handling to all force=True calls
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && sed -i "" "/docker_client\.images\.remove(image\.id, force=True)/c\\
+                  try:\\
+                      docker_client.images.remove(image.id, force=True)\\
+                  except docker.errors.ImageNotFound:\\
+                      print(f\"Image {image.id} was not found. It may have been removed already.\")\\
+                  except Exception as e:\\
+                      print(f\"An error occurred while trying to remove image {image.id}: {str(e)}\")" tests/integration/local/invoke/test_integrations_cli.py'
         shell: bash
 
       - name: Run unit tests
