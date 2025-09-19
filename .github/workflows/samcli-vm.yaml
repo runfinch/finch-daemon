@@ -187,12 +187,12 @@ jobs:
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && samdev --version'
         shell: bash
 
-      # - name: Patch SAM CLI for invoke workaround
-      #   if: matrix.test_step.name == 'invoke'
-      #   run: |
-      #     # Add force=True to TestLayerVersionBase tearDown
-      #     su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && sed -i "" '\''/class TestLayerVersionBase(InvokeIntegBase):/,/^class /{ /def tearDown(self):/,/^    def /s/docker_client\.images\.remove(image\.id)/docker_client.images.remove(image.id, force=True)/g; }'\'' tests/integration/local/invoke/test_integrations_cli.py'
-      #   shell: bash
+      - name: Patch SAM CLI for invoke workaround
+        if: matrix.test_step.name == 'invoke'
+        run: |
+          # Add force=True to TestLayerVersionBase tearDown
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && sed -i "" '\''/class TestLayerVersionBase(InvokeIntegBase):/,/^class /{ /def tearDown(self):/,/^    def /s/docker_client\.images\.remove(image\.id)/docker_client.images.remove(image.id, force=True)/g; }'\'' tests/integration/local/invoke/test_integrations_cli.py'
+        shell: bash
 
       - name: Run unit tests
         if: matrix.test_step.name == 'unit'
