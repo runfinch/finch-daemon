@@ -22,18 +22,18 @@ jobs:
       matrix:
         # account number allows distribution across codebuild fleets in different accounts
         test_step:
-          # - name: unit
-          #   account: 1
-          # - name: package
-          #   account: 2
-          - name: start-lambda
+          - name: unit
+            account: 1
+          - name: package
             account: 2
+          - name: start-lambda
+            account: 1
           - name: invoke
             account: 1
           - name: start-api
+            account: 1
+          - name: sync
             account: 2
-          # - name: sync
-          #   account: 2
     env:
       AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
       BY_CANARY: true # allows full testing
@@ -205,6 +205,14 @@ jobs:
       - name: Run package tests
         if: matrix.test_step.name == 'package'
         run: ./scripts/samcli-vm/run-package-tests.sh
+
+      - name: Layer Cache Tests
+        if: matrix.test_step.name == 'invoke'
+        run: su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && pytest tests/integration/local/invoke -k "test_caching_two_layers"'
+        
+      - name: Symlink Tests  
+        if: matrix.test_step.name == 'invoke'
+        run: su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && pytest tests/integration/local/invoke -k "test_successful_invoke"'
 
       - name: Run invoke tests
         if: matrix.test_step.name == 'invoke'
