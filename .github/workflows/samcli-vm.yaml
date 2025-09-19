@@ -27,11 +27,11 @@ jobs:
           # - name: package
           #   account: 2
           - name: start-lambda
-            account: 1
-          - name: invoke
             account: 2
-          - name: start-api
+          - name: invoke
             account: 1
+          - name: start-api
+            account: 2
           # - name: sync
           #   account: 2
     env:
