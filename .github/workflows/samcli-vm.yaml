@@ -206,23 +206,13 @@ jobs:
         if: matrix.test_step.name == 'package'
         run: ./scripts/samcli-vm/run-package-tests.sh
 
-      - name: Layer Cache Tests
-        if: matrix.test_step.name == 'invoke'
-        run: su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && pytest tests/integration/local/invoke -k "test_caching_two_layers"'
-        
       - name: Configure Finch for symlink support
         if: matrix.test_step.name == 'invoke'
         run: |
-          # Stop Finch VM to modify configuration
-          su ec2-user -c 'finch vm stop' || true
-          
-          # Make Lima configuration more permissive for mounts
-          su ec2-user -c 'mkdir -p /Applications/Finch/lima/data/finch'
-          
           # Backup existing config if it exists
           su ec2-user -c 'cp /Applications/Finch/lima/data/finch/lima.yaml /Applications/Finch/lima/data/finch/lima.yaml.bak 2>/dev/null || true'
           
-          # Add mount options to Lima config
+          # Add mount options to Lima config (don't stop VM)
           cat >> /Applications/Finch/lima/data/finch/lima.yaml << 'EOF'
           mounts:
           - location: "/private/tmp"
@@ -231,8 +221,8 @@ jobs:
             writable: true
           EOF
           
-          # Restart with new config
-          su ec2-user -c 'finch vm start'
+          # Restart VM to pick up new config
+          su ec2-user -c 'finch vm stop && finch vm init && finch vm start'
           sleep 10
         shell: bash
 
