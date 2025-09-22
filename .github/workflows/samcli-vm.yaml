@@ -31,7 +31,7 @@ jobs:
           - name: invoke
             account: 2
           - name: start-api
-            account: 1
+            account : 1
           - name: sync
             account: 2
     env:
@@ -122,7 +122,8 @@ jobs:
           su ec2-user -c 'source /Users/ec2-user/.brewrc && brew list | grep finch || echo "finch not installed"'
           mkdir -p /private/var/run/finch-lima
           cat /etc/passwd
-          chown ec2-user:daemon /private/var/run/finch-lima
+          # chown ec2-user:daemon /private/var/run/finch-lima
+          chown root:wheel /private/var/run/finch-lima
         shell: bash
 
       - name: Build binaries

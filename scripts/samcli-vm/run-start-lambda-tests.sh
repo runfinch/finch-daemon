@@ -2,6 +2,14 @@
 set -e
 
 echo "=== START-LAMBDA TESTS - Started at $(date) ==="
+
+# # Clean up before tests
+# echo "Cleaning up SAM processes and Finch resources..."
+# sudo pkill -f "sam local" || true
+# su ec2-user -c 'finch container prune -f' || true
+# su ec2-user -c 'finch image prune -f' || true
+# sleep 5
+
 touch /tmp/start_lambda_output.txt
 chown ec2-user:staff /tmp/start_lambda_output.txt
 su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && AWS_DEFAULT_REGION="$AWS_DEFAULT_REGION" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/local/start_lambda -k "not Terraform" -v --tb=short' > /tmp/start_lambda_output.txt 2>&1 || true
