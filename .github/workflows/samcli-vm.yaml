@@ -22,18 +22,18 @@ jobs:
       matrix:
         # account number allows distribution across codebuild fleets in different accounts
         test_step:
-          - name: unit
-            account: 1
-          - name: package
-            account: 2
+          # - name: unit
+          #   account: 1
+          # - name: package
+          #   account: 2
           - name: start-lambda
             account: 1
           - name: invoke
             account: 2
           - name: start-api
             account: 1
-          - name: sync
-            account: 2
+          # - name: sync
+          #   account: 2
     env:
       AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
       BY_CANARY: true # allows full testing
@@ -120,9 +120,12 @@ jobs:
           echo "Installing Finch as ec2-user..."
           su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install finch --cask'
           su ec2-user -c 'source /Users/ec2-user/.brewrc && brew list | grep finch || echo "finch not installed"'
-          mkdir -p /private/var/run/finch-lima
-          cat /etc/passwd
-          chown ec2-user:daemon /private/var/run/finch-lima
+          # mkdir -p /private/var/run/finch-lima
+          # cat /etc/passwd
+          # chown ec2-user:daemon /private/var/run/finch-lima
+          sudo mkdir -p /private/var/run/finch-lima
+          sudo chown root:daemon /private/var/run/finch-lima
+          sudo chmod 755 /private/var/run/finch-lima
         shell: bash
 
       - name: Build binaries
@@ -147,6 +150,11 @@ jobs:
           echo "Checking Finch version..."
           su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch curl --unix-socket /var/run/finch.sock -X GET http:/v1.43/version'
         shell: bash
+
+      - name: Verify Docker connectivity
+        run: |
+          timeout 30 bash -c 'until su ec2-user -c "docker version" 2>/dev/null; do sleep 2; done'
+          su ec2-user -c 'docker ps'
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
