@@ -151,19 +151,6 @@ jobs:
           su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch curl --unix-socket /var/run/finch.sock -X GET http:/v1.43/version'
         shell: bash
 
-      - name: Verify Docker connectivity
-        run: |
-          timeout 30 bash -c 'until su ec2-user -c "docker version" 2>/dev/null; do sleep 2; done'
-          su ec2-user -c 'docker ps'
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
-        with:
-          role-to-assume: ${{ matrix.test_step.name == 'sync' && secrets.SAMCLI_VM_ROLE_SYNC || secrets.SAMCLI_VM_ROLE_BASE }}
-          role-session-name: samcli-finch-vm-${{ matrix.test_step.name }}-tests
-          aws-region: ${{ secrets.REGION }}
-          role-duration-seconds: 4000
-
       - name: Install Docker CLI for SAM CLI compatibility
         run: |
           echo "Checking Docker CLI installation..."
@@ -174,6 +161,24 @@ jobs:
             echo "Docker CLI already installed"
           fi
         shell: bash
+        
+      - name: Verify Docker connectivity
+        run: |
+          for i in {1..15}; do
+            if su ec2-user -c "docker version" 2>/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          su ec2-user -c 'docker ps'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        with:
+          role-to-assume: ${{ matrix.test_step.name == 'sync' && secrets.SAMCLI_VM_ROLE_SYNC || secrets.SAMCLI_VM_ROLE_BASE }}
+          role-session-name: samcli-finch-vm-${{ matrix.test_step.name }}-tests
+          aws-region: ${{ secrets.REGION }}
+          role-duration-seconds: 4000
 
       - name: Checkout SAM CLI
         uses: actions/checkout@v4
