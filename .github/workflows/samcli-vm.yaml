@@ -124,6 +124,7 @@ jobs:
           cat /etc/passwd
           # chown ec2-user:daemon /private/var/run/finch-lima
           chown root:wheel /private/var/run/finch-lima
+          chmod 775 /private/var/run/finch-lima
         shell: bash
 
       - name: Build binaries
