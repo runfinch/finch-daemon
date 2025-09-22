@@ -151,6 +151,19 @@ jobs:
           su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch curl --unix-socket /var/run/finch.sock -X GET http:/v1.43/version'
         shell: bash
 
+      - name: Verify and fix Docker connectivity
+        run: |
+          echo "Checking Docker socket permissions..."
+          ls -la /Applications/Finch/lima/data/finch/sock/
+          echo "Testing Docker connectivity as ec2-user..."
+          su ec2-user -c 'docker version' || echo "Docker version failed"
+          su ec2-user -c 'docker info' || echo "Docker info failed"
+          echo "Fixing Docker socket permissions..."
+          chmod 666 /Applications/Finch/lima/data/finch/sock/finch.sock || true
+          echo "Testing Docker build capability..."
+          su ec2-user -c 'docker run --rm hello-world' || echo "Docker run failed"
+        shell: bash
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
