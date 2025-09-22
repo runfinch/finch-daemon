@@ -20,7 +20,6 @@ grep "FAILED" /tmp/invoke_output.txt || echo "No failures found"
 #         but matches actual Lambda service behavior.
 # test_building_new_rapid_image_removes_old_rapid_images: Cannot remove images with same digest,
 #         Docker creates different IDs for each.
-# test_caching_two_layers: TestLayerVersion_{0,1,2}
 cat > expected_invoke_failures.txt << 'EOF'
 test_invoke_with_error_during_image_build
 test_invoke_with_timeout_set_0_TimeoutFunction

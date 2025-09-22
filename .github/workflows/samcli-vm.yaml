@@ -16,7 +16,7 @@ permissions:
 jobs:
   samcli-vm-test:
     runs-on: codebuild-finch-daemon-arm64-${{ matrix.test_step.account }}-instance-${{ github.run_id }}-${{ github.run_attempt }}
-    timeout-minutes: 100 # start-api is the longest running at ~ 54 minutes, need a buffer
+    timeout-minutes: 100 # start-api is the longest running at ~ 54 minutes, need buffer
     strategy:
       fail-fast: false
       matrix:
@@ -27,11 +27,11 @@ jobs:
           # - name: package
           #   account: 2
           - name: start-lambda
-            account: 1
-          - name: invoke
             account: 2
-          - name: start-api
+          - name: invoke
             account: 1
+          - name: start-api
+            account: 2
           # - name: sync
           #   account: 2
     env:
@@ -120,12 +120,9 @@ jobs:
           echo "Installing Finch as ec2-user..."
           su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install finch --cask'
           su ec2-user -c 'source /Users/ec2-user/.brewrc && brew list | grep finch || echo "finch not installed"'
-          # mkdir -p /private/var/run/finch-lima
-          # cat /etc/passwd
-          # chown ec2-user:daemon /private/var/run/finch-lima
-          sudo mkdir -p /private/var/run/finch-lima
-          sudo chown root:daemon /private/var/run/finch-lima
-          sudo chmod 775 /private/var/run/finch-lima
+          mkdir -p /private/var/run/finch-lima
+          cat /etc/passwd
+          chown ec2-user:daemon /private/var/run/finch-lima
         shell: bash
 
       - name: Build binaries
@@ -151,6 +148,14 @@ jobs:
           su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch curl --unix-socket /var/run/finch.sock -X GET http:/v1.43/version'
         shell: bash
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        with:
+          role-to-assume: ${{ matrix.test_step.name == 'sync' && secrets.SAMCLI_VM_ROLE_SYNC || secrets.SAMCLI_VM_ROLE_BASE }}
+          role-session-name: samcli-finch-vm-${{ matrix.test_step.name }}-tests
+          aws-region: ${{ secrets.REGION }}
+          role-duration-seconds: 4000
+
       - name: Install Docker CLI for SAM CLI compatibility
         run: |
           echo "Checking Docker CLI installation..."
@@ -161,24 +166,6 @@ jobs:
             echo "Docker CLI already installed"
           fi
         shell: bash
-        
-      - name: Verify Docker connectivity
-        run: |
-          for i in {1..15}; do
-            if su ec2-user -c "docker version" 2>/dev/null; then
-              break
-            fi
-            sleep 2
-          done
-          su ec2-user -c 'docker ps'
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
-        with:
-          role-to-assume: ${{ matrix.test_step.name == 'sync' && secrets.SAMCLI_VM_ROLE_SYNC || secrets.SAMCLI_VM_ROLE_BASE }}
-          role-session-name: samcli-finch-vm-${{ matrix.test_step.name }}-tests
-          aws-region: ${{ secrets.REGION }}
-          role-duration-seconds: 4000
 
       - name: Checkout SAM CLI
         uses: actions/checkout@v4
@@ -203,8 +190,15 @@ jobs:
       - name: Patch SAM CLI for invoke workaround
         if: matrix.test_step.name == 'invoke'
         run: |
-          # Add force=True to TestLayerVersionBase tearDown
+          # Step 1: Add force=True to TestLayerVersionBase tearDown
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && sed -i "" '\''/class TestLayerVersionBase(InvokeIntegBase):/,/^class /{ /def tearDown(self):/,/^    def /s/docker_client\.images\.remove(image\.id)/docker_client.images.remove(image.id, force=True)/g; }'\'' tests/integration/local/invoke/test_integrations_cli.py'
+
+          # # Step 2: Add exception handling to all force=True calls
+          # su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && sed -i "" "/docker_client\.images\.remove(image\.id, force=True)/c\\
+          #         try:\\
+          #             docker_client.images.remove(image.id, force=True)\\
+          #         except docker.errors.ImageNotFound:\\
+          #             pass" tests/integration/local/invoke/test_integrations_cli.py'
         shell: bash
 
       - name: Run unit tests
