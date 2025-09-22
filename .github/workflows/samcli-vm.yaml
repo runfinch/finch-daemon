@@ -31,7 +31,7 @@ jobs:
           - name: invoke
             account: 2
           - name: start-api
-            account : 1
+            account: 1
           - name: sync
             account: 2
     env:
@@ -122,10 +122,7 @@ jobs:
           su ec2-user -c 'source /Users/ec2-user/.brewrc && brew list | grep finch || echo "finch not installed"'
           mkdir -p /private/var/run/finch-lima
           cat /etc/passwd
-          # chown ec2-user:daemon /private/var/run/finch-lima
-          # chown root:wheel /private/var/run/finch-lima
-          chown root:daemon /private/var/run/finch-lima
-          chmod 775 /private/var/run/finch-lima
+          chown ec2-user:daemon /private/var/run/finch-lima
         shell: bash
 
       - name: Build binaries
@@ -151,19 +148,6 @@ jobs:
           su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch curl --unix-socket /var/run/finch.sock -X GET http:/v1.43/version'
         shell: bash
 
-      - name: Verify and fix Docker connectivity
-        run: |
-          echo "Checking Docker socket permissions..."
-          ls -la /Applications/Finch/lima/data/finch/sock/
-          echo "Testing Docker connectivity as ec2-user..."
-          su ec2-user -c 'docker version' || echo "Docker version failed"
-          su ec2-user -c 'docker info' || echo "Docker info failed"
-          echo "Fixing Docker socket permissions..."
-          chmod 666 /Applications/Finch/lima/data/finch/sock/finch.sock || true
-          echo "Testing Docker build capability..."
-          su ec2-user -c 'docker run --rm hello-world' || echo "Docker run failed"
-        shell: bash
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
@@ -172,19 +156,29 @@ jobs:
           aws-region: ${{ secrets.REGION }}
           role-duration-seconds: 4000
 
-      - name: Ensure Finch-only Docker setup
+      - name: Install Docker CLI for SAM CLI compatibility
         run: |
-          echo "Stopping any Docker daemon to avoid dual daemon issues..."
+          echo "Stopping any Docker daemon to avoid conflicts..."
           sudo pkill dockerd || true
           sudo launchctl unload /Library/LaunchDaemons/com.docker.vmnetd.plist || true
           
-          echo "Installing Docker CLI (client only) for SAM CLI compatibility..."
-          if ! su ec2-user -c 'which docker' > /dev/null 2>&1; then
-            su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install --formula docker'
-          fi
+          echo "Installing Docker CLI..."
+          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install --formula docker'
           
-          echo "Verifying Docker CLI routes to Finch daemon..."
-          su ec2-user -c 'docker ps' || echo "Docker CLI not routing to Finch properly"
+          echo "Setting up Docker environment for ec2-user..."
+          su ec2-user -c 'echo "export DOCKER_HOST=unix:///Applications/Finch/lima/data/finch/sock/finch.sock" >> ~/.bashrc'
+        shell: bash
+
+      - name: Verify Docker routes to Finch
+        run: |
+          echo "Verifying dockerd is NOT running..."
+          pgrep dockerd && echo "ERROR: dockerd still running" || echo "Good: dockerd not running"
+          
+          echo "Testing Docker CLI connection to Finch..."
+          su ec2-user -c 'export DOCKER_HOST=unix:///Applications/Finch/lima/data/finch/sock/finch.sock && docker version'
+          
+          echo "Confirming connection to Finch daemon..."
+          su ec2-user -c 'export DOCKER_HOST=unix:///Applications/Finch/lima/data/finch/sock/finch.sock && docker version | grep "Finch Daemon"'
         shell: bash
 
       - name: Checkout SAM CLI
@@ -225,7 +219,7 @@ jobs:
       - name: Run package tests
         if: matrix.test_step.name == 'package'
         run: ./scripts/samcli-vm/run-package-tests.sh
-
+        
       - name: Run invoke tests
         if: matrix.test_step.name == 'invoke'
         run: ./scripts/samcli-vm/run-invoke-tests.sh
