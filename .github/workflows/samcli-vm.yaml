@@ -172,15 +172,19 @@ jobs:
           aws-region: ${{ secrets.REGION }}
           role-duration-seconds: 4000
 
-      - name: Install Docker CLI for SAM CLI compatibility
+      - name: Ensure Finch-only Docker setup
         run: |
-          echo "Checking Docker CLI installation..."
+          echo "Stopping any Docker daemon to avoid dual daemon issues..."
+          sudo pkill dockerd || true
+          sudo launchctl unload /Library/LaunchDaemons/com.docker.vmnetd.plist || true
+          
+          echo "Installing Docker CLI (client only) for SAM CLI compatibility..."
           if ! su ec2-user -c 'which docker' > /dev/null 2>&1; then
-            echo "Installing Docker CLI..."
             su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install --formula docker'
-          else
-            echo "Docker CLI already installed"
           fi
+          
+          echo "Verifying Docker CLI routes to Finch daemon..."
+          su ec2-user -c 'docker ps' || echo "Docker CLI not routing to Finch properly"
         shell: bash
 
       - name: Checkout SAM CLI
