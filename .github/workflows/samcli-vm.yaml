@@ -123,7 +123,8 @@ jobs:
           mkdir -p /private/var/run/finch-lima
           cat /etc/passwd
           # chown ec2-user:daemon /private/var/run/finch-lima
-          chown root:wheel /private/var/run/finch-lima
+          # chown root:wheel /private/var/run/finch-lima
+          chown root:daemon /private/var/run/finch-lima
           chmod 775 /private/var/run/finch-lima
         shell: bash
 
