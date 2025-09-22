@@ -125,7 +125,7 @@ jobs:
           # chown ec2-user:daemon /private/var/run/finch-lima
           sudo mkdir -p /private/var/run/finch-lima
           sudo chown root:daemon /private/var/run/finch-lima
-          sudo chmod 755 /private/var/run/finch-lima
+          sudo chmod 775 /private/var/run/finch-lima
         shell: bash
 
       - name: Build binaries
