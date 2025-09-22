@@ -190,15 +190,8 @@ jobs:
       - name: Patch SAM CLI for invoke workaround
         if: matrix.test_step.name == 'invoke'
         run: |
-          # Step 1: Add force=True to TestLayerVersionBase tearDown
-          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && sed -i "" '\''/class TestLayerVersionBase(InvokeIntegBase):/,/^class /{ /def tearDown(self):/,/^    def /s/docker_client\.images\.remove(image\.id)/docker_client.images.remove(image.id, force=True)/g; }'\'' tests/integration/local/invoke/test_integrations_cli.py'
-
-          # # Step 2: Add exception handling to all force=True calls
-          # su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && sed -i "" "/docker_client\.images\.remove(image\.id, force=True)/c\\
-          #         try:\\
-          #             docker_client.images.remove(image.id, force=True)\\
-          #         except docker.errors.ImageNotFound:\\
-          #             pass" tests/integration/local/invoke/test_integrations_cli.py'
+          # Apply git patch to handle ImageNotFound exceptions
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && git apply ${{ github.workspace }}/scripts/samcli-vm/invoke-teardown.patch'
         shell: bash
 
       - name: Run unit tests
