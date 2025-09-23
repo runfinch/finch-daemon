@@ -8,28 +8,41 @@ on:
 
 env:
   GO_VERSION: '1.24.x'
-  PYTHON_VERSION: '3.11.x' # from aws/aws-sam-cli/setup.py: python_requires=">=3.9, <=4.0, !=4.0
-  AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
-  BY_CANARY: true # allows full testing
-  SAM_CLI_DEV: 1
-  SAM_CLI_TELEMETRY: 0
-  DOCKER_HOST: unix:///Applications/Finch/lima/data/finch/sock/finch.sock
-  DOCKER_CONFIG: /Users/ec2-user/.finch
 
 permissions:
   id-token: write
   contents: read
 
 jobs:
-  setup:
-    timeout-minutes: 10
+  samcli-vm-test:
+    runs-on: codebuild-finch-daemon-arm64-${{ matrix.test_step.account }}-instance-${{ github.run_id }}-${{ github.run_attempt }}
+    timeout-minutes: 100 # start-api is the longest running at ~ 54 minutes, need buffer
     strategy:
       fail-fast: false
       matrix:
-        account: [1, 2]
-    runs-on: codebuild-finch-daemon-arm64-${{ matrix.account }}-instance-${{ github.run_id }}-${{ github.run_attempt }}
-
+        # account number allows distribution across codebuild fleets in different accounts
+        test_step:
+          # - name: unit
+          #   account: 1
+          # - name: package
+          #   account: 2
+          - name: start-lambda
+            account: 2
+          - name: invoke
+            account: 1
+          - name: start-api
+            account: 2
+          # - name: sync
+          #   account: 2
+    env:
+      AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
+      BY_CANARY: true # allows full testing
+      SAM_CLI_DEV: 1
+      SAM_CLI_TELEMETRY: 0
+      DOCKER_HOST: unix:///Applications/Finch/lima/data/finch/sock/finch.sock
+      DOCKER_CONFIG: /Users/ec2-user/.finch
     steps:
+
       - name: Clean macOS runner workspace
         run: |
           rm -rf ${{ github.workspace }}/*
@@ -53,10 +66,11 @@ jobs:
       - name: Install Rosetta 2
         run: su ec2-user -c 'echo "A" | /usr/sbin/softwareupdate --install-rosetta --agree-to-license || true'
 
+       # from aws/aws-sam-cli/setup.py: python_requires=">=3.9, <=4.0, !=4.0
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: '3.11'
 
       - name: Configure Python for ec2-user
         run: |
@@ -134,6 +148,14 @@ jobs:
           su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch curl --unix-socket /var/run/finch.sock -X GET http:/v1.43/version'
         shell: bash
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        with:
+          role-to-assume: ${{ matrix.test_step.name == 'sync' && secrets.SAMCLI_VM_ROLE_SYNC || secrets.SAMCLI_VM_ROLE_BASE }}
+          role-session-name: samcli-finch-vm-${{ matrix.test_step.name }}-tests
+          aws-region: ${{ secrets.REGION }}
+          role-duration-seconds: 4000
+  
       - name: Install Docker CLI for SAM CLI compatibility
         run: |
           echo "Checking Docker CLI installation..."
@@ -165,56 +187,36 @@ jobs:
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && samdev --version'
         shell: bash
 
-  samcli-vm-test:
-    needs: setup
-    timeout-minutes: 100 # start-api is the longest running at ~ 54 minutes, need buffer
-    strategy:
-      fail-fast: false
-      matrix:
-        # account number allows distribution across codebuild fleets in different accounts
-        test_step:
-          - name: unit
-            account: 1
-          - name: package
-            account: 2
-          - name: start-lambda
-            account: 1
-          - name: invoke
-            account: 2
-          - name: start-api
-            account: 1
-          - name: sync
-            account: 2
-    runs-on: codebuild-finch-daemon-arm64-${{ matrix.test_step.account }}-instance-${{ github.run_id }}-${{ github.run_attempt }}
-    steps:
-      - name: Checkout finch-daemon repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-          submodules: recursive
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
-        with:
-          role-to-assume: ${{ matrix.test_step.name == 'sync' && secrets.SAMCLI_VM_ROLE_SYNC || secrets.SAMCLI_VM_ROLE_BASE }}
-          role-session-name: samcli-finch-vm-${{ matrix.test_step.name }}-tests
-          aws-region: ${{ secrets.REGION }}
-          role-duration-seconds: 4000
-
       - name: Patch SAM CLI for invoke workaround
         if: matrix.test_step.name == 'invoke'
-        working-directory: ${{ github.workspace }}
         run: |
           # Apply git patch to handle ImageNotFound exceptions
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && git apply ${{ github.workspace }}/scripts/samcli-vm/invoke-teardown.patch'
         shell: bash
 
-      - name: Run ${{ matrix.test_step.name }} tests
-        working-directory: ${{ github.workspace }}
-        run: |
-          chmod +x scripts/samcli-vm/run-${{ matrix.test_step.name }}-tests.sh
-          ./scripts/samcli-vm/run-${{ matrix.test_step.name }}-tests.sh
+      - name: Run unit tests
+        if: matrix.test_step.name == 'unit'
+        run: ./scripts/samcli-vm/run-unit-tests.sh
+
+      - name: Run sync tests
+        if: matrix.test_step.name == 'sync'
+        run: ./scripts/samcli-vm/run-sync-tests.sh
+
+      - name: Run package tests
+        if: matrix.test_step.name == 'package'
+        run: ./scripts/samcli-vm/run-package-tests.sh
+
+      - name: Run invoke tests
+        if: matrix.test_step.name == 'invoke'
+        run: ./scripts/samcli-vm/run-invoke-tests.sh
+
+      - name: Run start-lambda tests
+        if: matrix.test_step.name == 'start-lambda'
+        run: ./scripts/samcli-vm/run-start-lambda-tests.sh
+
+      - name: Run start-api tests
+        if: matrix.test_step.name == 'start-api'
+        run: ./scripts/samcli-vm/run-start-api-tests.sh
 
   # ensuring resources are clean post-test
   cleanup-base:
