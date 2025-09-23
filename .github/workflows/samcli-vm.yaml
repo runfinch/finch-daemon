@@ -22,18 +22,18 @@ jobs:
       matrix:
         # account number allows distribution across codebuild fleets in different accounts
         test_step:
-          # - name: unit
-          #   account: 1
-          # - name: package
-          #   account: 2
-          - name: start-lambda
-            account: 2
-          - name: invoke
+          - name: unit
             account: 1
-          - name: start-api
+          - name: package
             account: 2
-          # - name: sync
-          #   account: 2
+          - name: start-lambda
+            account: 1
+          - name: invoke
+            account: 2
+          - name: start-api
+            account: 1
+          - name: sync
+            account: 2
     env:
       AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
       BY_CANARY: true # allows full testing
