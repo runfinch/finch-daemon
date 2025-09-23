@@ -5,7 +5,7 @@ echo "=== INVOKE TESTS - Started at $(date) ==="
 touch /tmp/invoke_output.txt
 chown ec2-user:staff /tmp/invoke_output.txt
 
-su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && AWS_DEFAULT_REGION="$AWS_DEFAULT_REGION" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/local/invoke -k "not Terraform" -v --tb=short' > /tmp/invoke_output.txt 2>&1 || true
+su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && AWS_DEFAULT_REGION="$AWS_DEFAULT_REGION" BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 DOCKER_HOST="$DOCKER_HOST" python3.11 -m pytest tests/integration/local/invoke -k "not Terraform" -v --tb=short' > /tmp/invoke_output.txt 2>&1 || true
 
 echo ""
 echo "=== PASSES ==="
