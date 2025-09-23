@@ -1,7 +1,6 @@
 --- a/tests/integration/local/invoke/test_integrations_cli.py
 +++ b/tests/integration/local/invoke/test_integrations_cli.py
-@@ -753,7 +753,12 @@ class TestLayerVersionBase(InvokeIntegBase):
-     def tearDown(self):
+@@ -754,6 +754,11 @@
          docker_client = docker.from_env()
          samcli_images = docker_client.images.list(name="samcli/lambda")
          for image in samcli_images:
