@@ -13,3 +13,4 @@
 +                print(f"An error occurred while trying to remove image {image.id}: {str(e)}")
  
          shutil.rmtree(str(self.layer_cache), ignore_errors=True)
++
