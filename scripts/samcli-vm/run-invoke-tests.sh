@@ -5,7 +5,16 @@ echo "=== INVOKE TESTS - Started at $(date) ==="
 touch /tmp/invoke_output.txt
 chown ec2-user:staff /tmp/invoke_output.txt
 
-su ec2-user -c "cd /Users/ec2-user/aws-sam-cli && export PATH='/Users/ec2-user/Library/Python/3.11/bin:$PATH' && export DOCKER_HOST='$DOCKER_HOST' && AWS_DEFAULT_REGION='$AWS_DEFAULT_REGION' BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short" 2>&1 | tee /tmp/invoke_output.txt || true
+su ec2-user -c "
+  cd /Users/ec2-user/aws-sam-cli && \
+  export PATH='/Users/ec2-user/Library/Python/$PYTHON_VERSION/bin:$PATH' && \
+  export DOCKER_HOST='$DOCKER_HOST' && \
+  AWS_DEFAULT_REGION='$AWS_DEFAULT_REGION' \
+  BY_CANARY='$BY_CANARY' \
+  SAM_CLI_DEV='$SAM_CLI_DEV' \
+  SAM_CLI_TELEMETRY='$SAM_CLI_TELEMETRY' \
+  '$PYTHON_BINARY' -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short
+" 2>&1 | tee /tmp/invoke_output.txt || true
 
 echo ""
 echo "=== PASSES ==="
@@ -20,6 +29,9 @@ grep "FAILED" /tmp/invoke_output.txt || echo "No failures found"
 #         but matches actual Lambda service behavior.
 # test_building_new_rapid_image_removes_old_rapid_images: Cannot remove images with same digest,
 #         Docker creates different IDs for each.
+# test_caching_two_layers and test_caching_two_layers_with_layer_cache_env_set: error due to sequential
+#         test runs within invoke. Work when run in isolation and locally.
+# test_successful_invoke: Related to symlink mount errors due to permissions. Works locally.
 cat > expected_invoke_failures.txt << 'EOF'
 test_invoke_with_error_during_image_build
 test_invoke_with_timeout_set_0_TimeoutFunction

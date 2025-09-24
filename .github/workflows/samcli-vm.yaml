@@ -1,13 +1,20 @@
 name: samcli-vm
 
 on:
-  pull_request:
-    branches:
-      - main
+  schedule:
+    - cron: '0 8 * * * '
   workflow_dispatch:
 
 env:
   GO_VERSION: '1.24.x'
+  PYTHON_VERSION: '3.11'
+  PYTHON_BINARY: 'python3.11'
+  AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
+  BY_CANARY: true # allows full testing
+  SAM_CLI_DEV: 1
+  SAM_CLI_TELEMETRY: 0
+  DOCKER_HOST: unix:///Applications/Finch/lima/data/finch/sock/finch.sock
+  DOCKER_CONFIG: /Users/ec2-user/.finch
 
 permissions:
   id-token: write
@@ -16,13 +23,6 @@ permissions:
 jobs:
   samcli-vm-test:
     runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
-    env:
-      AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
-      BY_CANARY: true # allows full testing
-      SAM_CLI_DEV: 1
-      SAM_CLI_TELEMETRY: 0
-      DOCKER_HOST: unix:///Applications/Finch/lima/data/finch/sock/finch.sock
-      DOCKER_CONFIG: /Users/ec2-user/.finch
     steps:
 
       - name: Clean macOS runner workspace
@@ -48,18 +48,17 @@ jobs:
       - name: Install Rosetta 2
         run: su ec2-user -c 'echo "A" | /usr/sbin/softwareupdate --install-rosetta --agree-to-license || true'
 
-       # from aws/aws-sam-cli/setup.py: python_requires=">=3.9, <=4.0, !=4.0
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Configure Python for ec2-user
         run: |
           # Make Python accessible to ec2-user
-          chown -R ec2-user:staff $(python3.11 -c "import site; print(site.USER_BASE)") || true
+          chown -R ec2-user:staff $(${{ env.PYTHON_BINARY }} -c "import site; print(site.USER_BASE)") || true
           # Or symlink to ec2-user's PATH
-          ln -sf $(which python3.11) /usr/local/bin/python3.11 || true
+          ln -sf $(which ${{ env.PYTHON_BINARY }}) /usr/local/bin/${{ env.PYTHON_BINARY }} || true
 
       - name: Configure Homebrew for ec2-user
         run: |
@@ -163,9 +162,9 @@ jobs:
           sudo chown -R ec2-user:staff /Users/ec2-user/aws-sam-cli
 
           # Install and setup (use full path)
-          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && python3.11 -m pip install --upgrade pip --user'
-          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && SAM_CLI_DEV=1 python3.11 -m pip install -e ".[dev]" --user'
-          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/3.11/bin:$PATH" && samdev --version'
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && ${{ env.PYTHON_BINARY }} -m pip install --upgrade pip --user'
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && SAM_CLI_DEV=1 ${{ env.PYTHON_BINARY }} -m pip install -e ".[dev]" --user'
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/${{ env.PYTHON_VERSION }}/bin:$PATH" && samdev --version'
         shell: bash
 
       - name: Run unit tests
@@ -200,26 +199,7 @@ jobs:
         run: ./scripts/samcli-vm/run-invoke-tests.sh
 
   # ensuring resources are clean post-test
-  cleanup-base:
-    runs-on: ubuntu-latest
-    needs: samcli-vm-test
-    if: always()
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df
-        with:
-          role-to-assume: ${{ secrets.SAMCLI_VM_ROLE_BASE }}
-          role-session-name: cleanup-base
-          aws-region: ${{ secrets.REGION }}
-
-      - name: Comprehensive AWS resource cleanup
-        timeout-minutes: 10
-        run: ./scripts/cleanup-aws-resources.sh
-
-  cleanup-sync:
+  cleanup:
     runs-on: ubuntu-latest
     needs: samcli-vm-test
     if: always()
@@ -231,7 +211,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df
         with:
           role-to-assume: ${{ secrets.SAMCLI_VM_ROLE_SYNC }}
-          role-session-name: cleanup-sync
+          role-session-name: cleanup
           aws-region: ${{ secrets.REGION }}
 
       - name: Comprehensive AWS resource cleanup
