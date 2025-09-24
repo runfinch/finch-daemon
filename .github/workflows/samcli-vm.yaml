@@ -136,7 +136,6 @@ jobs:
           role-to-assume: ${{ secrets.SAMCLI_VM_ROLE_SYNC }}
           role-session-name: samcli-finch-vm-sequential-tests
           aws-region: ${{ secrets.REGION }}
-          role-duration-seconds: 4000
   
       - name: Install Docker CLI for SAM CLI compatibility
         run: |
