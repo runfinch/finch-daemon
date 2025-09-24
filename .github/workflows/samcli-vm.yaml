@@ -2,7 +2,7 @@ name: samcli-vm
 
 on:
   schedule:
-    - cron: '0 8 * * * '
+    - cron: '0 8 * * *'
   workflow_dispatch:
 
 env:
@@ -135,7 +135,7 @@ jobs:
           role-to-assume: ${{ secrets.SAMCLI_VM_ROLE_SYNC }}
           role-session-name: samcli-finch-vm-sequential-tests
           aws-region: ${{ secrets.REGION }}
-  
+
       - name: Install Docker CLI for SAM CLI compatibility
         run: |
           echo "Checking Docker CLI installation..."
