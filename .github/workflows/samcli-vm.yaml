@@ -16,7 +16,7 @@ permissions:
 jobs:
   samcli-vm-test:
     runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
-    timeout-minutes: 150 # All tests sequential: unit + invoke(30) + start-lambda(20) + sync(15) + package(5) + start-api(60)
+    timeout-minutes: 180 # All tests sequential: unit + invoke(30) + start-lambda(20) + sync(15) + package(5) + start-api(60)
     env:
       AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
       BY_CANARY: true # allows full testing
