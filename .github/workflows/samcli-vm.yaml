@@ -174,6 +174,22 @@ jobs:
         continue-on-error: true
         run: ./scripts/samcli-vm/run-unit-tests.sh
 
+      - name: Run start-api tests
+        continue-on-error: true
+        run: ./scripts/samcli-vm/run-start-api-tests.sh
+
+      - name: Run start-lambda tests
+        continue-on-error: true
+        run: ./scripts/samcli-vm/run-start-lambda-tests.sh
+
+      - name: Run sync tests
+        continue-on-error: true
+        run: ./scripts/samcli-vm/run-sync-tests.sh
+
+      - name: Run package tests
+        continue-on-error: true
+        run: ./scripts/samcli-vm/run-package-tests.sh
+
       - name: Patch SAM CLI for Docker image cleanup
         run: |
           # Apply git patch to handle ImageNotFound exceptions for all Docker tests
@@ -183,22 +199,6 @@ jobs:
       - name: Run invoke tests
         continue-on-error: true
         run: ./scripts/samcli-vm/run-invoke-tests.sh
-
-      - name: Run start-lambda tests
-        continue-on-error: true
-        run: ./scripts/samcli-vm/run-start-lambda-tests.sh
-
-      - name: Run start-api tests
-        continue-on-error: true
-        run: ./scripts/samcli-vm/run-start-api-tests.sh
-
-      - name: Run sync tests
-        continue-on-error: true
-        run: ./scripts/samcli-vm/run-sync-tests.sh
-
-      - name: Run package tests
-        continue-on-error: true
-        run: ./scripts/samcli-vm/run-package-tests.sh
 
   # ensuring resources are clean post-test
   cleanup-base:
