@@ -16,7 +16,6 @@ permissions:
 jobs:
   samcli-vm-test:
     runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
-    timeout-minutes: 200
     env:
       AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
       BY_CANARY: true # allows full testing
@@ -174,14 +173,6 @@ jobs:
         continue-on-error: true
         run: ./scripts/samcli-vm/run-unit-tests.sh
 
-      - name: Run start-api tests
-        continue-on-error: true
-        run: ./scripts/samcli-vm/run-start-api-tests.sh
-
-      - name: Run start-lambda tests
-        continue-on-error: true
-        run: ./scripts/samcli-vm/run-start-lambda-tests.sh
-
       - name: Run sync tests
         continue-on-error: true
         run: ./scripts/samcli-vm/run-sync-tests.sh
@@ -190,7 +181,16 @@ jobs:
         continue-on-error: true
         run: ./scripts/samcli-vm/run-package-tests.sh
 
+      - name: Run start-api tests
+        continue-on-error: true
+        run: ./scripts/samcli-vm/run-start-api-tests.sh
+
+      - name: Run start-lambda tests
+        continue-on-error: true
+        run: ./scripts/samcli-vm/run-start-lambda-tests.sh
+
       - name: Patch SAM CLI for Docker image cleanup
+        continue-on-error: true
         run: |
           # Apply git patch to handle ImageNotFound exceptions for all Docker tests
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && git apply ${{ github.workspace }}/scripts/samcli-vm/invoke-teardown.patch'

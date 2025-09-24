@@ -4,7 +4,7 @@ set -e
 echo "=== START-LAMBDA TESTS - Started at $(date) ==="
 touch /tmp/start_lambda_output.txt
 chown ec2-user:staff /tmp/start_lambda_output.txt
-su ec2-user -c "cd /Users/ec2-user/aws-sam-cli && export PATH='/Users/ec2-user/Library/Python/3.11/bin:$PATH' && export DOCKER_CONFIG='$DOCKER_CONFIG' && export DOCKER_HOST='$DOCKER_HOST' && AWS_DEFAULT_REGION='$AWS_DEFAULT_REGION' BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short" 2>&1 | tee /tmp/start_lambda_output.txt || true
+su ec2-user -c "cd /Users/ec2-user/aws-sam-cli && export PATH='/Users/ec2-user/Library/Python/3.11/bin:$PATH' && export DOCKER_HOST='$DOCKER_HOST' && AWS_DEFAULT_REGION='$AWS_DEFAULT_REGION' BY_CANARY=true SAM_CLI_DEV=1 SAM_CLI_TELEMETRY=0 python3.11 -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v" 2>&1 | tee /tmp/start_lambda_output.txt || true
 
 echo ""
 echo "=== PASSES ==="
