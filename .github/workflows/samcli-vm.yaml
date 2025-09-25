@@ -138,6 +138,7 @@ jobs:
           role-to-assume: ${{ secrets.SAMCLI_VM_ROLE_SYNC }}
           role-session-name: samcli-finch-vm-sequential-tests
           aws-region: ${{ secrets.REGION }}
+          role-duration-seconds: 14400
 
       - name: Install Docker CLI for SAM CLI compatibility
         run: |
@@ -172,34 +173,65 @@ jobs:
 
       - name: Run unit tests
         continue-on-error: true
-        run: ./scripts/samcli-vm/run-unit-tests.sh
+        run: |
+          ./scripts/samcli-vm/run-unit-tests.sh
+          echo "UNIT_EXIT_CODE=$?" >> $GITHUB_ENV
 
       - name: Run sync tests
         continue-on-error: true
-        run: ./scripts/samcli-vm/run-sync-tests.sh
+        run: |
+          ./scripts/samcli-vm/run-sync-tests.sh
+          echo "SYNC_EXIT_CODE=$?" >> $GITHUB_ENV
 
       - name: Run package tests
         continue-on-error: true
-        run: ./scripts/samcli-vm/run-package-tests.sh
+        run: |
+          ./scripts/samcli-vm/run-package-tests.sh
+          echo "PACKAGE_EXIT_CODE=$?" >> $GITHUB_ENV
 
       - name: Run start-api tests
         continue-on-error: true
-        run: ./scripts/samcli-vm/run-start-api-tests.sh
+        run: |
+          ./scripts/samcli-vm/run-start-api-tests.sh
+          echo "START_API_EXIT_CODE=$?" >> $GITHUB_ENV
 
       - name: Run start-lambda tests
         continue-on-error: true
-        run: ./scripts/samcli-vm/run-start-lambda-tests.sh
+        run: |
+          ./scripts/samcli-vm/run-start-lambda-tests.sh
+          echo "START_LAMBDA_EXIT_CODE=$?" >> $GITHUB_ENV
 
       - name: Patch SAM CLI for Docker image cleanup
         continue-on-error: true
         run: |
           # Apply git patch to handle ImageNotFound exceptions for all Docker tests
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && git apply ${{ github.workspace }}/scripts/samcli-vm/invoke-teardown.patch'
+          echo "PATCH_EXIT_CODE=$?" >> $GITHUB_ENV
         shell: bash
 
       - name: Run invoke tests
         continue-on-error: true
-        run: ./scripts/samcli-vm/run-invoke-tests.sh
+        run: |
+          ./scripts/samcli-vm/run-invoke-tests.sh
+          echo "INVOKE_EXIT_CODE=$?" >> $GITHUB_ENV
+
+      - name: Check test results
+        run: |
+          echo "Test Results Summary:"
+          echo "Unit tests: ${UNIT_EXIT_CODE:-0}"
+          echo "Sync tests: ${SYNC_EXIT_CODE:-0}"
+          echo "Package tests: ${PACKAGE_EXIT_CODE:-0}"
+          echo "Start-API tests: ${START_API_EXIT_CODE:-0}"
+          echo "Start-Lambda tests: ${START_LAMBDA_EXIT_CODE:-0}"
+          echo "Patch: ${PATCH_EXIT_CODE:-0}"
+          echo "Invoke tests: ${INVOKE_EXIT_CODE:-0}"
+          
+          if [ "${UNIT_EXIT_CODE:-0}" -ne 0 ] || [ "${SYNC_EXIT_CODE:-0}" -ne 0 ] || [ "${PACKAGE_EXIT_CODE:-0}" -ne 0 ] || [ "${START_API_EXIT_CODE:-0}" -ne 0 ] || [ "${START_LAMBDA_EXIT_CODE:-0}" -ne 0 ] || [ "${INVOKE_EXIT_CODE:-0}" -ne 0 ]; then
+            echo "One or more tests failed"
+            exit 1
+          else
+            echo "All tests passed"
+          fi
 
   # ensuring resources are clean post-test
   cleanup:
@@ -220,5 +252,3 @@ jobs:
       - name: Comprehensive AWS resource cleanup
         timeout-minutes: 10
         run: ./scripts/cleanup-aws-resources.sh
-
-# Dummy PR Test
