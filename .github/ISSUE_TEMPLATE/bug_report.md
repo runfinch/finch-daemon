@@ -7,6 +7,11 @@ assignees: ''
 
 ---
 
+**Please do not report security issues through this template.** Refer to [Security](https://github.com/runfinch/finch-daemon?tab=security-ov-file#reporting-security-issues) for the proper reporting channels.
+
+---
+
+
 **Describe the bug**
 Briefly describe the problem you are having.
 
