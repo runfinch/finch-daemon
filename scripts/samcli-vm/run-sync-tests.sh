@@ -29,9 +29,11 @@ if grep -q "FAILED" /tmp/sync_output.txt; then
   echo ""
   echo "=== FULL OUTPUT FOR DEBUGGING ==="
   cat /tmp/sync_output.txt
+  echo "1" > /tmp/sync_exit_code
   exit 1
 else
   echo "✅ All sync tests passed as expected"
+  echo "0" > /tmp/sync_exit_code
 fi
 
 echo ""

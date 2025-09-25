@@ -27,11 +27,13 @@ echo ""
 if grep -q "Required test coverage of.*reached" /tmp/unit_test_output.txt; then
   echo "✅ Unit tests completed with required coverage"
   grep "Required test coverage of.*reached" /tmp/unit_test_output.txt
+  echo "0" > /tmp/unit_exit_code
 else
   echo "❌ Required test coverage not reached"
   echo ""
   echo "=== FULL OUTPUT FOR DEBUGGING ==="
   cat /tmp/unit_test_output.txt
+  echo "1" > /tmp/unit_exit_code
   exit 1
 fi
 

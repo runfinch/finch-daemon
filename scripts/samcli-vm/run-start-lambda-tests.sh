@@ -30,9 +30,11 @@ if grep -q "FAILED" /tmp/start_lambda_output.txt; then
   echo ""
   echo "=== FULL OUTPUT FOR DEBUGGING ==="
   cat /tmp/start_lambda_output.txt
+  echo "1" > /tmp/start_lambda_exit_code
   exit 1
 else
   echo "✅ All start-lambda tests passed as expected"
+  echo "0" > /tmp/start_lambda_exit_code
 fi
 
 echo ""

@@ -55,9 +55,11 @@ if [ -n "$UNEXPECTED" ]; then
   echo ""
   echo "=== FULL OUTPUT FOR DEBUGGING ==="
   cat /tmp/invoke_output.txt
+  echo "1" > /tmp/invoke_exit_code
   exit 1
 else
   echo "✅ All failures were expected"
+  echo "0" > /tmp/invoke_exit_code
 fi
 
 echo ""

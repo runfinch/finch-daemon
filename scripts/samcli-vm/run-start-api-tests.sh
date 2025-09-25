@@ -45,9 +45,11 @@ if [ -n "$UNEXPECTED" ]; then
   echo "=== NOTE ==="
   echo "This is a known flaky test with ~ % pass rate."
   echo "Please try again using an individual workflow trigger."
+  echo "1" > /tmp/start_api_exit_code
   exit 1
 else
   echo "✅ All start-api failures were expected (CI environment flakiness)"
+  echo "0" > /tmp/start_api_exit_code
 fi
 
 echo ""

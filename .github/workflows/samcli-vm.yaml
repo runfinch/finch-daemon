@@ -29,13 +29,7 @@ jobs:
     steps:
 
       - name: Clean macOS runner workspace
-        run: |
-          rm -rf ${{ github.workspace }}/*
-
-      - name: Configure Git for ec2-user
-        run: |
-          git config --global --add safe.directory "*"
-        shell: bash
+        run: rm -rf ${{ github.workspace }}/*
 
       - name: Set up Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
@@ -43,50 +37,24 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: false
 
-      - name: Configure Go for ec2-user
-        run: |
-          chown -R ec2-user:staff $GOPATH || true
-          chown -R ec2-user:staff $RUNNER_TOOL_CACHE/go || true
-
-      - name: Install Rosetta 2
-        run: su ec2-user -c 'echo "A" | /usr/sbin/softwareupdate --install-rosetta --agree-to-license || true'
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Configure Python for ec2-user
-        run: |
-          # Make Python accessible to ec2-user
-          chown -R ec2-user:staff $(${{ env.PYTHON_BINARY }} -c "import site; print(site.USER_BASE)") || true
-          # Or symlink to ec2-user's PATH
-          ln -sf $(which ${{ env.PYTHON_BINARY }}) /usr/local/bin/${{ env.PYTHON_BINARY }} || true
+      - name: Setup runner and dependencies
+        run: ./scripts/samcli-vm/setup-runner.sh
 
-      - name: Configure Homebrew for ec2-user
-        run: |
-          echo "Creating .brewrc file for ec2-user..."
-          cat > /Users/ec2-user/.brewrc << 'EOF'
-          # Homebrew environment setup
-          export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
-          export HOMEBREW_PREFIX="/opt/homebrew"
-          export HOMEBREW_CELLAR="/opt/homebrew/Cellar"
-          export HOMEBREW_REPOSITORY="/opt/homebrew"
-          export HOMEBREW_NO_AUTO_UPDATE=1
-          EOF
-          chown ec2-user:staff /Users/ec2-user/.brewrc
+      - name: Configure workspace for ec2-user
+        run: chown -R ec2-user:staff ${{ github.workspace }}
 
-          # Fix Homebrew permissions
-          echo "Setting permissions for Homebrew directories..."
-          mkdir -p /opt/homebrew/Cellar
-          chown -R ec2-user:staff /opt/homebrew
-        shell: bash
-
-      - name: Install dependencies
-        run: |
-          echo "Installing dependencies as ec2-user..."
-          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install lz4 automake autoconf libtool yq'
-        shell: bash
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        with:
+          role-to-assume: ${{ secrets.SAMCLI_VM_ROLE_SYNC }}
+          role-session-name: samcli-finch-vm-sequential-tests
+          aws-region: ${{ secrets.REGION }}
+          role-duration-seconds: 14400
 
       - name: Checkout finch-daemon repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -95,60 +63,8 @@ jobs:
           persist-credentials: false
           submodules: recursive
 
-      - name: Configure workspace for ec2-user
-        run: |
-          chown -R ec2-user:staff ${{ github.workspace }}
-
-      - name: Install Finch
-        run: |
-          echo "Installing Finch as ec2-user..."
-          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install finch --cask'
-          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew list | grep finch || echo "finch not installed"'
-          mkdir -p /private/var/run/finch-lima
-          cat /etc/passwd
-          chown ec2-user:daemon /private/var/run/finch-lima
-        shell: bash
-
-      - name: Build binaries
-        run: |
-          echo "Building cross architecture binaries..."
-          su ec2-user -c 'cd ${{ github.workspace }} && STATIC=1 GOPROXY=direct GOOS=linux GOARCH=arm64 make'
-          su ec2-user -c 'finch vm remove -f' || true
-          cp -f ${{ github.workspace }}/bin/finch-daemon /Applications/Finch/finch-daemon/finch-daemon
-          # Restart finch-daemon with new binary
-          su ec2-user -c 'finch vm stop' || true
-          su ec2-user -c 'finch vm start' || true
-        shell: bash
-
-      - name: Check Finch version
-        run: |
-          echo "Initializing VM and checking version..."
-          # Clean up any leftover network state
-          sudo pkill -f socket_vmnet || true
-          sudo rm -f /private/var/run/finch-lima/*.sock || true
-          su ec2-user -c 'finch vm init'
-          sleep 5  # Wait for services to be ready
-          echo "Checking Finch version..."
-          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch curl --unix-socket /var/run/finch.sock -X GET http:/v1.43/version'
-        shell: bash
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
-        with:
-          role-to-assume: ${{ secrets.SAMCLI_VM_ROLE_SYNC }}
-          role-session-name: samcli-finch-vm-sequential-tests
-          aws-region: ${{ secrets.REGION }}
-
-      - name: Install Docker CLI for SAM CLI compatibility
-        run: |
-          echo "Checking Docker CLI installation..."
-          if ! su ec2-user -c 'which docker' > /dev/null 2>&1; then
-            echo "Installing Docker CLI..."
-            su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install --formula docker'
-          else
-            echo "Docker CLI already installed"
-          fi
-        shell: bash
+      - name: Setup Finch and Docker
+        run: ./scripts/samcli-vm/setup-finch.sh
 
       - name: Checkout SAM CLI
         uses: actions/checkout@v4
@@ -157,49 +73,55 @@ jobs:
           submodules: recursive
           path: aws-sam-cli
 
-      - name: Set up SAM CLI from source
-        run: |
-          # Move to ec2-user home and change ownership
-          sudo rm -rf /Users/ec2-user/aws-sam-cli || true
-          sudo mv aws-sam-cli /Users/ec2-user/aws-sam-cli
-          sudo chown -R ec2-user:staff /Users/ec2-user/aws-sam-cli
-
-          # Install and setup (use full path)
-          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && ${{ env.PYTHON_BINARY }} -m pip install --upgrade pip --user'
-          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && SAM_CLI_DEV=1 ${{ env.PYTHON_BINARY }} -m pip install -e ".[dev]" --user'
-          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/${{ env.PYTHON_VERSION }}/bin:$PATH" && samdev --version'
-        shell: bash
+      - name: Setup SAM CLI
+        run: ./scripts/samcli-vm/setup-samcli.sh
 
       - name: Run unit tests
         continue-on-error: true
-        run: ./scripts/samcli-vm/run-unit-tests.sh
+        run: |
+          ./scripts/samcli-vm/run-unit-tests.sh
+          echo "UNIT_EXIT_CODE=$(cat /tmp/unit_exit_code 2>/dev/null || echo 1)" >> $GITHUB_ENV
 
       - name: Run sync tests
         continue-on-error: true
-        run: ./scripts/samcli-vm/run-sync-tests.sh
+        run: |
+          ./scripts/samcli-vm/run-sync-tests.sh
+          echo "SYNC_EXIT_CODE=$(cat /tmp/sync_exit_code 2>/dev/null || echo 1)" >> $GITHUB_ENV
 
       - name: Run package tests
         continue-on-error: true
-        run: ./scripts/samcli-vm/run-package-tests.sh
+        run: |
+          ./scripts/samcli-vm/run-package-tests.sh
+          echo "PACKAGE_EXIT_CODE=$(cat /tmp/package_exit_code 2>/dev/null || echo 1)" >> $GITHUB_ENV
 
       - name: Run start-api tests
         continue-on-error: true
-        run: ./scripts/samcli-vm/run-start-api-tests.sh
+        run: |
+          ./scripts/samcli-vm/run-start-api-tests.sh
+          echo "START_API_EXIT_CODE=$(cat /tmp/start_api_exit_code 2>/dev/null || echo 1)" >> $GITHUB_ENV
 
       - name: Run start-lambda tests
         continue-on-error: true
-        run: ./scripts/samcli-vm/run-start-lambda-tests.sh
+        run: |
+          ./scripts/samcli-vm/run-start-lambda-tests.sh
+          echo "START_LAMBDA_EXIT_CODE=$(cat /tmp/start_lambda_exit_code 2>/dev/null || echo 1)" >> $GITHUB_ENV
 
-      - name: Patch SAM CLI for Docker image cleanup
+      - name: Patch SAM CLI for image cleanup
         continue-on-error: true
         run: |
           # Apply git patch to handle ImageNotFound exceptions for all Docker tests
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && git apply ${{ github.workspace }}/scripts/samcli-vm/invoke-teardown.patch'
+          echo "PATCH_EXIT_CODE=$?" >> $GITHUB_ENV
         shell: bash
 
       - name: Run invoke tests
         continue-on-error: true
-        run: ./scripts/samcli-vm/run-invoke-tests.sh
+        run: |
+          ./scripts/samcli-vm/run-invoke-tests.sh
+          echo "INVOKE_EXIT_CODE=$(cat /tmp/invoke_exit_code 2>/dev/null || echo 1)" >> $GITHUB_ENV
+
+      - name: Check test results
+        run: ./scripts/samcli-vm/check-test-results.sh
 
   # ensuring resources are clean post-test
   cleanup:
@@ -216,6 +138,7 @@ jobs:
           role-to-assume: ${{ secrets.SAMCLI_VM_ROLE_SYNC }}
           role-session-name: cleanup
           aws-region: ${{ secrets.REGION }}
+          role-duration-seconds: 1000
 
       - name: Comprehensive AWS resource cleanup
         timeout-minutes: 10
