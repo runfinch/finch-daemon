@@ -74,6 +74,12 @@ following these steps:
 6. To enable the service on every reboot - `sudo systemctl enable finch.service`
 7. To disable the service on every reboot - `sudo systemctl disable finch.service`
 
+## Reporting an issue
+
+If you encounter anything that seems wrong, please check out our [issues](https://github.com/runfinch/finch-daemon/issues) tab first — someone may have already encountered your problem! If it's there, please add to the existing issue thread.
+
+If you can't find an existing issue, feel free to open a new one. As a remninder, anything related to security should NOT go through regular reporting channels. Please refer to [Security](https://github.com/runfinch/finch-daemon?tab=security-ov-file#reporting-security-issues) for guidance on how to report such issues.
+
 -----
 
 
