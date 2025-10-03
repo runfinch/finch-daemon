@@ -58,8 +58,13 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Checkout finch-daemon repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout finch-daemon
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: recursive
 
       - name: Stop pre-existing services
         run: |
@@ -100,6 +105,13 @@ jobs:
           python -m pip install --upgrade pip
           make init
           samdev --version
+
+      - name: Debug - Check file structure
+        run: |
+          pwd
+          ls -la
+          ls -la scripts/ || echo "No scripts directory"
+          ls -la scripts/validate-test-results.sh || echo "validate-test-results.sh not found"
 
       - name: Run unit tests
         if: matrix.test_step.name == 'unit'
