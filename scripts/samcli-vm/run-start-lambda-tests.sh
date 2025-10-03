@@ -2,7 +2,7 @@
 set -e
 
 echo "=== START-LAMBDA TESTS - Started at $(date) ==="
-touch /tmp/start_lambda_output.txt
+touch /tmp/start_lambda_test_output.txt
 chown ec2-user:staff /tmp/start_lambda_output.txt
 su ec2-user -c "
   cd /Users/ec2-user/aws-sam-cli && \
@@ -13,28 +13,10 @@ su ec2-user -c "
   SAM_CLI_DEV='$SAM_CLI_DEV' \
   SAM_CLI_TELEMETRY='$SAM_CLI_TELEMETRY' \
   '$PYTHON_BINARY' -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short
-" 2>&1 | tee /tmp/start_lambda_output.txt || true
+" 2>&1 | tee /tmp/start_lambda_test_output.txt || true
 
-echo ""
-echo "=== PASSES ==="
-grep "PASSED" /tmp/start_lambda_output.txt || echo "No passes found"
+# Create empty expected failures file (should pass completely)
+touch expected_start_lambda_failures.txt
 
-echo ""
-echo "=== FAILURES ==="
-grep "FAILED" /tmp/start_lambda_output.txt || echo "No failures found"
-
-# Should pass completely per test guide
-if grep -q "FAILED" /tmp/start_lambda_output.txt; then
-  echo "❌ Start-lambda tests failed (should pass completely)"
-  grep "FAILED" /tmp/start_lambda_output.txt
-  echo ""
-  echo "=== FULL OUTPUT FOR DEBUGGING ==="
-  cat /tmp/start_lambda_output.txt
-  exit 1
-else
-  echo "✅ All start-lambda tests passed as expected"
-fi
-
-echo ""
-echo "=== PYTEST SUMMARY ==="
-grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" /tmp/start_lambda_output.txt | tail -1 || echo "No pytest summary found"
+# Validate test results
+$(dirname "$0")/../validate-test-results.sh /tmp/start_lambda_test_output.txt expected_start_lambda_failures.txt "Start-Lambda tests"

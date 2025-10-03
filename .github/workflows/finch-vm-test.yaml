@@ -12,7 +12,7 @@ on:
       - '**.md'
   workflow_dispatch:
 env:
-  GO_VERSION: '1.23.8'
+  GO_VERSION: '1.24.x'
 jobs:
   mac-test-e2e:
     runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
@@ -65,57 +65,34 @@ jobs:
           su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install lz4 automake autoconf libtool yq'
         shell: bash
 
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Checkout mainline finch repo
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          # We need to get all the git tags to make version injection work. See VERSION in Makefile for more detail.
+          ref: main
+          repository: runfinch/finch
           fetch-depth: 0
           persist-credentials: false
           submodules: recursive
 
-      - name: Configure workspace for ec2-user
-        run: |
-          # Ensure workspace is properly owned by ec2-user
-          chown -R ec2-user:staff ${{ github.workspace }}
+      - name: Checkout finch-daemon PR
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: recursive
+          path: finch-daemon-pr
 
-      # Install Finch
-      - name: Install Finch
-        run: |
-          echo "Installing Finch as ec2-user..."
-
-          # Run brew with custom environment
-          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install finch --cask'
-
-          # Verify installation
-          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew list | grep finch || echo "finch not installed"'
-          mkdir -p /private/var/run/finch-lima
-          cat /etc/passwd
-          chown ec2-user:daemon /private/var/run/finch-lima
-        shell: bash
-
-      # Build binaries
-      - name: Build binaries
-        run: |
-          echo "Building cross architecture binaries..."
-          su ec2-user -c 'cd ${{ github.workspace }} && STATIC=1 GOPROXY=direct GOOS=linux GOARCH=$(GOARCH) make'
-          su ec2-user -c 'finch vm remove -f'
-          cp -f ${{ github.workspace }}/bin/finch-daemon /Applications/Finch/finch-daemon/finch-daemon
-        shell: bash
-
-      # Initialize VM and check version
-      - name: Check Finch version
-        run: |
-          echo "Initializing VM and checking version..."
-          su ec2-user -c 'finch vm init'
-          sleep 5  # Wait for services to be ready
-          echo "Checking Finch version..."
-          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch curl --unix-socket /var/run/finch.sock -X GET http:/v1.43/version'
-        shell: bash
+      - name: Build and setup Finch VM
+        run: ./finch-daemon-pr/scripts/build-and-setup-finch-vm.sh
 
       # Run e2e tests
       - name: Run e2e tests
         run: |
           echo "Running e2e tests..."
-          su ec2-user -c 'make test-e2e-inside-vm'
+
+          su ec2-user -c 'finch version' || true
+          su ec2-user -c 'cd ${{ github.workspace }}/finch-daemon-pr && make test-e2e-inside-vm'
         shell: bash
 
       # Cleanup
