@@ -40,4 +40,4 @@ test_can_invoke_lambda_layer_successfully
 EOF
 
 # Validate test results
-$(dirname "$0")/../validate-test-results.sh /tmp/start_api_test_output.txt expected_start_api_failures.txt "Start-API tests"
+./scripts/validate-test-results.sh /tmp/start_api_test_output.txt expected_start_api_failures.txt "Start-API tests"
