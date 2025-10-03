@@ -2,8 +2,8 @@
 set -e
 
 echo "=== INVOKE TESTS - Started at $(date) ==="
-touch /tmp/invoke_output.txt
-chown ec2-user:staff /tmp/invoke_output.txt
+touch /tmp/invoke_test_output.txt
+chown ec2-user:staff /tmp/invoke_test_output.txt
 
 su ec2-user -c "
   cd /Users/ec2-user/aws-sam-cli && \
@@ -14,15 +14,7 @@ su ec2-user -c "
   SAM_CLI_DEV='$SAM_CLI_DEV' \
   SAM_CLI_TELEMETRY='$SAM_CLI_TELEMETRY' \
   '$PYTHON_BINARY' -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short
-" 2>&1 | tee /tmp/invoke_output.txt || true
-
-echo ""
-echo "=== PASSES ==="
-grep "PASSED" /tmp/invoke_output.txt || echo "No passes found"
-
-echo ""
-echo "=== FAILURES ==="
-grep "FAILED" /tmp/invoke_output.txt || echo "No failures found"
+" 2>&1 | tee /tmp/invoke_test_output.txt || true
 
 # test_invoke_with_error_during_image_build: Build error message differs from expected.
 # test_invoke_with_timeout_set_X_TimeoutFunction: Returns timeout message instead of empty string,
@@ -43,23 +35,5 @@ test_caching_two_layers_with_layer_cache_env_set
 test_successful_invoke
 EOF
 
-# Extract actual failures
-grep "FAILED" /tmp/invoke_output.txt | grep -o "test_[^[:space:]]*" > actual_invoke_failures.txt || true
-
-# Find unexpected failures
-UNEXPECTED=$(grep -v -f expected_invoke_failures.txt actual_invoke_failures.txt 2>/dev/null || true)
-
-if [ -n "$UNEXPECTED" ]; then
-  echo "❌ Unexpected failures found:"
-  echo "$UNEXPECTED"
-  echo ""
-  echo "=== FULL OUTPUT FOR DEBUGGING ==="
-  cat /tmp/invoke_output.txt
-  exit 1
-else
-  echo "✅ All failures were expected"
-fi
-
-echo ""
-echo "=== PYTEST SUMMARY ==="
-grep -E "=+ .*(failed|passed|skipped|deselected).* =+$" /tmp/invoke_output.txt | tail -1 || echo "No pytest summary found"
+# Validate test results
+$(dirname "$0")/../validate-test-results.sh /tmp/invoke_test_output.txt expected_invoke_failures.txt "Invoke tests"
