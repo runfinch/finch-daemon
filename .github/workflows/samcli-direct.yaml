@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   samcli-direct-test:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    # if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     timeout-minutes: 30 # start-api is the longest at ~ 20 minutes
     strategy:
