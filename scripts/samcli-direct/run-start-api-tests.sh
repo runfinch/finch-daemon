@@ -13,4 +13,4 @@ test_can_invoke_lambda_layer_successfully
 EOF
 
 # Validate test results
-./scripts/validate-test-results.sh start_api_output.txt expected_start_api_failures.txt "Start-API tests"
+$GITHUB_WORKSPACE/scripts/validate-test-results.sh start_api_output.txt expected_start_api_failures.txt "Start-API tests"
