@@ -9,4 +9,4 @@ python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb
 touch expected_start_lambda_failures.txt
 
 # Validate test results
-$(dirname "$0")/../validate-test-results.sh start_lambda_output.txt expected_start_lambda_failures.txt "Start-Lambda tests"
+$GITHUB_WORKSPACE/scripts/validate-test-results.sh start_lambda_output.txt expected_start_lambda_failures.txt "Start-Lambda tests"

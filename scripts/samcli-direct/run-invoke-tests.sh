@@ -19,4 +19,4 @@ test_building_new_rapid_image_removes_old_rapid_images
 EOF
 
 # Validate test results
-$(dirname "$0")/../validate-test-results.sh invoke_output.txt expected_invoke_failures.txt "Invoke tests"
+$GITHUB_WORKSPACE/scripts/validate-test-results.sh invoke_output.txt expected_invoke_failures.txt "Invoke tests"
