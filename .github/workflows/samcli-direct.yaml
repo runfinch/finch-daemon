@@ -4,6 +4,8 @@ on:
   pull_request:
     branches:
       - main
+    types:
+      - closed
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:
@@ -18,7 +20,7 @@ permissions:
 
 jobs:
   samcli-direct-test:
-    # if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     timeout-minutes: 30 # start-api is the longest at ~ 20 minutes
     strategy:
@@ -105,13 +107,6 @@ jobs:
           python -m pip install --upgrade pip
           make init
           samdev --version
-
-      - name: Debug - Check file structure
-        run: |
-          pwd
-          ls -la
-          ls -la scripts/ || echo "No scripts directory"
-          ls -la scripts/validate-test-results.sh || echo "validate-test-results.sh not found"
 
       - name: Run unit tests
         if: matrix.test_step.name == 'unit'

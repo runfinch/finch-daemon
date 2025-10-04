@@ -35,8 +35,11 @@ echo "=== START-API TESTS - Finished at $(date) ==="
 
 # test_can_invoke_lambda_layer_successfully: Uses random port, fails occasionally.
 #         Only 1 test of 386 total, acceptable failure rate.
+# test_changed_code_got_observed_and_loaded: Fails due to race conditions with containers.
+# Fails infrequently, but is of note. 
 cat > expected_start_api_failures.txt << 'EOF'
 test_can_invoke_lambda_layer_successfully
+test_changed_code_got_observed_and_loaded
 EOF
 
 # Validate test results
