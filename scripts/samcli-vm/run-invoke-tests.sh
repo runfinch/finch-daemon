@@ -36,4 +36,4 @@ test_successful_invoke
 EOF
 
 # Validate test results
-$(dirname "$0")/../validate-test-results.sh /tmp/invoke_test_output.txt expected_invoke_failures.txt "Invoke tests"
+$GITHUB_WORKSPACE/finch-daemon-pr/scripts/validate-test-results.sh /tmp/invoke_test_output.txt expected_invoke_failures.txt "Invoke tests"

@@ -159,8 +159,8 @@ jobs:
 
       - name: Patch SAM CLI for Docker image cleanup
         run: |
-          # Apply git patch to handle ImageNotFound exceptions for all Docker tests
-          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && git apply ${{ github.workspace }}/finch-daemon-pr/scripts/samcli-vm/invoke-teardown.patch'
+          # Apply patch to handle ImageNotFound exceptions for all Docker tests
+          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && patch -p1 tests/integration/local/invoke/test_integrations_cli.py < ${{ github.workspace }}/finch-daemon-pr/scripts/samcli-vm/invoke-teardown.patch'
         shell: bash
 
       - name: Run invoke tests
