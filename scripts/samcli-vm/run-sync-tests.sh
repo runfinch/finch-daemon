@@ -19,4 +19,4 @@ su ec2-user -c "
 touch expected_sync_failures.txt
 
 # Validate test results
-$(dirname "$0")/../validate-test-results.sh /tmp/sync_test_output.txt expected_sync_failures.txt "Sync tests"
+$GITHUB_WORKSPACE/finch-daemon-pr/scripts/validate-test-results.sh /tmp/sync_test_output.txt expected_sync_failures.txt "Sync tests"

@@ -19,4 +19,4 @@ su ec2-user -c "
 touch expected_start_lambda_failures.txt
 
 # Validate test results
-$(dirname "$0")/../validate-test-results.sh /tmp/start_lambda_test_output.txt expected_start_lambda_failures.txt "Start-Lambda tests"
+$GITHUB_WORKSPACE/finch-daemon-pr/scripts/validate-test-results.sh /tmp/start_lambda_test_output.txt expected_start_lambda_failures.txt "Start-Lambda tests"
