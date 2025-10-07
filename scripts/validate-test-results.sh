@@ -45,10 +45,7 @@ if echo "$SUMMARY_LINE" | grep -q "error"; then
 fi
 
 # Check for cleanup errors (infrastructure issues)
-CLEANUP_ERRORS=$(grep -E "(failed to delete task|remove_container|" \
-  -e "APIError.*(500|409)|container.delete\(\)|force=False.*noprune=False|" \
-  -e "image is being used by stopped container|unable to delete.*must be forced)" \
-  "$OUTPUT_FILE" || true)
+CLEANUP_ERRORS=$(grep -E "(failed to delete task|remove_container|APIError.*(500|409)|container.delete\(\)|force=False.*noprune=False|image is being used by stopped container|unable to delete.*must be forced)" "$OUTPUT_FILE" || true)
 
 # Check for unexpected failures
 if [ -n "$UNEXPECTED" ]; then
