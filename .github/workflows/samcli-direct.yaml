@@ -94,7 +94,7 @@ jobs:
           sleep 10
 
       - name: Checkout SAM CLI
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: aws/aws-sam-cli
           submodules: recursive
@@ -140,7 +140,7 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df
