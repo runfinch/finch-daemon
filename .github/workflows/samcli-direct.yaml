@@ -99,13 +99,16 @@ jobs:
           repository: aws/aws-sam-cli
           submodules: recursive
           path: aws-sam-cli
+          fetch-depth: 0
           fetch-tags: true
 
       - name: Checkout latest SAM CLI tag
         working-directory: aws-sam-cli
         run: |
-          LATEST_TAG=$(git tag --sort=-version:refname | head -1)
+          LATEST_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+          echo "Latest SAM CLI release tag found: $LATEST_TAG"
           git checkout $LATEST_TAG
+          echo "Checked out to: $(git describe --tags)"
 
       - name: Set up SAM CLI from source
         working-directory: aws-sam-cli
