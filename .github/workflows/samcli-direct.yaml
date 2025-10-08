@@ -4,8 +4,8 @@ on:
   pull_request:
     branches:
       - main
-    types:
-      - closed
+    # types:
+      # - closed
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:
@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   samcli-direct-test:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    # if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     timeout-minutes: 30 # start-api is the longest at ~ 20 minutes
     strategy:
@@ -97,6 +97,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: aws/aws-sam-cli
+          ref: $(curl -s https://api.github.com/repos/aws/aws-sam-cli/releases/latest | jq -r .tag_name)
           submodules: recursive
           path: aws-sam-cli
 
