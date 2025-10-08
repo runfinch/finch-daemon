@@ -31,7 +31,10 @@ if ! grep -E "=+ .*(failed|passed|skipped|deselected|error).* =+$" "$OUTPUT_FILE
 fi
 
 # Check for positive number of passes
-PASS_COUNT=$(grep -c "PASSED" "$OUTPUT_FILE" || echo "0")
+PASS_COUNT=$(grep -c "PASSED" "$OUTPUT_FILE" 2>/dev/null || echo "0")
+# Ensure PASS_COUNT is a valid integer
+PASS_COUNT=$(echo "$PASS_COUNT" | grep -o '[0-9]*' | head -1)
+PASS_COUNT=${PASS_COUNT:-0}
 if [ "$PASS_COUNT" -eq 0 ]; then
   echo "❌ No tests passed - got $PASS_COUNT passes"
   exit 1
