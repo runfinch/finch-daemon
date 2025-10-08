@@ -136,13 +136,19 @@ jobs:
           fi
         shell: bash
 
-      - name: Checkout SAM CLI
-        uses: actions/checkout@v4
+      - name: Checkout SAM CLI repo
+        uses: actions/checkout@v5
         with:
           repository: aws/aws-sam-cli
-          ref: $(curl -s https://api.github.com/repos/aws/aws-sam-cli/releases/latest | jq -r .tag_name)
           submodules: recursive
           path: aws-sam-cli
+          fetch-tags: true
+
+      - name: Checkout latest SAM CLI tag
+        working-directory: aws-sam-cli
+        run: |
+          LATEST_TAG=$(git tag --sort=-version:refname | head -1)
+          git checkout $LATEST_TAG
 
       - name: Set up SAM CLI from source
         run: |
