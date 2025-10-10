@@ -5,6 +5,16 @@ echo "=== INVOKE TESTS - Started at $(date) ==="
 touch /tmp/invoke_test_output.txt
 chown ec2-user:staff /tmp/invoke_test_output.txt
 
+echo "=== System Information ===" | tee -a /tmp/invoke_test_output.txt
+su ec2-user -c "uname -a" | tee -a /tmp/invoke_test_output.txt
+su ec2-user -c "arch" | tee -a /tmp/invoke_test_output.txt
+echo "=== Finch VM Status ===" | tee -a /tmp/invoke_test_output.txt
+su ec2-user -c "finch vm status" | tee -a /tmp/invoke_test_output.txt
+
+echo "=== Checking Rosetta Configuration ===" | tee -a /tmp/invoke_test_output.txt
+su ec2-user -c "cat /Users/ec2-user/.finch/finch.yaml" | tee -a /tmp/invoke_test_output.txt
+
+echo "=== Running Specific Failing Test with Extra Verbosity ===" | tee -a /tmp/invoke_test_output.txt
 su ec2-user -c "
   cd /Users/ec2-user/aws-sam-cli && \
   export PATH='/Users/ec2-user/Library/Python/$PYTHON_VERSION/bin:$PATH' && \
@@ -13,7 +23,7 @@ su ec2-user -c "
   BY_CANARY='$BY_CANARY' \
   SAM_CLI_DEV='$SAM_CLI_DEV' \
   SAM_CLI_TELEMETRY='$SAM_CLI_TELEMETRY' \
-  '$PYTHON_BINARY' -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short
+  '$PYTHON_BINARY' -m pytest tests/integration/local/invoke/runtimes/test_with_runtime_zips.py::TestWithDifferentLambdaRuntimeZips::test_custom_provided_runtime -vvs --no-header --showlocals
 " 2>&1 | tee /tmp/invoke_test_output.txt || true
 
 # test_invoke_with_error_during_image_build: Build error message differs from expected.
