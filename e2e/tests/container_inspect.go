@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/containerd/continuity/testutil/loopback"
 	"github.com/docker/go-connections/nat"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -104,25 +105,13 @@ func ContainerInspect(opt *option.Option, pOpt util.NewOpt) {
 			}
 
 			// setup devices
-			tmpFileOpt, _ := pOpt([]string{"touch", "/tmp/loopdev"})
-			command.Run(tmpFileOpt)
-			defer func() {
-				rmOpt, _ := pOpt([]string{"rm", "-f", "/tmp/loopdev"})
-				command.Run(rmOpt)
-			}()
-			ddOpt, _ := pOpt([]string{"dd", "if=/dev/zero", "of=/tmp/loopdev", "bs=4096", "count=1"})
-			command.Run(ddOpt)
-			loopDevOpt, _ := pOpt([]string{"losetup", "-f", "--show", "/tmp/loopdev"})
-			loopDev := command.StdoutStr(loopDevOpt)
-			Expect(loopDev).ShouldNot(BeEmpty())
-			defer func() {
-				detachOpt, _ := pOpt([]string{"losetup", "-d", loopDev})
-				command.Run(detachOpt)
-			}()
+			lo, err := loopback.New(4096)
+			Expect(err).Should(BeNil())
+			defer lo.Close()
 			createOptions.HostConfig.Devices = []types.DeviceMapping{
 				{
-					PathOnHost:        loopDev,
-					PathInContainer:   loopDev,
+					PathOnHost:        lo.Device,
+					PathInContainer:   lo.Device,
 					CgroupPermissions: "rwm",
 				},
 			}
