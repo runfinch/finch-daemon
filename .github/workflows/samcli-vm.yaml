@@ -1,6 +1,9 @@
 name: samcli-vm
 
 on:
+  pull_request:
+    branches:
+      - main
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:
@@ -96,7 +99,7 @@ jobs:
       - name: Checkout mainline finch repo
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          ref: main
+          ref: 579d3266c5fb1be6b453cab87047256727de07a2
           repository: runfinch/finch
           fetch-depth: 0
           persist-credentials: false
@@ -133,12 +136,22 @@ jobs:
           fi
         shell: bash
 
-      - name: Checkout SAM CLI
-        uses: actions/checkout@v4
+      - name: Checkout SAM CLI repo
+        uses: actions/checkout@v5
         with:
           repository: aws/aws-sam-cli
           submodules: recursive
           path: aws-sam-cli
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Checkout latest SAM CLI tag
+        working-directory: aws-sam-cli
+        run: |
+          LATEST_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+          echo "Latest SAM CLI release tag found: $LATEST_TAG"
+          git checkout $LATEST_TAG
+          echo "Checked out to: $(git describe --tags)"
 
       - name: Set up SAM CLI from source
         run: |
