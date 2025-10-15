@@ -1,6 +1,9 @@
 name: samcli-vm
 
 on:
+  pull_request:
+    branches:
+      - main
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:
@@ -111,6 +114,16 @@ jobs:
           submodules: recursive
           path: finch-daemon-pr
 
+      - name: Configure Finch to use QEMU
+        run: |
+          echo "Original config:"
+          su ec2-user -c 'cat ~/.finch/finch.yaml'
+          echo "Switching Finch to use QEMU for stability..."
+          su ec2-user -c 'sed -i "" "s/vmType: qemu/vmType: vz/g" ~/.finch/finch.yaml'
+          su ec2-user -c 'sed -i "" "s/rosetta: true/rosetta: false/g" ~/.finch/finch.yaml'
+          echo "Updated config:"
+          su ec2-user -c 'cat ~/.finch/finch.yaml'
+
       - name: Build and setup Finch VM
         run: ./finch-daemon-pr/scripts/build-and-setup-finch-vm.sh
 
@@ -133,12 +146,19 @@ jobs:
           fi
         shell: bash
 
+      - name: Get latest SAM CLI tag
+        id: sam-tag
+        run: |
+          TAG=$(curl -s https://api.github.com/repos/aws/aws-sam-cli/releases/latest | jq -r .tag_name)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
       - name: Checkout SAM CLI
         uses: actions/checkout@v4
         with:
           repository: aws/aws-sam-cli
           submodules: recursive
           path: aws-sam-cli
+          ref: ${{ steps.sam-tag.outputs.tag }}
 
       - name: Set up SAM CLI from source
         run: |
@@ -153,34 +173,30 @@ jobs:
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/${{ env.PYTHON_VERSION }}/bin:$PATH" && samdev --version'
         shell: bash
 
+
+      - name: Check VM Memory
+        run: |
+          echo "Checking Memory..."
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch free -h'
+          echo "Checking Disk Space..."
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch sudo df -h'
+
       - name: Run unit tests
-        timeout-minutes: 30
         run: ./finch-daemon-pr/scripts/samcli-vm/run-unit-tests.sh
 
-      - name: Patch SAM CLI for Docker image cleanup
-        run: |
-          # Apply patch to handle ImageNotFound exceptions for all Docker tests
-          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && patch -p1 tests/integration/local/invoke/test_integrations_cli.py < ${{ github.workspace }}/finch-daemon-pr/scripts/samcli-vm/invoke-teardown.patch'
-        shell: bash
-
       - name: Run invoke tests
-        timeout-minutes: 40
         run: ./finch-daemon-pr/scripts/samcli-vm/run-invoke-tests.sh
 
       - name: Run start-api tests
-        timeout-minutes: 70
         run: ./finch-daemon-pr/scripts/samcli-vm/run-start-api-tests.sh
 
       - name: Run sync tests
-        timeout-minutes: 20
         run: ./finch-daemon-pr/scripts/samcli-vm/run-sync-tests.sh
 
       - name: Run package tests
-        timeout-minutes: 10
         run: ./finch-daemon-pr/scripts/samcli-vm/run-package-tests.sh
 
       - name: Run start-lambda tests
-        timeout-minutes: 30
         run: ./finch-daemon-pr/scripts/samcli-vm/run-start-lambda-tests.sh
 
   # ensuring resources are clean post-test
@@ -215,5 +231,4 @@ jobs:
           aws-region: ${{ secrets.REGION }}
 
       - name: Comprehensive AWS resource cleanup
-        timeout-minutes: 10
         run: ./scripts/cleanup-aws-resources.sh
