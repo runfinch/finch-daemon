@@ -34,7 +34,7 @@ jobs:
           - name: start-api
     env:
       AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
-      DOCKER_HOST: unix:///run/finch.sock
+      DOCKER_HOST: unix:///var/run/finch.sock
       DOCKER_CONFIG: $HOME/.finch
       BY_CANARY: true # allows full testing
       SAM_CLI_DEV: 1
@@ -67,6 +67,14 @@ jobs:
           persist-credentials: false
           submodules: recursive
 
+      # Note: samcli-direct doesn't use Finch CLI, but keeping for reference
+      # - name: Checkout specific finch repo commit (if needed)
+      #   uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      #   with:
+      #     ref: 579d3266c5fb1be6b453cab87047256727de07a2
+      #     repository: runfinch/finch
+      #     path: finch-cli
+
       - name: Stop pre-existing services
         run: |
           sudo systemctl stop docker
@@ -78,7 +86,7 @@ jobs:
 
       - name: Clean up Daemon socket
         run: |
-          sudo rm -f /run/finch.sock
+          sudo rm -f /var/run/finch.sock
           sudo rm -f /run/finch.pid
           sudo rm -f /run/finch-credential.sock
 
@@ -96,10 +104,9 @@ jobs:
       - name: Get latest SAM CLI release
         id: samcli-release
         run: |
-          # Pin to v1.144.0 until v1.145.0 Finch compatibility issues are resolved
-          LATEST_TAG="v1.144.0"
+          LATEST_TAG=$(curl -s https://api.github.com/repos/aws/aws-sam-cli/releases/latest | jq -r '.tag_name')
           echo "latest-tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-          echo "Using SAM CLI version: $LATEST_TAG (pinned due to v1.145.0 compatibility issues)"
+          echo "Using SAM CLI version: $LATEST_TAG"
 
       - name: Checkout SAM CLI
         uses: actions/checkout@v4

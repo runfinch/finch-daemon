@@ -16,7 +16,7 @@ env:
   BY_CANARY: true # allows full testing
   SAM_CLI_DEV: 1
   SAM_CLI_TELEMETRY: 0
-  DOCKER_HOST: unix:///Applications/Finch/lima/data/finch/sock/finch.sock
+  DOCKER_HOST: unix:////Applications/Finch/lima/data/finch/sock/finch.sock
   DOCKER_CONFIG: /Users/ec2-user/.finch
 
 permissions:
@@ -96,20 +96,20 @@ jobs:
           su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install lz4 automake autoconf libtool yq'
         shell: bash
 
-      - name: Checkout mainline finch repo
+      - name: Checkout specific finch repo commit
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          ref: main
+          ref: 579d3266c5fb1be6b453cab87047256727de07a2
           repository: runfinch/finch
           fetch-depth: 0
           persist-credentials: false
           submodules: recursive
 
-      - name: Set finch-core to latest commit
-        run: |
-          cd deps/finch-core
-          git fetch --all --tags
-          git checkout origin/main
+      # - name: Set finch-core to latest commit
+      #   run: |
+      #     cd deps/finch-core
+      #     git fetch --all --tags
+      #     git checkout origin/main
 
       - name: Checkout finch-daemon PR
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -145,10 +145,9 @@ jobs:
       - name: Get latest SAM CLI release
         id: samcli-release
         run: |
-          # Pin to v1.144.0 until v1.145.0 Finch compatibility issues are resolved
-          LATEST_TAG="v1.144.0"
+          LATEST_TAG=$(curl -s https://api.github.com/repos/aws/aws-sam-cli/releases/latest | jq -r '.tag_name')
           echo "latest-tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-          echo "Using SAM CLI version: $LATEST_TAG (pinned due to v1.145.0 compatibility issues)"
+          echo "Using SAM CLI version: $LATEST_TAG"
 
       - name: Checkout SAM CLI
         uses: actions/checkout@v4
