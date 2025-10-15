@@ -177,6 +177,15 @@ jobs:
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && patch -p1 tests/integration/local/invoke/test_integrations_cli.py < ${{ github.workspace }}/finch-daemon-pr/scripts/samcli-vm/invoke-teardown.patch'
         shell: bash
 
+      - name: Check VMM type
+        run: |
+          echo "Checking VMM configuration..."
+          echo "Checking lima instances..."
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl list' || echo "Lima list failed"
+          echo "Checking finch.yaml config..."
+          su ec2-user -c 'cat ~/.finch/finch.yaml | grep -E "vmType|arch"' || echo "Config check failed"
+        shell: bash
+
       - name: Verify Docker socket connectivity
         run: |
           echo "Testing Docker socket connectivity..."
