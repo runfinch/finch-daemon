@@ -142,10 +142,18 @@ jobs:
           fi
         shell: bash
 
+      - name: Get latest SAM CLI release
+        id: samcli-release
+        run: |
+          LATEST_TAG=$(curl -s https://api.github.com/repos/aws/aws-sam-cli/releases/latest | jq -r '.tag_name')
+          echo "latest-tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "Using SAM CLI version: $LATEST_TAG"
+
       - name: Checkout SAM CLI
         uses: actions/checkout@v4
         with:
           repository: aws/aws-sam-cli
+          ref: ${{ steps.samcli-release.outputs.latest-tag }}
           submodules: recursive
           path: aws-sam-cli
 
