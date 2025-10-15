@@ -119,7 +119,7 @@ jobs:
           echo "Original config:"
           su ec2-user -c 'cat ~/.finch/finch.yaml'
           echo "Switching Finch to use QEMU for stability..."
-          su ec2-user -c 'sed -i "" "s/vmType: vz/vmType: qemu/g" ~/.finch/finch.yaml'
+          su ec2-user -c 'sed -i "" "s/vmType: qemu/vmType: vz/g" ~/.finch/finch.yaml'
           su ec2-user -c 'sed -i "" "s/rosetta: true/rosetta: false/g" ~/.finch/finch.yaml'
           echo "Updated config:"
           su ec2-user -c 'cat ~/.finch/finch.yaml'
