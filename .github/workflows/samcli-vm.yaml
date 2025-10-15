@@ -96,10 +96,10 @@ jobs:
           su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install lz4 automake autoconf libtool yq'
         shell: bash
 
-      - name: Checkout specific finch repo commit
+      - name: Checkout Finch v1.11.0
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          ref: 579d3266c5fb1be6b453cab87047256727de07a2
+          ref: v1.11.0
           repository: runfinch/finch
           fetch-depth: 0
           persist-credentials: false
@@ -183,7 +183,7 @@ jobs:
           echo "Checking lima instances..."
           su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl list' || echo "Lima list failed"
           echo "Checking finch.yaml config..."
-          su ec2-user -c 'cat ~/.finch/finch.yaml | grep -E "vmType|arch"' || echo "Config check failed"
+          su ec2-user -c 'cat ~/.finch/finch.yaml || echo "Config check failed"
         shell: bash
 
       - name: Verify Docker socket connectivity
