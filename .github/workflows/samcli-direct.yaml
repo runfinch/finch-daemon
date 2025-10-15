@@ -123,6 +123,11 @@ jobs:
           make init
           samdev --version
 
+      - name: Verify Docker socket connectivity
+        run: |
+          echo "Testing Docker socket connectivity..."
+          docker version
+
       - name: Run unit tests
         if: matrix.test_step.name == 'unit'
         run: ./scripts/samcli-direct/run-unit-tests.sh
