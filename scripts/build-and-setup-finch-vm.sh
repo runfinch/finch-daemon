@@ -9,8 +9,7 @@ chown -R ec2-user:staff "$GITHUB_WORKSPACE"
 
 # Build and Install Finch from upstream
 echo "Building Finch from upstream..."
-FINCH_PATH="${FINCH_ROOT_PATH:-$GITHUB_WORKSPACE}"
-su ec2-user -c "cd $FINCH_PATH && make clean && make FINCH_OS_IMAGE_LOCATION_ROOT=/Applications/Finch && make install PREFIX=Applications/Finch"
+su ec2-user -c "cd $GITHUB_WORKSPACE && make clean && make FINCH_OS_IMAGE_LOCATION_ROOT=/Applications/Finch && make install PREFIX=Applications/Finch"
 
 # Build finch-daemon from PR and inject into VM
 echo "Building finch-daemon from PR..."
