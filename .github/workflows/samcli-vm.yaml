@@ -106,35 +106,12 @@ jobs:
           submodules: recursive
           path: finch
 
-      - name: Debug finch directory structure
-        working-directory: finch
-        run: |
-          echo "Current directory: $(pwd)"
-          echo "Directory contents:"
-          ls -la
-          echo "Looking for finch-core:"
-          find . -name "finch-core" -type d || echo "finch-core not found"
-          echo "Git submodules:"
-          git submodule status || echo "No submodules found"
-
       - name: Set finch-core to latest commit
         working-directory: finch
         run: |
-          if [ -d "finch-core" ]; then
-            cd finch-core
-            git fetch --all --tags
-            git checkout origin/main
-          else
-            echo "finch-core directory not found, initializing submodules..."
-            git submodule update --init --recursive
-            if [ -d "finch-core" ]; then
-              cd finch-core
-              git fetch --all --tags
-              git checkout origin/main
-            else
-              echo "finch-core still not found after submodule init"
-            fi
-          fi
+          cd deps/finch-core
+          git fetch --all --tags
+          git checkout origin/main
 
       - name: Checkout finch-daemon PR
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
