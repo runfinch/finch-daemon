@@ -120,6 +120,14 @@ jobs:
           submodules: recursive
           path: finch-daemon-pr
 
+      - name: Configure Finch to use QEMU
+        run: |
+          echo "Switching Finch to use QEMU for stability..."
+          su ec2-user -c 'sed -i "" "s/vmType: vz/vmType: qemu/g" ~/.finch/finch.yaml'
+          su ec2-user -c 'sed -i "" "s/rosetta: true/rosetta: false/g" ~/.finch/finch.yaml'
+          echo "Updated config:"
+          su ec2-user -c 'cat ~/.finch/finch.yaml'
+
       - name: Build and setup Finch VM
         run: ./finch-daemon-pr/scripts/build-and-setup-finch-vm.sh
 
