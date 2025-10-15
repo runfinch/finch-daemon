@@ -30,10 +30,11 @@ test_invoke_with_timeout_set_0_TimeoutFunction
 test_invoke_with_timeout_set_1_TimeoutFunctionWithParameter
 test_invoke_with_timeout_set_2_TimeoutFunctionWithStringParameter
 test_building_new_rapid_image_removes_old_rapid_images
-test_caching_two_layers
-test_caching_two_layers_with_layer_cache_env_set
-test_successful_invoke
 EOF
+# remove these for now, we want them to be highlighted
+# test_caching_two_layers
+# test_caching_two_layers_with_layer_cache_env_set
+# test_successful_invoke
 
 # Validate test results
 $GITHUB_WORKSPACE/finch-daemon-pr/scripts/validate-test-results.sh /tmp/invoke_test_output.txt expected_invoke_failures.txt "Invoke tests"

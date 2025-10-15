@@ -173,6 +173,14 @@ jobs:
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/${{ env.PYTHON_VERSION }}/bin:$PATH" && samdev --version'
         shell: bash
 
+
+      - name: Check VM Memory
+        run: |
+          echo "Checking Memory..."
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch free -h'
+          echo "Checking Disk Space..."
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch sudo df -h'
+
       - name: Run unit tests
         run: ./finch-daemon-pr/scripts/samcli-vm/run-unit-tests.sh
 
