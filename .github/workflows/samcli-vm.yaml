@@ -104,8 +104,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
           submodules: recursive
+          path: finch
 
       - name: Set finch-core to latest commit
+        working-directory: finch
         run: |
           cd finch-core
           git fetch --all --tags
@@ -121,7 +123,9 @@ jobs:
           path: finch-daemon-pr
 
       - name: Build and setup Finch VM
-        run: ./finch-daemon-pr/scripts/build-and-setup-finch-vm.sh
+        run: |
+          export FINCH_ROOT_PATH="${{ github.workspace }}/finch"
+          ./finch-daemon-pr/scripts/build-and-setup-finch-vm.sh
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
