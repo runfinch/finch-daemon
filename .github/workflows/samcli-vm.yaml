@@ -184,8 +184,8 @@ jobs:
       - name: Run unit tests
         run: ./finch-daemon-pr/scripts/samcli-vm/run-unit-tests.sh
 
-      # - name: Run invoke tests
-      #   run: ./finch-daemon-pr/scripts/samcli-vm/run-invoke-tests.sh
+      - name: Run invoke tests
+        run: ./finch-daemon-pr/scripts/samcli-vm/run-invoke-tests.sh
 
       - name: Run start-api tests
         run: ./finch-daemon-pr/scripts/samcli-vm/run-start-api-tests.sh
