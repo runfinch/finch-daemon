@@ -114,6 +114,16 @@ jobs:
           submodules: recursive
           path: finch-daemon-pr
 
+      - name: Configure Finch to use QEMU
+        run: |
+          echo "Original config:"
+          su ec2-user -c 'cat ~/.finch/finch.yaml'
+          echo "Switching Finch to use QEMU for stability..."
+          su ec2-user -c 'sed -i "" "s/vmType: vz/vmType: qemu/g" ~/.finch/finch.yaml'
+          su ec2-user -c 'sed -i "" "s/rosetta: true/rosetta: false/g" ~/.finch/finch.yaml'
+          echo "Updated config:"
+          su ec2-user -c 'cat ~/.finch/finch.yaml'
+
       - name: Build and setup Finch VM
         run: ./finch-daemon-pr/scripts/build-and-setup-finch-vm.sh
 
@@ -164,27 +174,21 @@ jobs:
         shell: bash
 
       - name: Run unit tests
-        timeout-minutes: 30
         run: ./finch-daemon-pr/scripts/samcli-vm/run-unit-tests.sh
 
       - name: Run invoke tests
-        timeout-minutes: 40
         run: ./finch-daemon-pr/scripts/samcli-vm/run-invoke-tests.sh
 
       - name: Run start-api tests
-        timeout-minutes: 70
         run: ./finch-daemon-pr/scripts/samcli-vm/run-start-api-tests.sh
 
       - name: Run sync tests
-        timeout-minutes: 20
         run: ./finch-daemon-pr/scripts/samcli-vm/run-sync-tests.sh
 
       - name: Run package tests
-        timeout-minutes: 10
         run: ./finch-daemon-pr/scripts/samcli-vm/run-package-tests.sh
 
       - name: Run start-lambda tests
-        timeout-minutes: 30
         run: ./finch-daemon-pr/scripts/samcli-vm/run-start-lambda-tests.sh
 
   # ensuring resources are clean post-test
@@ -219,5 +223,4 @@ jobs:
           aws-region: ${{ secrets.REGION }}
 
       - name: Comprehensive AWS resource cleanup
-        timeout-minutes: 10
         run: ./scripts/cleanup-aws-resources.sh
