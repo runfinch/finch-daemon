@@ -145,9 +145,10 @@ jobs:
       - name: Get latest SAM CLI release
         id: samcli-release
         run: |
-          LATEST_TAG=$(curl -s https://api.github.com/repos/aws/aws-sam-cli/releases/latest | jq -r '.tag_name')
+          # Pin to v1.144.0 until v1.145.0 Finch compatibility issues are resolved
+          LATEST_TAG="v1.144.0"
           echo "latest-tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-          echo "Using SAM CLI version: $LATEST_TAG"
+          echo "Using SAM CLI version: $LATEST_TAG (pinned due to v1.145.0 compatibility issues)"
 
       - name: Checkout SAM CLI
         uses: actions/checkout@v4
