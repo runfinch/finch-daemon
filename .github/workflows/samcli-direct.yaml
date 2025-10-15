@@ -34,7 +34,7 @@ jobs:
           - name: start-api
     env:
       AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
-      DOCKER_HOST: unix:///run/finch.sock
+      DOCKER_HOST: unix:///var/run/finch.sock
       DOCKER_CONFIG: $HOME/.finch
       BY_CANARY: true # allows full testing
       SAM_CLI_DEV: 1
@@ -78,7 +78,7 @@ jobs:
 
       - name: Clean up Daemon socket
         run: |
-          sudo rm -f /run/finch.sock
+          sudo rm -f /var/run/finch.sock
           sudo rm -f /run/finch.pid
           sudo rm -f /run/finch-credential.sock
 
@@ -144,7 +144,7 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     needs: samcli-direct-test
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    # if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
