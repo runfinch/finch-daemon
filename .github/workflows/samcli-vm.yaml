@@ -153,13 +153,13 @@ jobs:
       - name: Get SAM CLI release
         id: samcli-release
         run: |
-          # Pin to v1.144.0 for VM test stability
-          LATEST_TAG="v1.144.0"
+          # Pin specific version (1.144 base, 1.145 new)
+          LATEST_TAG="v1.145.0"
           echo "latest-tag=$LATEST_TAG" >> $GITHUB_OUTPUT
           echo "Using SAM CLI version: $LATEST_TAG (pinned for VM stability)"
 
       - name: Checkout SAM CLI
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: aws/aws-sam-cli
           ref: ${{ steps.samcli-release.outputs.latest-tag }}
@@ -246,7 +246,7 @@ jobs:
           sudo rm -rf /tmp/finch-* || true
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df
