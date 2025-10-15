@@ -183,7 +183,7 @@ jobs:
           echo "Checking lima instances..."
           su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl list' || echo "Lima list failed"
           echo "Checking finch.yaml config..."
-          su ec2-user -c 'cat ~/.finch/finch.yaml || echo "Config check failed"
+          su ec2-user -c 'cat ~/.finch/finch.yaml || echo "Config check failed"'
         shell: bash
 
       - name: Verify Docker socket connectivity
