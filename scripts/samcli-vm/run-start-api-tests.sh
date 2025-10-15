@@ -3,7 +3,7 @@ set -e
 
 echo "=== START-API TESTS - Started at $(date) ==="
 touch /tmp/start_api_test_output.txt
-chown ec2-user:staff /tmp/start_api_output.txt
+chown ec2-user:staff /tmp/start_api_test_output.txt
 
 # Start background monitor to show progress
 (
