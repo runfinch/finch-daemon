@@ -1,6 +1,9 @@
 name: samcli-vm
 
 on:
+  pull_request:
+    branches:
+      - main
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:
@@ -93,23 +96,37 @@ jobs:
           su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install lz4 automake autoconf libtool yq'
         shell: bash
 
-      - name: Checkout mainline finch repo
+      - name: Checkout Finch v1.11.0
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          ref: main
+          ref: v1.11.0
           repository: runfinch/finch
           fetch-depth: 0
           persist-credentials: false
           submodules: recursive
 
+      # - name: Set finch-core to latest commit
+      #   run: |
+      #     cd deps/finch-core
+      #     git fetch --all --tags
+      #     git checkout origin/main
+
       - name: Checkout finch-daemon PR
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.head_ref || 'main' }}
           fetch-depth: 0
           persist-credentials: false
           submodules: recursive
           path: finch-daemon-pr
+
+      - name: Configure Finch to use QEMU
+        run: |
+          echo "Switching Finch to use QEMU for stability..."
+          su ec2-user -c 'sed -i "" "s/vmType: vz/vmType: qemu/g" ~/.finch/finch.yaml'
+          su ec2-user -c 'sed -i "" "s/rosetta: true/rosetta: false/g" ~/.finch/finch.yaml'
+          echo "Updated config:"
+          su ec2-user -c 'cat ~/.finch/finch.yaml'
 
       - name: Build and setup Finch VM
         run: ./finch-daemon-pr/scripts/build-and-setup-finch-vm.sh
@@ -133,10 +150,19 @@ jobs:
           fi
         shell: bash
 
+      - name: Get SAM CLI release
+        id: samcli-release
+        run: |
+          # Pin specific version (1.144 base, 1.145 new)
+          LATEST_TAG="v1.145.0"
+          echo "latest-tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "Using SAM CLI version: $LATEST_TAG (pinned for VM stability)"
+
       - name: Checkout SAM CLI
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: aws/aws-sam-cli
+          ref: ${{ steps.samcli-release.outputs.latest-tag }}
           submodules: recursive
           path: aws-sam-cli
 
@@ -153,15 +179,30 @@ jobs:
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/${{ env.PYTHON_VERSION }}/bin:$PATH" && samdev --version'
         shell: bash
 
-      - name: Run unit tests
-        timeout-minutes: 30
-        run: ./finch-daemon-pr/scripts/samcli-vm/run-unit-tests.sh
-
       - name: Patch SAM CLI for Docker image cleanup
         run: |
           # Apply patch to handle ImageNotFound exceptions for all Docker tests
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && patch -p1 tests/integration/local/invoke/test_integrations_cli.py < ${{ github.workspace }}/finch-daemon-pr/scripts/samcli-vm/invoke-teardown.patch'
         shell: bash
+
+      - name: Check VMM type
+        run: |
+          echo "Checking VMM configuration..."
+          echo "Checking lima instances..."
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl list' || echo "Lima list failed"
+          echo "Checking finch.yaml config..."
+          su ec2-user -c 'cat ~/.finch/finch.yaml || echo "Config check failed"'
+        shell: bash
+
+      - name: Verify Docker socket connectivity
+        run: |
+          echo "Testing Docker socket connectivity..."
+          su ec2-user -c 'docker version'
+        shell: bash
+
+      - name: Run unit tests
+        timeout-minutes: 30
+        run: ./finch-daemon-pr/scripts/samcli-vm/run-unit-tests.sh
 
       - name: Run invoke tests
         timeout-minutes: 40
@@ -205,7 +246,7 @@ jobs:
           sudo rm -rf /tmp/finch-* || true
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df

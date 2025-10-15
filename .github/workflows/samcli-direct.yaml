@@ -4,8 +4,8 @@ on:
   pull_request:
     branches:
       - main
-    types:
-      - closed
+    # types:
+    #   - closed
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:
@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   samcli-direct-test:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    # if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     timeout-minutes: 30 # start-api is the longest at ~ 20 minutes
     strategy:
@@ -34,7 +34,7 @@ jobs:
           - name: start-api
     env:
       AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
-      DOCKER_HOST: unix:///run/finch.sock
+      DOCKER_HOST: unix:///var/run/finch.sock
       DOCKER_CONFIG: $HOME/.finch
       BY_CANARY: true # allows full testing
       SAM_CLI_DEV: 1
@@ -67,6 +67,14 @@ jobs:
           persist-credentials: false
           submodules: recursive
 
+      # Note: samcli-direct doesn't use Finch CLI, but keeping for reference
+      # - name: Checkout specific finch repo commit (if needed)
+      #   uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      #   with:
+      #     ref: 579d3266c5fb1be6b453cab87047256727de07a2
+      #     repository: runfinch/finch
+      #     path: finch-cli
+
       - name: Stop pre-existing services
         run: |
           sudo systemctl stop docker
@@ -78,7 +86,7 @@ jobs:
 
       - name: Clean up Daemon socket
         run: |
-          sudo rm -f /run/finch.sock
+          sudo rm -f /var/run/finch.sock
           sudo rm -f /run/finch.pid
           sudo rm -f /run/finch-credential.sock
 
@@ -93,10 +101,18 @@ jobs:
           sudo bin/finch-daemon --debug --socket-owner $UID 2>&1 | tee finch-daemon.log &
           sleep 10
 
+      - name: Get latest SAM CLI release
+        id: samcli-release
+        run: |
+          LATEST_TAG=$(curl -s https://api.github.com/repos/aws/aws-sam-cli/releases/latest | jq -r '.tag_name')
+          echo "latest-tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "Using SAM CLI version: $LATEST_TAG"
+
       - name: Checkout SAM CLI
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: aws/aws-sam-cli
+          ref: ${{ steps.samcli-release.outputs.latest-tag }}
           submodules: recursive
           path: aws-sam-cli
 
@@ -106,6 +122,11 @@ jobs:
           python -m pip install --upgrade pip
           make init
           samdev --version
+
+      - name: Verify Docker socket connectivity
+        run: |
+          echo "Testing Docker socket connectivity..."
+          docker version
 
       - name: Run unit tests
         if: matrix.test_step.name == 'unit'
@@ -140,7 +161,7 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df
