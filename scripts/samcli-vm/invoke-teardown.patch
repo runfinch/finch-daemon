@@ -1,0 +1,43 @@
+--- a/tests/integration/local/invoke/test_integrations_cli.py
++++ b/tests/integration/local/invoke/test_integrations_cli.py
+@@ -755,7 +755,12 @@
+         docker_client = docker.from_env()
+         samcli_images = docker_client.images.list(name="samcli/lambda")
+         for image in samcli_images:
+-            docker_client.images.remove(image.id)
++            try:
++                docker_client.images.remove(image.id, force=True)
++            except docker.errors.ImageNotFound:
++                print(f"Image {image.id} was not found. It may have been removed already.")
++            except Exception as e:
++                print(f"An error occurred while trying to remove image {image.id}: {str(e)}")
+ 
+         shutil.rmtree(str(self.layer_cache), ignore_errors=True)
+ 
+@@ -772,7 +777,12 @@
+         docker_client = docker.from_env()
+         samcli_images = docker_client.images.list(name="samcli/lambda")
+         for image in samcli_images:
+-            docker_client.images.remove(image.id)
++            try:
++                docker_client.images.remove(image.id, force=True)
++            except docker.errors.ImageNotFound:
++                print(f"Image {image.id} was not found. It may have been removed already.")
++            except Exception as e:
++                print(f"An error occurred while trying to remove image {image.id}: {str(e)}")
+         integ_layer_cache_dir = Path().home().joinpath("integ_layer_cache")
+         if integ_layer_cache_dir.exists():
+             shutil.rmtree(str(integ_layer_cache_dir))
+@@ -1012,7 +1022,12 @@
+         docker_client = docker.from_env()
+         samcli_images = docker_client.images.list(name="samcli/lambda")
+         for image in samcli_images:
+-            docker_client.images.remove(image.id)
++            try:
++                docker_client.images.remove(image.id, force=True)
++            except docker.errors.ImageNotFound:
++                print(f"Image {image.id} was not found. It may have been removed already.")
++            except Exception as e:
++                print(f"An error occurred while trying to remove image {image.id}: {str(e)}")
+ 
+     def test_layer_does_not_exist(self):
