@@ -114,7 +114,7 @@ jobs:
       - name: Checkout finch-daemon PR
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.head_ref || 'main' }}
           fetch-depth: 0
           persist-credentials: false
           submodules: recursive
@@ -165,12 +165,6 @@ jobs:
       - name: Run unit tests
         timeout-minutes: 30
         run: ./finch-daemon-pr/scripts/samcli-vm/run-unit-tests.sh
-
-      - name: Patch SAM CLI for Docker image cleanup
-        run: |
-          # Apply patch to handle ImageNotFound exceptions for all Docker tests
-          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && patch -p1 tests/integration/local/invoke/test_integrations_cli.py < ${{ github.workspace }}/finch-daemon-pr/scripts/samcli-vm/invoke-teardown.patch'
-        shell: bash
 
       - name: Run invoke tests
         timeout-minutes: 40
