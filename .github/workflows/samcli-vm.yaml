@@ -102,6 +102,12 @@ jobs:
           persist-credentials: false
           submodules: recursive
 
+      - name: Set finch-core to latest commit
+        run: |
+          cd finch-core
+          git fetch --all --tags
+          git checkout origin/main
+
       - name: Checkout finch-daemon PR
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
