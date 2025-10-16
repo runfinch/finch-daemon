@@ -131,18 +131,45 @@ jobs:
           submodules: recursive
           path: finch-daemon-pr
 
-      - name: Configure Finch for macOS 15 compatibility
+      - name: Configure Finch to use VZ with Rosetta
         run: |
           echo "Original config:"
           su ec2-user -c 'cat ~/.finch/finch.yaml || echo "No config file found"'
-          echo "Using QEMU for macOS 15 stability"
-          su ec2-user -c 'yq eval ".vmType = \"qemu\"" -i ~/.finch/finch.yaml'
-          su ec2-user -c 'yq eval ".rosetta = false" -i ~/.finch/finch.yaml'
+          echo "Configuring Finch to use VZ with Rosetta for optimal performance"
+          su ec2-user -c 'yq eval ".vmType = \"vz\"" -i ~/.finch/finch.yaml'
+          su ec2-user -c 'yq eval ".rosetta = true" -i ~/.finch/finch.yaml'
           echo "Updated config:"
           su ec2-user -c 'cat ~/.finch/finch.yaml'
 
       - name: Build and setup Finch VM
         run: ./finch-daemon-pr/scripts/build-and-setup-finch-vm.sh
+
+      - name: Verify Finch socket and configuration
+        run: |
+          echo "=== Finch Socket Verification ==="
+          echo "Expected socket path: /Applications/Finch/lima/data/finch/sock/finch.sock"
+          echo "DOCKER_HOST environment: $DOCKER_HOST"
+          
+          # Check if socket exists and is accessible
+          if [ -S "/Applications/Finch/lima/data/finch/sock/finch.sock" ]; then
+            echo "✓ Finch socket exists"
+            ls -la /Applications/Finch/lima/data/finch/sock/finch.sock
+          else
+            echo "✗ Finch socket not found"
+            ls -la /Applications/Finch/lima/data/finch/sock/ || echo "Socket directory not found"
+          fi
+          
+          # Test socket connectivity as ec2-user
+          echo "Testing socket connectivity as ec2-user..."
+          su ec2-user -c 'curl -s --unix-socket /Applications/Finch/lima/data/finch/sock/finch.sock http://localhost/version || echo "Socket connection failed"'
+          
+          # Verify Finch configuration
+          echo "Final Finch configuration:"
+          su ec2-user -c 'cat ~/.finch/finch.yaml'
+          
+          # Check Finch VM status
+          echo "Finch VM status:"
+          su ec2-user -c 'finch vm status || true'
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
@@ -152,14 +179,19 @@ jobs:
           aws-region: ${{ secrets.REGION }}
           role-duration-seconds: 14400
 
-      - name: Install Docker CLI for SAM CLI compatibility
+      - name: Ensure Docker is not available (force Finch usage)
         run: |
-          echo "Checking Docker CLI installation..."
-          if ! su ec2-user -c 'which docker' > /dev/null 2>&1; then
-            echo "Installing Docker CLI..."
-            su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install --formula docker'
+          echo "Ensuring Docker is not accessible to force SAM CLI to use Finch..."
+          # Remove any existing docker installations
+          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew uninstall --ignore-dependencies docker || true'
+          # Make sure docker command is not in PATH
+          sudo rm -f /usr/local/bin/docker /opt/homebrew/bin/docker || true
+          # Verify docker is not accessible
+          if su ec2-user -c 'which docker' > /dev/null 2>&1; then
+            echo "WARNING: Docker is still accessible"
+            su ec2-user -c 'which docker'
           else
-            echo "Docker CLI already installed"
+            echo "SUCCESS: Docker is not accessible - SAM CLI will use Finch"
           fi
         shell: bash
 
