@@ -42,12 +42,19 @@ jobs:
 
       - name: Check macOS version and system info
         run: |
+          echo "=== System Information (as ec2-user) ==="
           echo "macOS version:"
-          sw_vers
+          su ec2-user -c 'sw_vers'
           echo "Architecture:"
-          uname -m
+          su ec2-user -c 'uname -m'
+          echo "Kernel:"
+          su ec2-user -c 'uname -a'
+          echo "CodeBuild Environment:"
+          su ec2-user -c 'env | grep -i codebuild || echo "No CodeBuild env vars found"'
           echo "Rosetta status:"
           /usr/bin/pgrep -q oahd && echo "Rosetta is running" || echo "Rosetta is not running"
+          echo "Testing Rosetta availability:"
+          su ec2-user -c 'arch -x86_64 /usr/bin/true && echo "Rosetta works" || echo "Rosetta unavailable"'
         shell: bash
 
       - name: Configure Git for ec2-user
@@ -124,13 +131,13 @@ jobs:
           submodules: recursive
           path: finch-daemon-pr
 
-      - name: Configure Finch to use VZ with Rosetta
+      - name: Configure Finch for macOS 15 compatibility
         run: |
           echo "Original config:"
           su ec2-user -c 'cat ~/.finch/finch.yaml || echo "No config file found"'
-          echo "Ensuring vmType: vz and rosetta: true"
-          su ec2-user -c 'yq eval ".vmType = \"vz\"" -i ~/.finch/finch.yaml'
-          su ec2-user -c 'yq eval ".rosetta = true" -i ~/.finch/finch.yaml'
+          echo "Using QEMU for macOS 15 stability"
+          su ec2-user -c 'yq eval ".vmType = \"qemu\"" -i ~/.finch/finch.yaml'
+          su ec2-user -c 'yq eval ".rosetta = false" -i ~/.finch/finch.yaml'
           echo "Updated config:"
           su ec2-user -c 'cat ~/.finch/finch.yaml'
 
