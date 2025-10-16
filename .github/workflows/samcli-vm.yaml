@@ -16,7 +16,7 @@ env:
   BY_CANARY: true # allows full testing
   SAM_CLI_DEV: 1
   SAM_CLI_TELEMETRY: 0
-  DOCKER_HOST: unix:///Applications/Finch/lima/data/finch/sock/finch.sock
+  DOCKER_HOST: unix:////Applications/Finch/lima/data/finch/sock/finch.sock
   DOCKER_CONFIG: /Users/ec2-user/.finch
 
 permissions:
