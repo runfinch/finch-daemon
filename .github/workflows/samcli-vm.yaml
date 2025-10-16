@@ -40,6 +40,16 @@ jobs:
           su ec2-user -c 'finch container prune -f' || true
           su ec2-user -c 'finch image prune -a -f' || true
 
+      - name: Check macOS version and system info
+        run: |
+          echo "macOS version:"
+          sw_vers
+          echo "Architecture:"
+          uname -m
+          echo "Rosetta status:"
+          /usr/bin/pgrep -q oahd && echo "Rosetta is running" || echo "Rosetta is not running"
+        shell: bash
+
       - name: Configure Git for ec2-user
         run: |
           git config --global --add safe.directory "*"
