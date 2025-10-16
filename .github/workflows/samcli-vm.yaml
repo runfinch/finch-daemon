@@ -1,6 +1,9 @@
 name: samcli-vm
 
 on:
+  pull_request:
+    branches:
+      - main
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:
@@ -110,6 +113,16 @@ jobs:
           persist-credentials: false
           submodules: recursive
           path: finch-daemon-pr
+
+      - name: Configure Finch to use VZ with Rosetta
+        run: |
+          echo "Original config:"
+          su ec2-user -c 'cat ~/.finch/finch.yaml || echo "No config file found"'
+          echo "Ensuring vmType: vz and rosetta: true"
+          su ec2-user -c 'yq eval ".vmType = \"vz\"" -i ~/.finch/finch.yaml'
+          su ec2-user -c 'yq eval ".rosetta = true" -i ~/.finch/finch.yaml'
+          echo "Updated config:"
+          su ec2-user -c 'cat ~/.finch/finch.yaml'
 
       - name: Build and setup Finch VM
         run: ./finch-daemon-pr/scripts/build-and-setup-finch-vm.sh
