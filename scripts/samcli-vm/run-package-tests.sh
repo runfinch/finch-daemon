@@ -3,7 +3,7 @@ set -e
 
 echo "=== PACKAGE TESTS - Started at $(date) ==="
 touch /tmp/package_test_output.txt
-chown ec2-user:staff /tmp/package_output.txt
+chown ec2-user:staff /tmp/package_test_output.txt
 su ec2-user -c "
   cd /Users/ec2-user/aws-sam-cli && \
   export PATH='/Users/ec2-user/Library/Python/$PYTHON_VERSION/bin:$PATH' && \

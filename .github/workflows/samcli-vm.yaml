@@ -1,6 +1,9 @@
 name: samcli-vm
 
 on:
+  pull_request:
+    branches:
+      - main
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:
@@ -13,7 +16,7 @@ env:
   BY_CANARY: true # allows full testing
   SAM_CLI_DEV: 1
   SAM_CLI_TELEMETRY: 0
-  DOCKER_HOST: unix:///Applications/Finch/lima/data/finch/sock/finch.sock
+  DOCKER_HOST: unix:////Applications/Finch/lima/data/finch/sock/finch.sock
   DOCKER_CONFIG: /Users/ec2-user/.finch
 
 permissions:
@@ -22,7 +25,7 @@ permissions:
 
 jobs:
   samcli-vm-test:
-    runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
+    runs-on: codebuild-finch-daemon-arm64-2-macOS15-instance-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
 
       - name: Clean macOS runner workspace
@@ -36,6 +39,23 @@ jobs:
           # Clean up containers and images via Finch CLI
           su ec2-user -c 'finch container prune -f' || true
           su ec2-user -c 'finch image prune -a -f' || true
+
+      - name: Check macOS version and system info
+        run: |
+          echo "=== System Information (as ec2-user) ==="
+          echo "macOS version:"
+          su ec2-user -c 'sw_vers'
+          echo "Architecture:"
+          su ec2-user -c 'uname -m'
+          echo "Kernel:"
+          su ec2-user -c 'uname -a'
+          echo "CodeBuild Environment:"
+          su ec2-user -c 'env | grep -i codebuild || echo "No CodeBuild env vars found"'
+          echo "Rosetta status:"
+          /usr/bin/pgrep -q oahd && echo "Rosetta is running" || echo "Rosetta is not running"
+          echo "Testing Rosetta availability:"
+          su ec2-user -c 'arch -x86_64 /usr/bin/true && echo "Rosetta works" || echo "Rosetta unavailable"'
+        shell: bash
 
       - name: Configure Git for ec2-user
         run: |
@@ -111,8 +131,45 @@ jobs:
           submodules: recursive
           path: finch-daemon-pr
 
+      - name: Configure Finch to use VZ with Rosetta
+        run: |
+          echo "Original config:"
+          su ec2-user -c 'cat ~/.finch/finch.yaml || echo "No config file found"'
+          echo "Configuring Finch to use VZ with Rosetta for optimal performance"
+          su ec2-user -c 'yq eval ".vmType = \"vz\"" -i ~/.finch/finch.yaml'
+          su ec2-user -c 'yq eval ".rosetta = true" -i ~/.finch/finch.yaml'
+          echo "Updated config:"
+          su ec2-user -c 'cat ~/.finch/finch.yaml'
+
       - name: Build and setup Finch VM
         run: ./finch-daemon-pr/scripts/build-and-setup-finch-vm.sh
+
+      - name: Verify Finch socket and configuration
+        run: |
+          echo "=== Finch Socket Verification ==="
+          echo "Expected socket path: /Applications/Finch/lima/data/finch/sock/finch.sock"
+          echo "DOCKER_HOST environment: $DOCKER_HOST"
+          
+          # Check if socket exists and is accessible
+          if [ -S "/Applications/Finch/lima/data/finch/sock/finch.sock" ]; then
+            echo "✓ Finch socket exists"
+            ls -la /Applications/Finch/lima/data/finch/sock/finch.sock
+          else
+            echo "✗ Finch socket not found"
+            ls -la /Applications/Finch/lima/data/finch/sock/ || echo "Socket directory not found"
+          fi
+          
+          # Test socket connectivity as ec2-user
+          echo "Testing socket connectivity as ec2-user..."
+          su ec2-user -c 'curl -s --unix-socket /Applications/Finch/lima/data/finch/sock/finch.sock http://localhost/version || echo "Socket connection failed"'
+          
+          # Verify Finch configuration
+          echo "Final Finch configuration:"
+          su ec2-user -c 'cat ~/.finch/finch.yaml'
+          
+          # Check Finch VM status
+          echo "Finch VM status:"
+          su ec2-user -c 'finch vm status || true'
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
@@ -122,16 +179,27 @@ jobs:
           aws-region: ${{ secrets.REGION }}
           role-duration-seconds: 14400
 
-      - name: Install Docker CLI for SAM CLI compatibility
+      - name: Ensure Docker is not available (force Finch usage)
         run: |
-          echo "Checking Docker CLI installation..."
-          if ! su ec2-user -c 'which docker' > /dev/null 2>&1; then
-            echo "Installing Docker CLI..."
-            su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install --formula docker'
+          echo "Ensuring Docker is not accessible to force SAM CLI to use Finch..."
+          # Remove any existing docker installations
+          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew uninstall --ignore-dependencies docker || true'
+          # Make sure docker command is not in PATH
+          sudo rm -f /usr/local/bin/docker /opt/homebrew/bin/docker || true
+          # Verify docker is not accessible
+          if su ec2-user -c 'which docker' > /dev/null 2>&1; then
+            echo "WARNING: Docker is still accessible"
+            su ec2-user -c 'which docker'
           else
-            echo "Docker CLI already installed"
+            echo "SUCCESS: Docker is not accessible - SAM CLI will use Finch"
           fi
         shell: bash
+
+      - name: Get latest SAM CLI tag
+        id: sam-tag
+        run: |
+          TAG=$(curl -s https://api.github.com/repos/aws/aws-sam-cli/releases/latest | jq -r .tag_name)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Checkout SAM CLI
         uses: actions/checkout@v4
@@ -139,6 +207,7 @@ jobs:
           repository: aws/aws-sam-cli
           submodules: recursive
           path: aws-sam-cli
+          ref: ${{ steps.sam-tag.outputs.tag }}
 
       - name: Set up SAM CLI from source
         run: |
@@ -157,35 +226,30 @@ jobs:
         timeout-minutes: 30
         run: ./finch-daemon-pr/scripts/samcli-vm/run-unit-tests.sh
 
-      - name: Patch SAM CLI for Docker image cleanup
-        run: |
-          # Apply patch to handle ImageNotFound exceptions for all Docker tests
-          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && patch -p1 tests/integration/local/invoke/test_integrations_cli.py < ${{ github.workspace }}/finch-daemon-pr/scripts/samcli-vm/invoke-teardown.patch'
-        shell: bash
+      # - name: Patch SAM CLI for Docker image cleanup
+      #   run: |
+      #     # Apply patch to handle ImageNotFound exceptions for all Docker tests
+      #     su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && patch -p1 tests/integration/local/invoke/test_integrations_cli.py < ${{ github.workspace }}/finch-daemon-pr/scripts/samcli-vm/invoke-teardown.patch'
+      #   shell: bash
 
       - name: Run invoke tests
-        timeout-minutes: 40
         run: ./finch-daemon-pr/scripts/samcli-vm/run-invoke-tests.sh
 
       - name: Run start-api tests
-        timeout-minutes: 70
         run: ./finch-daemon-pr/scripts/samcli-vm/run-start-api-tests.sh
 
       - name: Run sync tests
-        timeout-minutes: 20
         run: ./finch-daemon-pr/scripts/samcli-vm/run-sync-tests.sh
 
       - name: Run package tests
-        timeout-minutes: 10
         run: ./finch-daemon-pr/scripts/samcli-vm/run-package-tests.sh
 
       - name: Run start-lambda tests
-        timeout-minutes: 30
         run: ./finch-daemon-pr/scripts/samcli-vm/run-start-lambda-tests.sh
 
   # ensuring resources are clean post-test
   cleanup:
-    runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
+    runs-on: codebuild-finch-daemon-arm64-2-macOS15-instance-${{ github.run_id }}-${{ github.run_attempt }}
     needs: samcli-vm-test
     if: always()
     steps:
