@@ -15,8 +15,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
@@ -233,4 +235,40 @@ func GetFinchDaemonExe() string {
 		daemonPath = "./bin/finch-daemon" // fallback
 	}
 	return daemonPath
+}
+
+func GetNerdctlVersion(opt *option.Option) (string, error) {
+	// option.Option does not export subject which would
+	// enable an easier check if the subject is nerdctl or finch.
+	output := command.StdoutStr(opt, "version")
+	if output == "" {
+		return "", fmt.Errorf("failed to get nerdctl version")
+	}
+
+	var re *regexp.Regexp
+	var matches []string
+	// try to get nerdctl version from "finch version" first
+	re = regexp.MustCompile(`\s*nerdctl:\s*Version:\s*v(.*)`)
+	matches = re.FindStringSubmatch(output)
+	if len(matches) != 2 {
+		// if no match is found, try to get nerdctl version from "nerdctl version"
+		re = regexp.MustCompile(`\s*Client:\s*Version:\s*v(.*)`)
+		matches = re.FindStringSubmatch(output)
+		if len(matches) != 2 {
+			return "", fmt.Errorf("failed to get nerdctl version")
+		}
+	}
+	return matches[1], nil
+}
+
+func RequireNerdctlVersion(opt *option.Option, constraint string) {
+	nerdctlVersion, err := GetNerdctlVersion(opt)
+	gomega.Expect(err).Should(gomega.BeNil())
+	nerdctlSemver, err := semver.NewVersion(nerdctlVersion)
+	gomega.Expect(err).Should(gomega.BeNil())
+	nerdctlVersionConstraint, err := semver.NewConstraint(constraint)
+	gomega.Expect(err).Should(gomega.BeNil())
+	if !nerdctlVersionConstraint.Check(nerdctlSemver) {
+		ginkgo.Skip(fmt.Sprintf("Test requires nerdctl version: %s, but got: %s", constraint, nerdctlVersion))
+	}
 }

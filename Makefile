@@ -3,7 +3,7 @@
 
 GINKGO = go run github.com/onsi/ginkgo/v2/ginkgo
 # Common ginkgo options: -v for verbose mode, --focus="test name" for running single tests
-GFLAGS ?= --race --randomize-all --randomize-suites 
+GFLAGS ?= -v --race --randomize-all --randomize-suites 
 BIN = $(PWD)/bin
 FINCH_DAEMON_PROJECT_ROOT ?= $(shell pwd)
 
