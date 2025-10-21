@@ -3,7 +3,7 @@ set -e
 
 echo "=== START-LAMBDA TESTS - Started at $(date) ==="
 touch /tmp/start_lambda_test_output.txt
-chown ec2-user:staff /tmp/start_lambda_output.txt
+chown ec2-user:staff /tmp/start_lambda_test_output.txt
 su ec2-user -c "
   cd /Users/ec2-user/aws-sam-cli && \
   export PATH='/Users/ec2-user/Library/Python/$PYTHON_VERSION/bin:$PATH' && \
