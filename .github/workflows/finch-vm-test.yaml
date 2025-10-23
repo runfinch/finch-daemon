@@ -107,7 +107,7 @@ jobs:
           echo "Configuring Finch for ${{ matrix.vm_type.name }} (rosetta: ${{ matrix.vm_type.rosetta }})"
           su ec2-user -c 'yq eval ".vmType = \"vz\"" -i ~/.finch/finch.yaml'
           su ec2-user -c 'yq eval ".rosetta = ${{ matrix.vm_type.rosetta }}" -i ~/.finch/finch.yaml'
-          su ec2-user -c 'yq eval ".dockercompat = true" -i ~/.finch/finch.yaml'
+          su ec2-user -c 'yq eval ".dockercompat = false" -i ~/.finch/finch.yaml'
           echo "Updated config:"
           su ec2-user -c 'cat ~/.finch/finch.yaml'
 
