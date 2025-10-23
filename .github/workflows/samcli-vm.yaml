@@ -1,6 +1,9 @@
 name: samcli-vm
 
 on:
+  pull_request:
+    branches:
+      - main
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:
@@ -23,6 +26,14 @@ permissions:
 jobs:
   samcli-vm-test:
     runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
+    strategy:
+      fail-fast: false
+      matrix:
+        vm_type:
+          - name: rosetta
+            rosetta: true
+          - name: qemu
+            rosetta: false
     steps:
 
       - name: Clean macOS runner workspace
@@ -114,9 +125,9 @@ jobs:
         run: |
           echo "Original config:"
           su ec2-user -c 'cat ~/.finch/finch.yaml || echo "No config file found"'
-          echo "Configuring Finch to use QEMU+VZ"
+          echo "Configuring Finch for ${{ matrix.vm_type.name }} (rosetta: ${{ matrix.vm_type.rosetta }})"
           su ec2-user -c 'yq eval ".vmType = \"vz\"" -i ~/.finch/finch.yaml'
-          su ec2-user -c 'yq eval ".rosetta = false" -i ~/.finch/finch.yaml'
+          su ec2-user -c 'yq eval ".rosetta = ${{ matrix.vm_type.rosetta }}" -i ~/.finch/finch.yaml'
           echo "Updated config:"
           su ec2-user -c 'cat ~/.finch/finch.yaml'
 
@@ -211,6 +222,11 @@ jobs:
     runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
     needs: samcli-vm-test
     if: always()
+    strategy:
+      matrix:
+        vm_type:
+          - name: rosetta
+          - name: qemu
     steps:
       - name: Final cleanup
         run: |

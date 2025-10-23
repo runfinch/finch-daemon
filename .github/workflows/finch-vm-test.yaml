@@ -17,6 +17,14 @@ jobs:
   mac-test-e2e:
     runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        vm_type:
+          - name: rosetta
+            rosetta: true
+          - name: qemu
+            rosetta: false
     steps:
       - name: Clean macOS runner workspace
         run: |
@@ -92,10 +100,15 @@ jobs:
           submodules: recursive
           path: finch-daemon-pr
 
-      - name: Check Finch configuration
+      - name: Configure Finch
         run: |
-          echo "Config (finch.yaml):"
+          echo "Original config:"
           su ec2-user -c 'cat ~/.finch/finch.yaml || echo "No config file found"'
+          echo "Configuring Finch for ${{ matrix.vm_type.name }} (rosetta: ${{ matrix.vm_type.rosetta }})"
+          su ec2-user -c 'yq eval ".vmType = \"vz\"" -i ~/.finch/finch.yaml'
+          su ec2-user -c 'yq eval ".rosetta = ${{ matrix.vm_type.rosetta }}" -i ~/.finch/finch.yaml'
+          echo "Updated config:"
+          su ec2-user -c 'cat ~/.finch/finch.yaml'
 
       - name: Build and setup Finch VM
         run: ./finch-daemon-pr/scripts/build-and-setup-finch-vm.sh
