@@ -21,6 +21,14 @@ jobs:
       - name: Clean macOS runner workspace
         run: |
           rm -rf ${{ github.workspace }}/*
+          # Clean up any leftover Finch VM state
+          su ec2-user -c 'finch vm remove -f' || true
+          sudo pkill -f socket_vmnet || true
+          sudo rm -rf /private/var/run/finch-lima/*.sock || true
+          sudo rm -rf /Applications/Finch/lima/data/finch/_cache || true
+          # Clean up containers and images via Finch CLI
+          su ec2-user -c 'finch system prune -f' || true
+
       - name: Configure Git for ec2-user
         run: |
           git config --global --add safe.directory "*"
@@ -83,6 +91,11 @@ jobs:
           persist-credentials: false
           submodules: recursive
           path: finch-daemon-pr
+
+      - name: Check Finch configuration
+        run: |
+          echo "Config (finch.yaml):"
+          su ec2-user -c 'cat ~/.finch/finch.yaml || echo "No config file found"'
 
       - name: Build and setup Finch VM
         run: ./finch-daemon-pr/scripts/build-and-setup-finch-vm.sh
