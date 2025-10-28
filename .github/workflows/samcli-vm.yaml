@@ -32,8 +32,8 @@ jobs:
         vm_type:
           - name: rosetta
             rosetta: true
-          - name: qemu
-            rosetta: false
+          # - name: qemu
+          #   rosetta: false
     steps:
 
       - name: Clean macOS runner workspace
