@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.21.0](https://github.com/runfinch/finch-daemon/compare/v0.20.0...v0.21.0) (2025-11-07)
+
+
+### Build System or External Dependencies
+
+* **deps:** bump github.com/containerd/containerd/v2 ([a7c990f](https://github.com/runfinch/finch-daemon/commit/a7c990f85a1f07f09d073d29b2e6395acfd6a41a))
+* **deps:** bump github.com/containerd/containerd/v2 from 2.1.4 to 2.1.5 ([#361](https://github.com/runfinch/finch-daemon/issues/361)) ([a7c990f](https://github.com/runfinch/finch-daemon/commit/a7c990f85a1f07f09d073d29b2e6395acfd6a41a))
+
+
+### Features
+
+* add HostConfig to container inspect response ([#324](https://github.com/runfinch/finch-daemon/issues/324)) ([7148cd8](https://github.com/runfinch/finch-daemon/commit/7148cd8313f26a92da5dfcc9fe586ee4961c5566))
+
 ## [0.20.0](https://github.com/runfinch/finch-daemon/compare/v0.19.1...v0.20.0) (2025-08-24)
 
 
