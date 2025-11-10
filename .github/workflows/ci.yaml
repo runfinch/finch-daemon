@@ -42,7 +42,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: golangci/golangci-lint-action@v6 # v6.1.0
+      - uses: golangci/golangci-lint-action@v8 # v6.1.0
         with:
           version: v${{ env.GOLANGCI_LINT_VERSION }}
           working-directory: ${{ matrix.working_dir }}
