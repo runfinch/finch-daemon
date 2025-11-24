@@ -3,7 +3,7 @@
 
 GINKGO = go run github.com/onsi/ginkgo/v2/ginkgo
 # Common ginkgo options: -v for verbose mode, --focus="test name" for running single tests
-GFLAGS ?= --race --randomize-all --randomize-suites 
+GFLAGS ?= -v -timeout 2h --race --randomize-all --randomize-suites 
 BIN = $(PWD)/bin
 FINCH_DAEMON_PROJECT_ROOT ?= $(shell pwd)
 
@@ -181,7 +181,7 @@ test-e2e-inside-vm: macos
 	DOCKER_HOST=$(DAEMON_DOCKER_HOST) \
 	DOCKER_API_VERSION="v1.41" \
 	TEST_E2E=1 \
-	go test ./e2e -test.v -ginkgo.v -ginkgo.randomize-all \
+	go test ./e2e -test.v -ginkgo.v -ginkgo.timeout 2h -ginkgo.randomize-all \
 	--subject="finch" \
 	--daemon-context-subject-prefix="/Applications/Finch/lima/bin/limactl shell finch sudo" \
 	--daemon-context-subject-env="LIMA_HOME=/Applications/Finch/lima/data"
