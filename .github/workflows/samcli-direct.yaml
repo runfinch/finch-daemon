@@ -34,7 +34,7 @@ jobs:
           - name: start-api
     env:
       AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
-      DOCKER_HOST: unix:///run/finch.sock
+      DOCKER_HOST: unix:///var/run/finch.sock
       DOCKER_CONFIG: $HOME/.finch
       BY_CANARY: true # allows full testing
       SAM_CLI_DEV: 1
@@ -63,6 +63,7 @@ jobs:
       - name: Checkout finch-daemon
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
+          ref: ${{ github.head_ref }}
           fetch-depth: 0
           persist-credentials: false
           submodules: recursive
@@ -93,12 +94,19 @@ jobs:
           sudo bin/finch-daemon --debug --socket-owner $UID 2>&1 | tee finch-daemon.log &
           sleep 10
 
+      - name: Get latest SAM CLI tag
+        id: sam-tag
+        run: |
+          TAG=$(curl -s https://api.github.com/repos/aws/aws-sam-cli/releases/latest | jq -r .tag_name)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
       - name: Checkout SAM CLI
         uses: actions/checkout@v5
         with:
           repository: aws/aws-sam-cli
           submodules: recursive
           path: aws-sam-cli
+          ref: ${{ steps.sam-tag.outputs.tag }}
 
       - name: Set up SAM CLI from source
         working-directory: aws-sam-cli

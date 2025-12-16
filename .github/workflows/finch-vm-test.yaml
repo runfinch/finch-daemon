@@ -16,15 +16,12 @@ env:
 jobs:
   mac-test-e2e:
     runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
-    timeout-minutes: 30
     steps:
-      - name: Clean macOS runner workspace
-        run: |
-          rm -rf ${{ github.workspace }}/*
       - name: Configure Git for ec2-user
         run: |
           git config --global --add safe.directory "*"
         shell: bash
+
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -35,6 +32,7 @@ jobs:
           # Ensure Go is properly configured for ec2-user
           chown -R ec2-user:staff $GOPATH || true
           chown -R ec2-user:staff $RUNNER_TOOL_CACHE/go || true
+
       - name: Install Rosetta 2
         run: su ec2-user -c 'echo "A" | /usr/sbin/softwareupdate --install-rosetta --agree-to-license || true'
 
@@ -77,30 +75,61 @@ jobs:
       - name: Checkout finch-daemon PR
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.event.pull_request.head.sha || 'main' }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           fetch-depth: 0
           persist-credentials: false
           submodules: recursive
           path: finch-daemon-pr
 
-      - name: Build and setup Finch VM
-        run: ./finch-daemon-pr/scripts/build-and-setup-finch-vm.sh
+      - name: Clean macOS runner workspace
+        run: |
+          # taken from test-pkg workflow in finch
+          sudo rm -rf /Applications/Finch
+          sudo rm -rf /opt/finch
+          su ec2-user -c 'rm -rf ~/.finch'
+          sudo rm -rf ./_output
+          if pgrep '^qemu-system'; then
+            sudo pkill '^qemu-system'
+          fi
+          if pgrep '^socket_vmnet'; then
+            sudo pkill '^socket_vmnet'
+          fi
+
+      - name: Make & install Finch
+        run: |
+          chown -R ec2-user:staff "$GITHUB_WORKSPACE"
+          su ec2-user -c "cd $GITHUB_WORKSPACE && make clean && make FINCH_OS_IMAGE_LOCATION_ROOT=/Applications/Finch && make install PREFIX=Applications/Finch"
+          su ec2-user -c "ls -lah /Applications/Finch"
+
+      - name: Make Finch Daemon
+        run: |
+          su ec2-user -c "cd $GITHUB_WORKSPACE/finch-daemon-pr && STATIC=1 GOPROXY=direct GOOS=linux GOARCH=\$(go env GOARCH) make"
+          su ec2-user -c "cp $GITHUB_WORKSPACE/finch-daemon-pr/bin/finch-daemon /Applications/Finch/finch-daemon/finch-daemon"
+
+      - name: Initializing Finch VM
+        run: |
+          su ec2-user -c 'finch vm init'
+          su ec2-user -c 'while ! finch vm status | grep -q "Running"; do echo "Waiting for VM..."; sleep 5; done'
+
+      - name: Pinging Finch Daemon socket
+        run: |
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch curl --unix-socket /var/run/finch.sock -X GET http:/v1.41/version'
 
       # Run e2e tests
       - name: Run e2e tests
-        run: |
-          echo "Running e2e tests..."
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+        with:
+          timeout_minutes: 120
+          max_attempts: 3
+          command: |
+            echo "Running e2e tests..."
+            su ec2-user -c 'cd ${{ github.workspace }}/finch-daemon-pr && make test-e2e-inside-vm'
 
-          su ec2-user -c 'finch version' || true
-          su ec2-user -c 'cd ${{ github.workspace }}/finch-daemon-pr && make test-e2e-inside-vm'
-        shell: bash
-
-      # Cleanup
-      - name: Stop Finch VM
+      - name: Stop & remove Finch VM
         run: |
           echo "Stopping Finch VM as ec2-user..."
-
           # Stop VM using ec2-user with custom environment
-          su ec2-user -c "source /Users/ec2-user/.brewrc && HOME=/Users/ec2-user finch vm stop"
+          su ec2-user -c "source /Users/ec2-user/.brewrc && HOME=/Users/ec2-user finch vm remove -f"
         shell: bash
         if: always()

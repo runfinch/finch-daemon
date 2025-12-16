@@ -3,20 +3,9 @@ set -e
 
 echo "=== START-API TESTS - Started at $(date) ==="
 touch /tmp/start_api_test_output.txt
-chown ec2-user:staff /tmp/start_api_output.txt
+chown ec2-user:staff /tmp/start_api_test_output.txt
 
-# Start background monitor to show progress
-(
-  while true; do
-    sleep 30
-    echo "[$(date)] Progress check - Last 20 lines:"
-    tail -20 /tmp/start_api_test_output.txt 2>/dev/null || echo "No output yet"
-    echo "---"
-  done
-) &
-MONITOR_PID=$!
-
-# Run tests (output to file only, show progress via monitor)
+# Run tests with live output
 su ec2-user -c "
   cd /Users/ec2-user/aws-sam-cli && \
   export PATH='/Users/ec2-user/Library/Python/$PYTHON_VERSION/bin:$PATH' && \
@@ -27,10 +16,7 @@ su ec2-user -c "
   SAM_CLI_DEV='$SAM_CLI_DEV' \
   SAM_CLI_TELEMETRY='$SAM_CLI_TELEMETRY' \
   '$PYTHON_BINARY' -m pytest tests/integration/local/start_api -k 'not Terraform' -v --tb=short
-" > /tmp/start_api_test_output.txt 2>&1 || true
-
-# Stop monitor
-kill $MONITOR_PID 2>/dev/null || true
+" 2>&1 | tee /tmp/start_api_test_output.txt || true
 echo "=== START-API TESTS - Finished at $(date) ==="
 
 # test_can_invoke_lambda_layer_successfully: Uses random port, fails occasionally.
