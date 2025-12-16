@@ -28,6 +28,13 @@ jobs:
       - name: Clean macOS runner workspace
         run: |
           rm -rf ${{ github.workspace }}/*
+          # Clean up any leftover Finch VM state
+          su ec2-user -c 'finch vm remove -f' || true
+          sudo pkill -f socket_vmnet || true
+          sudo rm -rf /private/var/run/finch-lima/*.sock || true
+          sudo rm -rf /Applications/Finch/lima/data/finch/_cache || true
+          # Clean up containers and images via Finch CLI
+          su ec2-user -c 'finch system prune -f' || true
 
       - name: Configure Git for ec2-user
         run: |
@@ -85,48 +92,60 @@ jobs:
           su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install lz4 automake autoconf libtool yq'
         shell: bash
 
-      - name: Checkout finch-daemon repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout mainline finch repo
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
+          ref: main
+          repository: runfinch/finch
           fetch-depth: 0
           persist-credentials: false
           submodules: recursive
 
-      - name: Configure workspace for ec2-user
-        run: |
-          chown -R ec2-user:staff ${{ github.workspace }}
+      - name: Checkout finch-daemon PR
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: recursive
+          path: finch-daemon-pr
 
-      - name: Install Finch
+      - name: Configure Finch
         run: |
-          echo "Installing Finch as ec2-user..."
-          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install finch --cask'
-          su ec2-user -c 'source /Users/ec2-user/.brewrc && brew list | grep finch || echo "finch not installed"'
-          mkdir -p /private/var/run/finch-lima
-          cat /etc/passwd
-          chown ec2-user:daemon /private/var/run/finch-lima
-        shell: bash
+          echo "Original config:"
+          su ec2-user -c 'cat ~/.finch/finch.yaml || echo "No config file found"'
+          echo "Configuring Finch to use QEMU+VZ"
+          su ec2-user -c 'yq eval ".vmType = \"vz\"" -i ~/.finch/finch.yaml'
+          su ec2-user -c 'yq eval ".rosetta = false" -i ~/.finch/finch.yaml'
+          echo "Updated config:"
+          su ec2-user -c 'cat ~/.finch/finch.yaml'
 
-      - name: Build binaries
-        run: |
-          echo "Building cross architecture binaries..."
-          su ec2-user -c 'cd ${{ github.workspace }} && STATIC=1 GOPROXY=direct GOOS=linux GOARCH=arm64 make'
-          su ec2-user -c 'finch vm remove -f' || true
-          cp -f ${{ github.workspace }}/bin/finch-daemon /Applications/Finch/finch-daemon/finch-daemon
-          # Restart finch-daemon with new binary
-          su ec2-user -c 'finch vm stop' || true
-          su ec2-user -c 'finch vm start' || true
-        shell: bash
+      - name: Build and setup Finch VM
+        run: ./finch-daemon-pr/scripts/build-and-setup-finch-vm.sh
 
-      - name: Check Finch version
+      - name: Verify Finch socket
         run: |
-          echo "Initializing VM and checking version..."
-          # Clean up any leftover network state
-          sudo pkill -f socket_vmnet || true
-          sudo rm -f /private/var/run/finch-lima/*.sock || true
-          su ec2-user -c 'finch vm init'
-          sleep 5  # Wait for services to be ready
-          echo "Checking Finch version..."
-          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch curl --unix-socket /var/run/finch.sock -X GET http:/v1.43/version'
+          # Test socket connectivity
+          if su ec2-user -c 'curl -s --unix-socket /Applications/Finch/lima/data/finch/sock/finch.sock http://localhost/version' > /dev/null; then
+            echo "✓ Finch daemon is accessible"
+          else
+            echo "✗ Finch daemon connection failed"
+            ls -la /Applications/Finch/lima/data/finch/sock/ || echo "Socket directory not found"
+            exit 1
+          fi
+
+      - name: Ensure Docker is not available (force Finch usage)
+        run: |
+          echo "Ensuring Docker is not accessible to force SAM CLI to use Finch..."
+          # Remove docker binaries from PATH
+          sudo rm -f /usr/local/bin/docker /opt/homebrew/bin/docker || true
+          # Verify docker is not accessible
+          if su ec2-user -c 'which docker' > /dev/null 2>&1; then
+            echo "WARNING: Docker is still accessible"
+            su ec2-user -c 'which docker'
+          else
+            echo "SUCCESS: Docker is not accessible - SAM CLI will use Finch"
+          fi
         shell: bash
 
       - name: Configure AWS credentials
@@ -137,16 +156,11 @@ jobs:
           aws-region: ${{ secrets.REGION }}
           role-duration-seconds: 14400
 
-      - name: Install Docker CLI for SAM CLI compatibility
+      - name: Get latest SAM CLI tag
+        id: sam-tag
         run: |
-          echo "Checking Docker CLI installation..."
-          if ! su ec2-user -c 'which docker' > /dev/null 2>&1; then
-            echo "Installing Docker CLI..."
-            su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install --formula docker'
-          else
-            echo "Docker CLI already installed"
-          fi
-        shell: bash
+          TAG=$(curl -s https://api.github.com/repos/aws/aws-sam-cli/releases/latest | jq -r .tag_name)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Checkout SAM CLI
         uses: actions/checkout@v4
@@ -154,6 +168,7 @@ jobs:
           repository: aws/aws-sam-cli
           submodules: recursive
           path: aws-sam-cli
+          ref: ${{ steps.sam-tag.outputs.tag }}
 
       - name: Set up SAM CLI from source
         run: |
@@ -169,58 +184,49 @@ jobs:
         shell: bash
 
       - name: Run unit tests
-        continue-on-error: true
-        run: |
-          ./scripts/samcli-vm/run-unit-tests.sh
-          echo "UNIT_EXIT_CODE=$(cat /tmp/unit_exit_code 2>/dev/null || echo 1)" >> $GITHUB_ENV
-
-      - name: Run sync tests
-        continue-on-error: true
-        run: |
-          ./scripts/samcli-vm/run-sync-tests.sh
-          echo "SYNC_EXIT_CODE=$(cat /tmp/sync_exit_code 2>/dev/null || echo 1)" >> $GITHUB_ENV
-
-      - name: Run package tests
-        continue-on-error: true
-        run: |
-          ./scripts/samcli-vm/run-package-tests.sh
-          echo "PACKAGE_EXIT_CODE=$(cat /tmp/package_exit_code 2>/dev/null || echo 1)" >> $GITHUB_ENV
-
-      - name: Run start-api tests
-        continue-on-error: true
-        run: |
-          ./scripts/samcli-vm/run-start-api-tests.sh
-          echo "START_API_EXIT_CODE=$(cat /tmp/start_api_exit_code 2>/dev/null || echo 1)" >> $GITHUB_ENV
-
-      - name: Run start-lambda tests
-        continue-on-error: true
-        run: |
-          ./scripts/samcli-vm/run-start-lambda-tests.sh
-          echo "START_LAMBDA_EXIT_CODE=$(cat /tmp/start_lambda_exit_code 2>/dev/null || echo 1)" >> $GITHUB_ENV
-
-      - name: Patch SAM CLI for Docker image cleanup
-        continue-on-error: true
-        run: |
-          # Apply git patch to handle ImageNotFound exceptions for all Docker tests
-          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && git apply ${{ github.workspace }}/scripts/samcli-vm/invoke-teardown.patch'
-          echo "PATCH_EXIT_CODE=$?" >> $GITHUB_ENV
-        shell: bash
+        run: ./finch-daemon-pr/scripts/samcli-vm/run-unit-tests.sh
 
       - name: Run invoke tests
-        continue-on-error: true
-        run: |
-          ./scripts/samcli-vm/run-invoke-tests.sh
-          echo "INVOKE_EXIT_CODE=$(cat /tmp/invoke_exit_code 2>/dev/null || echo 1)" >> $GITHUB_ENV
+        timeout-minutes: 40
+        run: ./finch-daemon-pr/scripts/samcli-vm/run-invoke-tests.sh
 
-      - name: Check test results
-        run: ./scripts/samcli-vm/check-test-results.sh
+      - name: Run start-api tests
+        timeout-minutes: 60
+        run: ./finch-daemon-pr/scripts/samcli-vm/run-start-api-tests.sh
+
+      - name: Run sync tests
+        timeout-minutes: 20
+        run: ./finch-daemon-pr/scripts/samcli-vm/run-sync-tests.sh
+
+      - name: Run package tests
+        timeout-minutes: 5
+        run: ./finch-daemon-pr/scripts/samcli-vm/run-package-tests.sh
+
+      - name: Run start-lambda tests
+        timeout-minutes: 20
+        run: ./finch-daemon-pr/scripts/samcli-vm/run-start-lambda-tests.sh
 
   # ensuring resources are clean post-test
   cleanup:
-    runs-on: ubuntu-latest
+    runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
     needs: samcli-vm-test
     if: always()
     steps:
+      - name: Final cleanup
+        run: |
+          # Stop and remove VM
+          su ec2-user -c 'finch vm stop' || true
+          su ec2-user -c 'finch vm remove -f' || true
+
+          # Clean up processes and sockets
+          sudo pkill -f socket_vmnet || true
+          sudo pkill -f finch-daemon || true
+          sudo rm -rf /private/var/run/finch-lima/*.sock || true
+
+          # Clean up cache and temporary files
+          sudo rm -rf /Applications/Finch/lima/data/finch/_cache || true
+          sudo rm -rf /tmp/finch-* || true
+
       - name: Checkout repository
         uses: actions/checkout@v4
 

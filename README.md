@@ -7,7 +7,7 @@
 
 The Finch Daemon project is an open source container runtime engine that enables users to integrate software that uses Docker's RESTful APIs as a programmatic dependency. Some core features include:
 
- - A partial implementation of the [Docker API Spec v1.43](https://docs.docker.com/engine/api/v1.43/)
+ - A partial implementation of the [Docker API Spec v1.43](https://docs.docker.com/engine/api/v1.43/) - see [supported endpoints](docs/supported-endpoints.md) for details
  - Native support for Linux environments
 
 The Finch Daemon project is actively taking contributions, especially to improve API compatibility.
@@ -73,6 +73,12 @@ following these steps:
 5. To check the status of the service - `sudo systemctl status finch.service`
 6. To enable the service on every reboot - `sudo systemctl enable finch.service`
 7. To disable the service on every reboot - `sudo systemctl disable finch.service`
+
+## Reporting an issue
+
+If you encounter anything that seems wrong, please check out our [issues](https://github.com/runfinch/finch-daemon/issues) tab first — someone may have already encountered your problem! If it's there, please add to the existing issue thread.
+
+If you can't find an existing issue, feel free to open a new one. As a remninder, anything related to security should NOT go through regular reporting channels. Please refer to [Security](https://github.com/runfinch/finch-daemon?tab=security-ov-file#reporting-security-issues) for guidance on how to report such issues.
 
 -----
 
