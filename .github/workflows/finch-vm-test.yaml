@@ -87,7 +87,7 @@ jobs:
           # taken from test-pkg workflow in finch
           sudo rm -rf /Applications/Finch
           sudo rm -rf /opt/finch
-          sudo rm -rf ~/.finch
+          su ec2-user -c 'rm -rf ~/.finch'
           sudo rm -rf ./_output
           if pgrep '^qemu-system'; then
             sudo pkill '^qemu-system'
