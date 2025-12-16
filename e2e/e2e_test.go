@@ -136,7 +136,7 @@ func runContainerTests(opt *option.Option, pOpt func([]string, ...option.Modifie
 	tests.ContainerAttach(opt)
 	tests.ContainerLogs(opt)
 	tests.ContainerKill(opt)
-	tests.ContainerInspect(opt)
+	tests.ContainerInspect(opt, pOpt)
 	tests.ContainerWait(opt)
 	tests.ContainerPause(opt)
 }

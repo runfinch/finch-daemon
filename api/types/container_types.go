@@ -178,7 +178,7 @@ type Container struct {
 	// TODO: ProcessLabel    string
 	AppArmorProfile string
 	// TODO: ExecIDs         []string
-	// TODO: HostConfig      *container.HostConfig
+	HostConfig *ContainerHostConfig
 	// TODO: GraphDriver     GraphDriverData
 	SizeRw     *int64 `json:",omitempty"`
 	SizeRootFs *int64 `json:",omitempty"`
