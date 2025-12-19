@@ -4,9 +4,8 @@ on:
     branches:
       - main
 name: release-please
-
 permissions:
-  contents: write # Required for trigger-release-automation job
+  contents: write
   pull-requests: write
 
 jobs:
