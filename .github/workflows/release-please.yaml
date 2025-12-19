@@ -29,6 +29,7 @@ jobs:
     permissions:
       contents: write    # Required for uploading release assets
       id-token: write    # Required for AWS OIDC authentication
+      deployments: write
       pull-requests: write
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
     uses: ./.github/workflows/release-automation.yaml
