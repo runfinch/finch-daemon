@@ -7,7 +7,7 @@
 
 The Finch Daemon project is an open source container runtime engine that enables users to integrate software that uses Docker's RESTful APIs as a programmatic dependency. Some core features include:
 
- - A partial implementation of the [Docker API Spec v1.43](https://docs.docker.com/engine/api/v1.43/)
+ - A partial implementation of the [Docker API Spec v1.43](https://docs.docker.com/engine/api/v1.43/) - see [supported endpoints](docs/supported-endpoints.md) for details
  - Native support for Linux environments
 
 The Finch Daemon project is actively taking contributions, especially to improve API compatibility.

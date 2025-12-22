@@ -3,7 +3,7 @@ set -e
 
 cd aws-sam-cli
 
-python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short > invoke_output.txt 2>&1 || true
+python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short 2>&1 | tee invoke_output.txt || true
 
 # test_invoke_with_error_during_image_build: Build error message differs from expected.
 # test_invoke_with_timeout_set_X_TimeoutFunction: Returns timeout message instead of empty string,

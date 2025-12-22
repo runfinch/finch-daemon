@@ -34,8 +34,7 @@ jobs:
           sudo rm -rf /private/var/run/finch-lima/*.sock || true
           sudo rm -rf /Applications/Finch/lima/data/finch/_cache || true
           # Clean up containers and images via Finch CLI
-          su ec2-user -c 'finch container prune -f' || true
-          su ec2-user -c 'finch image prune -a -f' || true
+          su ec2-user -c 'finch system prune -f' || true
 
       - name: Configure Git for ec2-user
         run: |
@@ -111,8 +110,43 @@ jobs:
           submodules: recursive
           path: finch-daemon-pr
 
+      - name: Configure Finch
+        run: |
+          echo "Original config:"
+          su ec2-user -c 'cat ~/.finch/finch.yaml || echo "No config file found"'
+          echo "Configuring Finch to use QEMU+VZ"
+          su ec2-user -c 'yq eval ".vmType = \"vz\"" -i ~/.finch/finch.yaml'
+          su ec2-user -c 'yq eval ".rosetta = false" -i ~/.finch/finch.yaml'
+          echo "Updated config:"
+          su ec2-user -c 'cat ~/.finch/finch.yaml'
+
       - name: Build and setup Finch VM
         run: ./finch-daemon-pr/scripts/build-and-setup-finch-vm.sh
+
+      - name: Verify Finch socket
+        run: |
+          # Test socket connectivity
+          if su ec2-user -c 'curl -s --unix-socket /Applications/Finch/lima/data/finch/sock/finch.sock http://localhost/version' > /dev/null; then
+            echo "✓ Finch daemon is accessible"
+          else
+            echo "✗ Finch daemon connection failed"
+            ls -la /Applications/Finch/lima/data/finch/sock/ || echo "Socket directory not found"
+            exit 1
+          fi
+
+      - name: Ensure Docker is not available (force Finch usage)
+        run: |
+          echo "Ensuring Docker is not accessible to force SAM CLI to use Finch..."
+          # Remove docker binaries from PATH
+          sudo rm -f /usr/local/bin/docker /opt/homebrew/bin/docker || true
+          # Verify docker is not accessible
+          if su ec2-user -c 'which docker' > /dev/null 2>&1; then
+            echo "WARNING: Docker is still accessible"
+            su ec2-user -c 'which docker'
+          else
+            echo "SUCCESS: Docker is not accessible - SAM CLI will use Finch"
+          fi
+        shell: bash
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
@@ -122,16 +156,11 @@ jobs:
           aws-region: ${{ secrets.REGION }}
           role-duration-seconds: 14400
 
-      - name: Install Docker CLI for SAM CLI compatibility
+      - name: Get latest SAM CLI tag
+        id: sam-tag
         run: |
-          echo "Checking Docker CLI installation..."
-          if ! su ec2-user -c 'which docker' > /dev/null 2>&1; then
-            echo "Installing Docker CLI..."
-            su ec2-user -c 'source /Users/ec2-user/.brewrc && brew install --formula docker'
-          else
-            echo "Docker CLI already installed"
-          fi
-        shell: bash
+          TAG=$(curl -s https://api.github.com/repos/aws/aws-sam-cli/releases/latest | jq -r .tag_name)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Checkout SAM CLI
         uses: actions/checkout@v4
@@ -139,6 +168,7 @@ jobs:
           repository: aws/aws-sam-cli
           submodules: recursive
           path: aws-sam-cli
+          ref: ${{ steps.sam-tag.outputs.tag }}
 
       - name: Set up SAM CLI from source
         run: |
@@ -154,21 +184,14 @@ jobs:
         shell: bash
 
       - name: Run unit tests
-        timeout-minutes: 30
         run: ./finch-daemon-pr/scripts/samcli-vm/run-unit-tests.sh
-
-      - name: Patch SAM CLI for Docker image cleanup
-        run: |
-          # Apply patch to handle ImageNotFound exceptions for all Docker tests
-          su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && patch -p1 tests/integration/local/invoke/test_integrations_cli.py < ${{ github.workspace }}/finch-daemon-pr/scripts/samcli-vm/invoke-teardown.patch'
-        shell: bash
 
       - name: Run invoke tests
         timeout-minutes: 40
         run: ./finch-daemon-pr/scripts/samcli-vm/run-invoke-tests.sh
 
       - name: Run start-api tests
-        timeout-minutes: 70
+        timeout-minutes: 60
         run: ./finch-daemon-pr/scripts/samcli-vm/run-start-api-tests.sh
 
       - name: Run sync tests
@@ -176,11 +199,11 @@ jobs:
         run: ./finch-daemon-pr/scripts/samcli-vm/run-sync-tests.sh
 
       - name: Run package tests
-        timeout-minutes: 10
+        timeout-minutes: 5
         run: ./finch-daemon-pr/scripts/samcli-vm/run-package-tests.sh
 
       - name: Run start-lambda tests
-        timeout-minutes: 30
+        timeout-minutes: 20
         run: ./finch-daemon-pr/scripts/samcli-vm/run-start-lambda-tests.sh
 
   # ensuring resources are clean post-test

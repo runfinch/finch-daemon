@@ -4,7 +4,7 @@ set -e
 cd aws-sam-cli
 
 ulimit -n 65536
-make test > unit_test_output.txt 2>&1 || true
+make test 2>&1 | tee unit_test_output.txt || true
 
 echo ""
 echo "=== PASSES ==="

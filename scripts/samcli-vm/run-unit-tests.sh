@@ -16,7 +16,7 @@ su ec2-user -c "
   SAM_CLI_DEV='$SAM_CLI_DEV' \
   SAM_CLI_TELEMETRY='$SAM_CLI_TELEMETRY' \
   make test
-" > /tmp/unit_test_output.txt 2>&1 || true
+" 2>&1 | tee /tmp/unit_test_output.txt || true
 
 echo ""
 echo "=== PASSES ==="
