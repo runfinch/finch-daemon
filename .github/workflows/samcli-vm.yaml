@@ -42,7 +42,7 @@ jobs:
         shell: bash
 
       - name: Set up Go
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
@@ -56,7 +56,7 @@ jobs:
         run: su ec2-user -c 'echo "A" | /usr/sbin/softwareupdate --install-rosetta --agree-to-license || true'
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -93,7 +93,7 @@ jobs:
         shell: bash
 
       - name: Checkout mainline finch repo
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           ref: main
           repository: runfinch/finch
@@ -102,7 +102,7 @@ jobs:
           submodules: recursive
 
       - name: Checkout finch-daemon PR
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
@@ -149,7 +149,7 @@ jobs:
         shell: bash
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
         with:
           role-to-assume: ${{ secrets.SAMCLI_VM_ROLE_SYNC }}
           role-session-name: samcli-finch-vm-sequential-tests
@@ -163,7 +163,7 @@ jobs:
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Checkout SAM CLI
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: aws/aws-sam-cli
           submodules: recursive
@@ -228,10 +228,10 @@ jobs:
           sudo rm -rf /tmp/finch-* || true
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708
         with:
           role-to-assume: ${{ secrets.SAMCLI_VM_ROLE_SYNC }}
           role-session-name: cleanup
