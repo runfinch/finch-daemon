@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  GO_VERSION: '1.24.x'
+  GO_VERSION: '1.24.11'
   PYTHON_VERSION: '3.11'
   PYTHON_BINARY: 'python3.11'
   AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
