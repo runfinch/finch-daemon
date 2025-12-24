@@ -148,7 +148,6 @@ func ContainerInspect(opt *option.Option, pOpt util.NewOpt) {
 			Expect(got.HostConfig.PidMode).Should(BeEmpty())
 			Expect(got.HostConfig.IpcMode).Should(Equal("private"))
 			Expect(got.HostConfig.ReadonlyRootfs).Should(BeFalse())
-			Expect(got.HostConfig.Sysctls).Should(BeEmpty())
 			Expect(got.HostConfig.Devices).Should(HaveLen(1))
 			Expect(got.HostConfig.Devices[0]).Should(Equal(createOptions.HostConfig.Devices[0]))
 			Expect(got.HostConfig.ShmSize).Should(Equal(createOptions.HostConfig.ShmSize))
@@ -164,6 +163,9 @@ func ContainerInspect(opt *option.Option, pOpt util.NewOpt) {
 			Expect(got.HostConfig.PortBindings[tcpPort][0]).Should(Equal(tcpPortBinding))
 			Expect(got.HostConfig.PortBindings[udpPort]).Should(HaveLen(1))
 			Expect(got.HostConfig.PortBindings[udpPort][0]).Should(Equal(udpPortBinding))
+			// Sysctls can be empty or contain "net.ipv4.ip_unprivileged_port_start" depending on the environment.
+			// See - https://github.com/containerd/nerdctl/blob/53e7b272af14b075a5e8d7b95a5c2d862a1620f8/cmd/nerdctl/container/container_inspect_linux_test.go#L366
+			Expect(got.HostConfig.Sysctls).Should(Or(HaveLen(0), HaveLen(1)))
 		})
 
 		It("should return 404 error when container does not exist", func() {

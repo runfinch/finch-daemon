@@ -12,7 +12,7 @@ on:
       - '**.md'
   workflow_dispatch:
 env:
-  GO_VERSION: '1.24.x'
+  GO_VERSION: '1.24.11'
 jobs:
   mac-test-e2e:
     runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
@@ -66,7 +66,8 @@ jobs:
       - name: Checkout mainline finch repo
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          ref: main
+          # TODO: revert to main
+          ref: updated-finch-core-nerdctl
           repository: runfinch/finch
           fetch-depth: 0
           persist-credentials: false
