@@ -13,6 +13,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
@@ -24,6 +26,7 @@ import (
 const (
 	// ConnectionTimeout is the timeout for connecting to the credential socket.
 	ConnectionTimeout = 5 * time.Second
+	BufferSize = 4096
 )
 
 // CredentialSocketPath is the path to the credential socket.
@@ -51,6 +54,10 @@ func (h FinchCredentialHelper) List() (map[string]string, error) {
 
 // Get retrieves credentials from the Finch daemon.
 func (h FinchCredentialHelper) Get(serverURL string) (string, string, error) {
+	if os.Getenv("USE_NATIVE_CREDSTORE") != "" {
+		return h.getFromCredSocket(serverURL)
+	}
+
 	buildID := os.Getenv("FINCH_BUILD_ID")
 	if buildID == "" {
 		return "", "", credentials.NewErrCredentialsNotFound()
@@ -109,6 +116,65 @@ func (h FinchCredentialHelper) Get(serverURL string) (string, string, error) {
 	}
 
 	return authConfig.Username, authConfig.Password, nil
+}
+
+func (h FinchCredentialHelper) getFromCredSocket(serverURL string) (string, string, error) {
+	credentialSocketPath := os.Getenv("FINCH_CREDENTIAL_SOCKET")
+	if credentialSocketPath == "" {
+		// detect WSL; Windows Finch uses direct fs mount instead of port forwarding
+		if strings.Contains(os.Getenv("PATH"), "/mnt/c") || os.Getenv("WSL_DISTRO_NAME") != "" {
+			finchDir := os.Getenv("FINCH_DIR")
+			if finchDir != "" {
+				credentialSocketPath = filepath.Join(finchDir, "lima", "data", "finch", "sock", "creds.sock")
+			} else {
+				return "", "", fmt.Errorf("FINCH_DIR environment variable not set; cannot find mounted socket")
+			}
+		} else {
+			// reverse port forwarded sock from mac.yaml
+			credentialSocketPath = "/run/finch-user-sockets/creds.sock"
+		}
+	}
+
+	// connect to socket
+	conn, err := net.Dial("unix", credentialSocketPath)
+	if err != nil {
+		return "", "", credentials.NewErrCredentialsNotFound()
+	}
+	defer conn.Close()
+
+	// simple sanitize to fight injection
+	serverURL = strings.ReplaceAll(serverURL, "\n", "")
+	serverURL = strings.ReplaceAll(serverURL, "\r", "")
+
+	// send get command with URL through socket
+	_, err = conn.Write([]byte("get\n" + serverURL + "\n"))
+	if err != nil {
+		return "", "", credentials.NewErrCredentialsNotFound()
+	}
+
+	// read response
+	response := make([]byte, BufferSize)
+	n, err := conn.Read(response)
+	if err != nil {
+		return "", "", credentials.NewErrCredentialsNotFound()
+	}
+
+	// parse response into credential struct (auth config breaking)
+	var cred struct {
+		ServerURL string `json:"ServerURL"`
+		Username  string `json:"Username"`
+		Secret    string `json:"Secret"`
+	}
+	if err := json.Unmarshal(response[:n], &cred); err != nil {
+		return "", "", credentials.NewErrCredentialsNotFound()
+	}
+
+	// Return empty credentials if no credentials found
+	if cred.Username == "" && cred.Secret == "" {
+		return "", "", credentials.NewErrCredentialsNotFound()
+	}
+
+	return cred.Username, cred.Secret, nil
 }
 
 func main() {
