@@ -19,7 +19,7 @@ func (s *service) Remove(ctx context.Context, name string, force bool) (deleted,
 		err = errdefs.NewNotFound(fmt.Errorf("no such image: %s", name))
 		return
 	}
-	if matchCount > 1 && !(force && uniqueCount == 1) {
+	if matchCount > 1 && (!force || uniqueCount != 1) {
 		err = errdefs.NewConflict(fmt.Errorf(
 			"unable to delete %s (must be forced) - image is referenced in multiple repositories", name))
 		return

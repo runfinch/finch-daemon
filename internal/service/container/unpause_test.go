@@ -8,9 +8,9 @@ import (
 	"errors"
 	"fmt"
 
-	"go.uber.org/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	containerd "github.com/containerd/containerd/v2/client"
 	cerrdefs "github.com/containerd/errdefs"
@@ -85,7 +85,7 @@ var _ = Describe("Container Unpause API", func() {
 			cdClient.EXPECT().GetContainerStatus(gomock.Any(), gomock.Any()).Return(containerd.Running)
 
 			err := svc.Unpause(ctx, cid, unpauseOptions)
-			Expect(err.Error()).Should(Equal(errdefs.NewConflict(fmt.Errorf("Container %s is not paused", cid)).Error()))
+			Expect(err.Error()).Should(Equal(errdefs.NewConflict(fmt.Errorf("container %s is not paused", cid)).Error()))
 		})
 
 		It("should return a Conflict error if container is not paused", func() {
@@ -94,7 +94,7 @@ var _ = Describe("Container Unpause API", func() {
 			cdClient.EXPECT().GetContainerStatus(gomock.Any(), gomock.Any()).Return(containerd.Stopped)
 
 			err := svc.Unpause(ctx, cid, unpauseOptions)
-			Expect(err.Error()).Should(Equal(errdefs.NewConflict(fmt.Errorf("Container %s is not paused", cid)).Error()))
+			Expect(err.Error()).Should(Equal(errdefs.NewConflict(fmt.Errorf("container %s is not paused", cid)).Error()))
 		})
 
 		It("should return a generic error if unpause operation fails", func() {

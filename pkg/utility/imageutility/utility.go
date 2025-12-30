@@ -41,5 +41,5 @@ func Canonicalize(name, tag string) (string, error) {
 func refNeedsTag(ref reference.Reference) bool {
 	_, tagged := ref.(reference.Tagged)
 	_, digested := ref.(reference.Digested)
-	return !(tagged || digested)
+	return !tagged && !digested
 }

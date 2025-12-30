@@ -67,11 +67,10 @@ func (p platformParser) DefaultSpec() platforms.Platform {
 // Licensed under the Apache License, Version 2.0
 // NOTICE: https://github.com/containerd/nerdctl/blob/main/NOTICE
 
-// TODO: Make generateBuildctlArgs public in nerdctl library.
-// source: https://github.com/containerd/nerdctl/blob/ff9323859a8d7892d8d72380a17b99395ef9a516/pkg/cmd/builder/build.go.
-//
 //nolint:stylecheck // adding a todo for exposing env in nerdctl library
 func (w *NerdctlWrapper) RunBuild(ctx context.Context, client *containerd.Client, options types.BuilderBuildOptions, buildID string) error {
+	// TODO: Make generateBuildctlArgs public in nerdctl library.
+	// source: https://github.com/containerd/nerdctl/blob/ff9323859a8d7892d8d72380a17b99395ef9a516/pkg/cmd/builder/build.go.
 	buildctlBinary, buildctlArgs, needsLoading, metaFile, tags, cleanup, err := generateBuildctlArgs(ctx, client, options)
 	if err != nil {
 		return err
@@ -85,7 +84,7 @@ func (w *NerdctlWrapper) RunBuild(ctx context.Context, client *containerd.Client
 	buildctlCmd := exec.Command(buildctlBinary, buildctlArgs...)
 	buildctlCmd.Env = os.Environ()
 	buildctlCmd.Env = append(buildctlCmd.Env, fmt.Sprintf("FINCH_BUILD_ID=%s", buildID))
-	buildctlCmd.Env = append(buildctlCmd.Env, fmt.Sprintf("FINCH_CREDENTIAL_SOCKET=%s",config.GetCredentialAddr()))
+	buildctlCmd.Env = append(buildctlCmd.Env, fmt.Sprintf("FINCH_CREDENTIAL_SOCKET=%s", config.GetCredentialAddr()))
 
 	var buildctlStdout io.Reader
 	if needsLoading {
