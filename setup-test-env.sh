@@ -1,10 +1,10 @@
 #!/bin/bash
 
-DEFAULT_RUNC_VERSION="1.3.0"
-DEFAULT_CONTAINERD_VERSION="1.7.27"
-DEFAULT_NERDCTL_VERSION="2.1.3"
-DEFAULT_BUILDKIT_VERSION="0.23.2"
-DEFAULT_CNI_VERSION="1.6.2"
+DEFAULT_RUNC_VERSION="1.3.3"
+DEFAULT_CONTAINERD_VERSION="2.2.1"
+DEFAULT_NERDCTL_VERSION="2.2.1"
+DEFAULT_BUILDKIT_VERSION="0.26.3"
+DEFAULT_CNI_VERSION="1.9.0"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -93,7 +93,20 @@ sudo tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v${CNI_VERSION}.tgz
 
 export PATH=$PATH:/usr/local/bin
 
+# Create BuildKit config directory and file to ensure finch namespace
+sudo mkdir -p /etc/buildkit
+sudo tee /etc/buildkit/buildkitd.toml > /dev/null << 'EOF'
+root = "/var/lib/buildkit"
+
+[worker.oci]
+  enabled = false
+
+[worker.containerd]
+  enabled = true
+  namespace = "finch"
+EOF
+
 sudo containerd &
-sudo buildkitd &
+sudo buildkitd --config /etc/buildkit/buildkitd.toml &
 
 sleep 2

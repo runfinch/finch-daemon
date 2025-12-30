@@ -4,9 +4,17 @@ on:
     branches:
       - main
 name: release-please
+
+permissions:
+  contents: write # Required for trigger-release-automation job
+  pull-requests: write
+
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
     steps:
@@ -18,5 +26,10 @@ jobs:
   trigger-release-automation:
     name: Trigger release-automation.yaml if PR is merged
     needs: [release-please]
+    permissions:
+      contents: write    # Required for uploading release assets
+      id-token: write    # Required for AWS OIDC authentication
+      deployments: write
+      pull-requests: write
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
     uses: ./.github/workflows/release-automation.yaml

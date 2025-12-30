@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.21.0](https://github.com/runfinch/finch-daemon/compare/v0.20.0...v0.21.0) (2025-12-24)
+
+
+### Build System or External Dependencies
+
+* **deps:** bump github.com/containerd/containerd/v2 ([a7c990f](https://github.com/runfinch/finch-daemon/commit/a7c990f85a1f07f09d073d29b2e6395acfd6a41a))
+* **deps:** bump github.com/containerd/containerd/v2 from 2.1.4 to 2.1.5 ([#361](https://github.com/runfinch/finch-daemon/issues/361)) ([a7c990f](https://github.com/runfinch/finch-daemon/commit/a7c990f85a1f07f09d073d29b2e6395acfd6a41a))
+* **deps:** bump github.com/containernetworking/plugins ([b2d30ca](https://github.com/runfinch/finch-daemon/commit/b2d30caf91d1a6235acbc721f75c03c4a8b3dd4c))
+* **deps:** bump github.com/containernetworking/plugins from 1.7.1 to 1.9.0 ([#365](https://github.com/runfinch/finch-daemon/issues/365)) ([b2d30ca](https://github.com/runfinch/finch-daemon/commit/b2d30caf91d1a6235acbc721f75c03c4a8b3dd4c))
+* **deps:** bump github.com/onsi/gomega from 1.38.1 to 1.38.3 ([#371](https://github.com/runfinch/finch-daemon/issues/371)) ([62f744e](https://github.com/runfinch/finch-daemon/commit/62f744ec77808c7651846e6fa5e3b013fbc9ac82))
+* **deps:** bump github.com/open-policy-agent/opa from 1.7.1 to 1.12.1 ([#370](https://github.com/runfinch/finch-daemon/issues/370)) ([e56548b](https://github.com/runfinch/finch-daemon/commit/e56548beb6faa2ace2fbdc8caf41da3acb981045))
+* **deps:** bump github.com/stretchr/testify from 1.10.0 to 1.11.1 ([#326](https://github.com/runfinch/finch-daemon/issues/326)) ([762b18c](https://github.com/runfinch/finch-daemon/commit/762b18c927b34a0f6ca13163b637051f1dc441f3))
+* **deps:** bump golang.org/x/crypto from 0.41.0 to 0.45.0 ([#363](https://github.com/runfinch/finch-daemon/issues/363)) ([6282e66](https://github.com/runfinch/finch-daemon/commit/6282e666b09d7ba36f9e123355a592e453207b80))
+
+
+### Features
+
+* add HostConfig to container inspect response ([#324](https://github.com/runfinch/finch-daemon/issues/324)) ([7148cd8](https://github.com/runfinch/finch-daemon/commit/7148cd8313f26a92da5dfcc9fe586ee4961c5566))
+
+
+### Bug Fixes
+
+* **ci:** fix finch daemon macos vm test workflow ([#364](https://github.com/runfinch/finch-daemon/issues/364)) ([fb371ad](https://github.com/runfinch/finch-daemon/commit/fb371adf4ffa8c64ecb2d4be0709b3f9896a90e9))
+* Cleanup finch yaml before tests ([#367](https://github.com/runfinch/finch-daemon/issues/367)) ([67339ac](https://github.com/runfinch/finch-daemon/commit/67339aca1be2c75b81663567528e0e56dcaf0226))
+
 ## [0.20.0](https://github.com/runfinch/finch-daemon/compare/v0.19.1...v0.20.0) (2025-08-24)
 
 

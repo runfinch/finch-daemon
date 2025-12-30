@@ -65,6 +65,8 @@ func (s *service) Inspect(ctx context.Context, cid string, sizeFlag bool) (*type
 		Labels:       inspect.Config.Labels,
 	}
 
+	cont.HostConfig = getHostConfigFromDockerCompat(inspect.HostConfig)
+
 	l, err := c.Labels(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get container labels: %s", err)
@@ -81,6 +83,47 @@ func (s *service) Inspect(ctx context.Context, cid string, sizeFlag bool) (*type
 	}
 
 	return &cont, nil
+}
+
+func getHostConfigFromDockerCompat(c *dockercompat.HostConfig) *types.ContainerHostConfig {
+	if c == nil {
+		return nil
+	}
+
+	hostConfigDevices := []types.DeviceMapping{}
+	for _, device := range c.Devices {
+		hostConfigDevices = append(hostConfigDevices, types.DeviceMapping{
+			PathOnHost:        device.PathOnHost,
+			PathInContainer:   device.PathInContainer,
+			CgroupPermissions: device.CgroupPermissions,
+		})
+	}
+
+	return &types.ContainerHostConfig{
+		ContainerIDFile: c.ContainerIDFile,
+		LogConfig: types.LogConfig{
+			Type:   c.LogConfig.Driver,
+			Config: c.LogConfig.Opts,
+		},
+		PortBindings:   c.PortBindings,
+		IpcMode:        c.IpcMode,
+		PidMode:        c.PidMode,
+		ReadonlyRootfs: c.ReadonlyRootfs,
+		ShmSize:        c.ShmSize,
+		Sysctls:        c.Sysctls,
+		CPUSetMems:     c.CPUSetMems,
+		CPUSetCPUs:     c.CPUSetCPUs,
+		CPUShares:      int64(c.CPUShares),
+		CPUPeriod:      int64(c.CPUPeriod),
+		Memory:         c.Memory,
+		MemorySwap:     c.MemorySwap,
+		OomKillDisable: c.OomKillDisable,
+		Devices:        hostConfigDevices,
+		// TODO: Uncomment these when https://github.com/runfinch/finch-daemon/pull/267 gets merged
+		// CPURealtimePeriod: inspect.HostConfig.CPURealtimePeriod,
+		// CPURealtimeRuntime: inspect.HostConfig.CPURealtimeRuntime,
+		// TODO: add blkio devices which requires a change in the dockercompat response from Nerdctl
+	}
 }
 
 // updateNetworkSettings updates the settings in the network to match that
