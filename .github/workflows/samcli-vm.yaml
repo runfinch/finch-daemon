@@ -7,8 +7,9 @@ on:
 
 env:
   GO_VERSION: '1.24.11'
-  PYTHON_VERSION: '3.11'
-  PYTHON_BINARY: 'python3.11'
+  # python version should match https://github.com/aws/aws-sam-cli/blame/develop/tests/integration/testdata/durable/template.yaml
+  PYTHON_VERSION: '3.13'
+  PYTHON_BINARY: 'python3.13'
   AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
   BY_CANARY: true # allows full testing
   SAM_CLI_DEV: 1
@@ -24,17 +25,19 @@ jobs:
   samcli-vm-test:
     runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
-
       - name: Clean macOS runner workspace
         run: |
-          rm -rf ${{ github.workspace }}/*
-          # Clean up any leftover Finch VM state
-          su ec2-user -c 'finch vm remove -f' || true
-          sudo pkill -f socket_vmnet || true
-          sudo rm -rf /private/var/run/finch-lima/*.sock || true
-          sudo rm -rf /Applications/Finch/lima/data/finch/_cache || true
-          # Clean up containers and images via Finch CLI
-          su ec2-user -c 'finch system prune -f' || true
+          # taken from test-pkg workflow in finch
+          sudo rm -rf /Applications/Finch
+          sudo rm -rf /opt/finch
+          su ec2-user -c 'rm -rf ~/.finch'
+          sudo rm -rf ./_output
+          if pgrep '^qemu-system'; then
+            sudo pkill '^qemu-system'
+          fi
+          if pgrep '^socket_vmnet'; then
+            sudo pkill '^socket_vmnet'
+          fi
 
       - name: Configure Git for ec2-user
         run: |
@@ -101,27 +104,34 @@ jobs:
           persist-credentials: false
           submodules: recursive
 
-      - name: Checkout finch-daemon PR
+      - name: Checkout finch-daemon
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
           persist-credentials: false
           submodules: recursive
           path: finch-daemon-pr
 
-      - name: Configure Finch
+      - name: Make & install Finch
         run: |
-          echo "Original config:"
-          su ec2-user -c 'cat ~/.finch/finch.yaml || echo "No config file found"'
-          echo "Configuring Finch to use QEMU+VZ"
-          su ec2-user -c 'yq eval ".vmType = \"vz\"" -i ~/.finch/finch.yaml'
-          su ec2-user -c 'yq eval ".rosetta = false" -i ~/.finch/finch.yaml'
-          echo "Updated config:"
-          su ec2-user -c 'cat ~/.finch/finch.yaml'
+          chown -R ec2-user:staff "$GITHUB_WORKSPACE"
+          su ec2-user -c "cd $GITHUB_WORKSPACE && make clean && make FINCH_OS_IMAGE_LOCATION_ROOT=/Applications/Finch && make install PREFIX=Applications/Finch"
+          su ec2-user -c "ls -lah /Applications/Finch"
 
-      - name: Build and setup Finch VM
-        run: ./finch-daemon-pr/scripts/build-and-setup-finch-vm.sh
+      - name: Make Finch Daemon
+        run: |
+          su ec2-user -c "cd $GITHUB_WORKSPACE/finch-daemon-pr && STATIC=1 GOPROXY=direct GOOS=linux GOARCH=\$(go env GOARCH) make"
+          su ec2-user -c "cp $GITHUB_WORKSPACE/finch-daemon-pr/bin/finch-daemon /Applications/Finch/finch-daemon/finch-daemon"
+
+      - name: Initializing Finch VM
+        run: |
+          su ec2-user -c 'finch vm init'
+          su ec2-user -c 'while ! finch vm status | grep -q "Running"; do echo "Waiting for VM..."; sleep 5; done'
+
+      - name: Pinging Finch Daemon socket
+        run: |
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch curl --unix-socket /var/run/finch.sock -X GET http:/v1.41/version'
 
       - name: Verify Finch socket
         run: |
@@ -187,23 +197,23 @@ jobs:
         run: ./finch-daemon-pr/scripts/samcli-vm/run-unit-tests.sh
 
       - name: Run invoke tests
-        timeout-minutes: 40
+        timeout-minutes: 50
         run: ./finch-daemon-pr/scripts/samcli-vm/run-invoke-tests.sh
 
       - name: Run start-api tests
-        timeout-minutes: 60
+        timeout-minutes: 80
         run: ./finch-daemon-pr/scripts/samcli-vm/run-start-api-tests.sh
 
       - name: Run sync tests
-        timeout-minutes: 20
+        timeout-minutes: 30
         run: ./finch-daemon-pr/scripts/samcli-vm/run-sync-tests.sh
 
       - name: Run package tests
-        timeout-minutes: 5
+        timeout-minutes: 10
         run: ./finch-daemon-pr/scripts/samcli-vm/run-package-tests.sh
 
       - name: Run start-lambda tests
-        timeout-minutes: 20
+        timeout-minutes: 30
         run: ./finch-daemon-pr/scripts/samcli-vm/run-start-lambda-tests.sh
 
   # ensuring resources are clean post-test
