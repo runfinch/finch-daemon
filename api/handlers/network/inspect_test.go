@@ -11,10 +11,10 @@ import (
 
 	"github.com/containerd/nerdctl/v2/pkg/config"
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
-	"go.uber.org/mock/gomock"
 	"github.com/gorilla/mux"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/mocks/mocks_logger"
@@ -53,6 +53,11 @@ var _ = Describe("Network Inspect API ", func() {
 			IPAM: dockercompat.IPAM{
 				Config: []dockercompat.IPAMConfig{
 					{Subnet: "10.5.2.0/24", Gateway: "10.5.2.1"},
+				},
+			},
+			Containers: map[string]dockercompat.EndpointResource{
+				"container1": {
+					Name: "test-container-1",
 				},
 			},
 			Labels: map[string]string{"label": "value"},
