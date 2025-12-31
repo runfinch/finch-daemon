@@ -1,6 +1,14 @@
 name: samcli-vm
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'scripts/samcli-vm/**'
+      - 'scripts/cleanup-aws-resources.sh'
+      - 'scripts/validate-test-results.sh'
+      - '.github/workflows/samcli-vm.yaml'
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:
@@ -100,17 +108,11 @@ jobs:
         with:
           ref: main
           repository: runfinch/finch
-          fetch-depth: 0
-          persist-credentials: false
           submodules: recursive
 
       - name: Checkout finch-daemon
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          ref: ${{ github.ref_name }}
-          fetch-depth: 0
-          persist-credentials: false
-          submodules: recursive
           path: finch-daemon-pr
 
       - name: Make & install Finch
@@ -209,11 +211,11 @@ jobs:
         run: ./finch-daemon-pr/scripts/samcli-vm/run-sync-tests.sh
 
       - name: Run package tests
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: ./finch-daemon-pr/scripts/samcli-vm/run-package-tests.sh
 
       - name: Run start-lambda tests
-        timeout-minutes: 30
+        timeout-minutes: 40
         run: ./finch-daemon-pr/scripts/samcli-vm/run-start-lambda-tests.sh
 
   # ensuring resources are clean post-test

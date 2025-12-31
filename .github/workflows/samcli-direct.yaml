@@ -1,16 +1,17 @@
 name: samcli-direct
 
 on:
-  push:
+  pull_request:
     branches:
-      - 'main'
+      - main
+    paths-ignore:
+      - '**.md'
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:
 
 env:
   GO_VERSION: '1.24.11'
-  CONTAINERD_VERSION: '2.0.x'
 
 permissions:
   id-token: write
@@ -55,11 +56,6 @@ jobs:
 
       - name: Checkout finch-daemon
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          ref: ${{ github.ref_name }}
-          fetch-depth: 0
-          persist-credentials: false
-          submodules: recursive
 
       - name: Stop pre-existing services
         run: |
