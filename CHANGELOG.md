@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.0](https://github.com/runfinch/finch-daemon/compare/v0.21.0...v0.22.0) (2025-12-31)
+
+
+### Features
+
+* add containers field in network inspect response ([#384](https://github.com/runfinch/finch-daemon/issues/384)) ([356ed67](https://github.com/runfinch/finch-daemon/commit/356ed672bbbeabf6bb7291fce1315e027e31108c))
+
 ## [0.21.0](https://github.com/runfinch/finch-daemon/compare/v0.20.0...v0.21.0) (2025-12-24)
 
 
