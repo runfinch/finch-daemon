@@ -11,9 +11,9 @@ import (
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	"github.com/containerd/nerdctl/v2/pkg/netutil"
 	"github.com/containernetworking/cni/libcni"
-	"go.uber.org/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/api/handlers/network"
 	"github.com/runfinch/finch-daemon/api/types"
@@ -62,12 +62,22 @@ var _ = Describe("Network Inspect API ", func() {
 					{Subnet: "10.5.2.0/24", Gateway: "10.5.2.1"},
 				},
 			},
+			Containers: map[string]dockercompat.EndpointResource{
+				"container1": {
+					Name: "test-container-1",
+				},
+			},
 		}
 		expNetworkResp = &types.NetworkInspectResponse{
 			ID:     networkId,
 			Name:   networkName,
 			Labels: mockNetworkInspect.Labels,
 			IPAM:   mockNetworkInspect.IPAM,
+			Containers: map[string]dockercompat.EndpointResource{
+				"container1": {
+					Name: "test-container-1",
+				},
+			},
 		}
 	})
 	Context("service", func() {
