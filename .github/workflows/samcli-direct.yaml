@@ -4,15 +4,14 @@ on:
   pull_request:
     branches:
       - main
-    types:
-      - closed
+    paths-ignore:
+      - '**.md'
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:
 
 env:
   GO_VERSION: '1.24.11'
-  CONTAINERD_VERSION: '2.0.x'
 
 permissions:
   id-token: write
@@ -20,18 +19,12 @@ permissions:
 
 jobs:
   samcli-direct-test:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    timeout-minutes: 30 # start-api is the longest at ~ 20 minutes
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        test_step:
-          - name: unit
-          - name: package
-          - name: start-lambda
-          - name: invoke
-          - name: start-api
+        test_type: [unit, package, invoke, start-lambda, start-api]
     env:
       AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
       DOCKER_HOST: unix:///var/run/finch.sock
@@ -45,7 +38,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
           role-to-assume: ${{secrets.SAMCLI_DIRECT_ROLE_BASE}}
-          role-session-name: samcli-${{ matrix.test_step.name }}-tests
+          role-session-name: samcli-${{ matrix.test_type }}-tests
           aws-region: ${{ secrets.REGION }}
           role-duration-seconds: 2000
 
@@ -58,15 +51,11 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          # python version should match https://github.com/aws/aws-sam-cli/blame/develop/tests/integration/testdata/durable/template.yaml
+          python-version: '3.13'
 
       - name: Checkout finch-daemon
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
-          persist-credentials: false
-          submodules: recursive
 
       - name: Stop pre-existing services
         run: |
@@ -115,25 +104,8 @@ jobs:
           make init
           samdev --version
 
-      - name: Run unit tests
-        if: matrix.test_step.name == 'unit'
-        run: ./scripts/samcli-direct/run-unit-tests.sh
-
-      - name: Run package tests
-        if: matrix.test_step.name == 'package'
-        run: ./scripts/samcli-direct/run-package-tests.sh
-
-      - name: Run invoke tests
-        if: matrix.test_step.name == 'invoke'
-        run: ./scripts/samcli-direct/run-invoke-tests.sh
-
-      - name: Run start-lambda tests
-        if: matrix.test_step.name == 'start-lambda'
-        run: ./scripts/samcli-direct/run-start-lambda-tests.sh
-
-      - name: Run start-api tests
-        if: matrix.test_step.name == 'start-api'
-        run: ./scripts/samcli-direct/run-start-api-tests.sh
+      - name: Run ${{ matrix.test_type }} tests
+        run: ./scripts/samcli-direct/run-${{ matrix.test_type }}-tests.sh
 
       - name: Show finch-daemon logs
         if: always()
@@ -145,7 +117,6 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     needs: samcli-direct-test
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
