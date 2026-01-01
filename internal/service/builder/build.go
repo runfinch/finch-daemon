@@ -62,7 +62,7 @@ func (s *service) Build(ctx context.Context, options *ncTypes.BuilderBuildOption
 				return nil, err
 			}
 			result = append(result, types.BuildResult{ID: tagEvent.ID})
-			options.Stdout.Write([]byte(fmt.Sprintf("Successfully built %s\n", tagEvent.ID)))
+			fmt.Fprintf(options.Stdout, "Successfully built %s\n", tagEvent.ID)
 		}
 	}
 

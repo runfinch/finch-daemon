@@ -111,9 +111,8 @@ func (s *service) Inspect(ctx context.Context, name string, ac *dockertypes.Auth
 	}
 
 	var platforms []ocispec.Platform
-	switch {
-	case desc.MediaType == ocispec.MediaTypeImageManifest ||
-		desc.MediaType == containerdimages.MediaTypeDockerSchema2Manifest:
+	switch desc.MediaType {
+	case ocispec.MediaTypeImageManifest, containerdimages.MediaTypeDockerSchema2Manifest:
 		var manifest ocispec.Manifest
 		if err := json.Unmarshal(res, &manifest); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal manifest: %w", err)
@@ -145,8 +144,7 @@ func (s *service) Inspect(ctx context.Context, name string, ac *dockertypes.Auth
 		}
 
 		platforms = []ocispec.Platform{image.Platform}
-	case desc.MediaType == ocispec.MediaTypeImageIndex ||
-		desc.MediaType == containerdimages.MediaTypeDockerSchema2ManifestList:
+	case ocispec.MediaTypeImageIndex, containerdimages.MediaTypeDockerSchema2ManifestList:
 		var index ocispec.Index
 		if err := json.Unmarshal(res, &index); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal index: %w", err)

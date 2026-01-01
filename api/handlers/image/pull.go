@@ -57,7 +57,7 @@ func (h *handler) pull(w http.ResponseWriter, r *http.Request) {
 		streamWriter.WriteError(code, err)
 		return
 	}
-	streamWriter.Write([]byte(fmt.Sprintf("Pulled %s:%s\n", name, tag)))
+	fmt.Fprintf(streamWriter, "Pulled %s:%s\n", name, tag)
 }
 
 func handleUnsupportedParams(r *http.Request) []string {

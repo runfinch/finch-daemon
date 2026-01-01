@@ -23,7 +23,7 @@ import (
 func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 	// return early if neither stdout and stderr are set
 	stdout, stderr := httputils.BoolValue(r, "stdout"), httputils.BoolValue(r, "stderr")
-	if !(stdout || stderr) {
+	if !stdout && !stderr {
 		response.JSON(w, http.StatusBadRequest, response.NewErrorFromMsg(
 			"you must choose at least one stream"))
 		return
