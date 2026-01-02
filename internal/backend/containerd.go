@@ -33,6 +33,7 @@ type ContainerdClient interface {
 	GetClient() *containerd.Client
 	GetContainerStatus(ctx context.Context, c containerd.Container) containerd.ProcessStatus
 	SearchContainer(ctx context.Context, searchText string) (containers []containerd.Container, err error)
+	GetContainers(ctx context.Context, filters ...string) (containers []containerd.Container, err error)
 	GetImage(ctx context.Context, ref string) (containerd.Image, error)
 	SearchImage(ctx context.Context, searchText string) ([]images.Image, error)
 	ParsePlatform(platform string) (ocispec.Platform, error)
@@ -106,6 +107,12 @@ func (w *ContainerdClientWrapper) SearchContainer(ctx context.Context, searchTex
 		fmt.Sprintf("id~=^%s.*$", regexp.QuoteMeta(searchText)),
 	}
 
+	containers, err = w.client.Containers(ctx, filters...)
+	return containers, err
+}
+
+// GetContainers returns the list of containers that match the given filters.
+func (w *ContainerdClientWrapper) GetContainers(ctx context.Context, filters ...string) (containers []containerd.Container, err error) {
 	containers, err = w.client.Containers(ctx, filters...)
 	return containers, err
 }
