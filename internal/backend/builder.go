@@ -287,7 +287,12 @@ func generateBuildctlArgs(ctx context.Context, client *containerd.Client, option
 				return "", nil, false, "", nil, nil, err
 			}
 			cleanup = func() {
-				os.RemoveAll(dir)
+				absDir, err := filepath.Abs(dir)
+				safeTmp := filepath.Clean(os.TempDir())
+				// Only remove if inside the temp directory
+				if err == nil && strings.HasPrefix(absDir, safeTmp+string(os.PathSeparator)) {
+					os.RemoveAll(absDir)
+				}
 			}
 		} else {
 			dir, file = filepath.Split(options.File)
