@@ -163,7 +163,7 @@ require (
 	github.com/multiformats/go-multibase v0.2.0 // indirect
 	github.com/multiformats/go-multihash v0.2.3 // indirect
 	github.com/multiformats/go-varint v0.1.0 // indirect
-	github.com/open-policy-agent/opa v1.12.1
+	github.com/open-policy-agent/opa v1.12.2
 	github.com/opencontainers/runtime-tools v0.9.1-0.20251205004911-5e639034dcdc // indirect
 	github.com/opencontainers/selinux v1.13.1 // indirect
 	github.com/petermattis/goid v0.0.0-20251121121749-a11dd1a45f9a // indirect
