@@ -14,6 +14,7 @@ import (
 	"github.com/runfinch/common-tests/option"
 
 	"github.com/runfinch/finch-daemon/api/response"
+	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/e2e/client"
 )
 
@@ -39,8 +40,8 @@ func ContainerRemove(opt *option.Option) {
 
 		It("should remove the container", func() {
 			// start a container that exits as soon as it starts
-			command.Run(opt, "run", "--name", testContainerName, defaultImage, "echo", "foo")
-			command.Run(opt, "wait", testContainerName)
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"echo", "foo"})
+			httpWaitContainer(uClient, version, testContainerName)
 
 			res, err := uClient.Post(apiUrl, "application/json", nil)
 			Expect(err).Should(BeNil())
@@ -49,7 +50,7 @@ func ContainerRemove(opt *option.Option) {
 		})
 		It("should fail to remove a running container", func() {
 			// start a container that keeps running
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
 			res, err := uClient.Post(apiUrl, "application/json", nil)
 			Expect(err).Should(BeNil())
 			Expect(res.StatusCode).Should(Equal(http.StatusConflict))
@@ -57,7 +58,7 @@ func ContainerRemove(opt *option.Option) {
 		})
 		It("should successfully remove a running container with force=true", func() {
 			// start a container that keeps running
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
 
 			relativeUrl := fmt.Sprintf("/containers/%s/remove?force=true", testContainerName)
 			apiUrl = client.ConvertToFinchUrl(version, relativeUrl)
@@ -67,9 +68,16 @@ func ContainerRemove(opt *option.Option) {
 			containerShouldNotExist(opt, testContainerName)
 		})
 		It("should successfully remove a volume associated with it", func() {
-			// start a container that keeps running
-			command.Run(opt, "run", "-v", "test-vol", "--name", testContainerName, defaultImage)
-			command.Run(opt, "wait", testContainerName)
+			// start a container with a volume
+			httpRunContainerWithOptions(uClient, version, testContainerName, types.ContainerCreateRequest{
+				ContainerConfig: types.ContainerConfig{
+					Image: defaultImage,
+				},
+				HostConfig: types.ContainerHostConfig{
+					Binds: []string{"test-vol:/data"},
+				},
+			})
+			httpWaitContainer(uClient, version, testContainerName)
 			// get the total number of volumes after creating the new volume
 			totalVolumes := len(command.GetAllVolumeNames(opt))
 			relativeUrl := fmt.Sprintf("/containers/%s/remove?v=true", testContainerName)

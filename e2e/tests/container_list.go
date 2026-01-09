@@ -82,8 +82,8 @@ func ContainerList(opt *option.Option) {
 			Expect(got).Should(ContainElements(want))
 		})
 		It("should list all the containers with all is true and limit is 1", func() {
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
-			id2 := command.StdoutStr(opt, "run", "-d", "--name", testContainerName2, defaultImage)
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
+			id2 := httpRunContainer(uClient, version, testContainerName2, defaultImage, nil)
 			want := []types.ContainerListItem{
 				{
 					Id:    id2[:12],
@@ -131,8 +131,8 @@ func ContainerList(opt *option.Option) {
 			Expect(got).Should(ContainElements(want))
 		})
 		It("should list the running containers with all is true and filters including exited status", func() {
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
-			id2 := command.StdoutStr(opt, "run", "-d", "--name", testContainerName2, defaultImage)
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
+			id2 := httpRunContainer(uClient, version, testContainerName2, defaultImage, nil)
 			want := []types.ContainerListItem{
 				{
 					Id:    id2[:12],
@@ -170,8 +170,16 @@ func ContainerList(opt *option.Option) {
 			Expect(got).Should(ContainElements(want))
 		})
 		It("should list the running containers with filters including network", func() {
-			command.Run(opt, "network", "create", testNetwork)
-			id := command.StdoutStr(opt, "run", "-d", "--name", testContainerName, "--network", testNetwork, defaultImage, "sleep", "infinity")
+			httpCreateNetwork(uClient, version, testNetwork)
+			id := httpRunContainerWithOptions(uClient, version, testContainerName, types.ContainerCreateRequest{
+				ContainerConfig: types.ContainerConfig{
+					Image: defaultImage,
+					Cmd:   []string{"sleep", "infinity"},
+				},
+				HostConfig: types.ContainerHostConfig{
+					NetworkMode: testNetwork,
+				},
+			})
 			want := []types.ContainerListItem{
 				{
 					Id:    id[:12],
