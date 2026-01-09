@@ -10,9 +10,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
-	"github.com/runfinch/common-tests/option"
 
+	"github.com/runfinch/common-tests/option"
 	"github.com/runfinch/finch-daemon/api/response"
 	"github.com/runfinch/finch-daemon/e2e/client"
 )
@@ -36,12 +35,12 @@ func ContainerUnpause(opt *option.Option) {
 		})
 
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 
 		It("should unpause a paused container", func() {
 			// Start a container that keeps running
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
 
 			// Pause this running container
 			res, err := uClient.Post(pauseUrl, "application/json", nil)
@@ -49,8 +48,8 @@ func ContainerUnpause(opt *option.Option) {
 			Expect(res.StatusCode).Should(Equal(http.StatusNoContent))
 
 			// Verify container is paused
-			output := command.StdoutStr(opt, "inspect", "--format", "{{.State.Status}}", testContainerName)
-			Expect(output).Should(Equal("paused"))
+			inspect := httpInspectContainer(uClient, version, testContainerName)
+			Expect(inspect.State.Status).Should(Equal("paused"))
 
 			// Unpause the paused container
 			res, err = uClient.Post(unpauseUrl, "application/json", nil)
@@ -58,8 +57,8 @@ func ContainerUnpause(opt *option.Option) {
 			Expect(res.StatusCode).Should(Equal(http.StatusNoContent))
 
 			// Verify container is running again
-			output = command.StdoutStr(opt, "inspect", "--format", "{{.State.Status}}", testContainerName)
-			Expect(output).Should(Equal("running"))
+			inspect = httpInspectContainer(uClient, version, testContainerName)
+			Expect(inspect.State.Status).Should(Equal("running"))
 		})
 
 		It("should fail to unpause a non-existent container", func() {
@@ -74,7 +73,7 @@ func ContainerUnpause(opt *option.Option) {
 
 		It("should fail to unpause a running container", func() {
 			// Start a container that keeps running
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
 
 			// Try to unpause the running container
 			res, err := uClient.Post(unpauseUrl, "application/json", nil)
@@ -87,20 +86,20 @@ func ContainerUnpause(opt *option.Option) {
 			Expect(body.Message).Should(Equal(fmt.Sprintf("Container %s is not paused", testContainerName)))
 
 			// Verify container is still running
-			output := command.StdoutStr(opt, "inspect", "--format", "{{.State.Status}}", testContainerName)
-			Expect(output).Should(Equal("running"))
+			inspect := httpInspectContainer(uClient, version, testContainerName)
+			Expect(inspect.State.Status).Should(Equal("running"))
 		})
 
 		It("should fail to unpause a stopped container", func() {
 			// Create and start a container
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
 
 			// Verify container is running
-			output := command.StdoutStr(opt, "inspect", "--format", "{{.State.Status}}", testContainerName)
-			Expect(output).Should(Equal("running"))
+			inspect2 := httpInspectContainer(uClient, version, testContainerName)
+			Expect(inspect2.State.Status).Should(Equal("running"))
 
 			// Stop the container with a timeout to ensure it stops
-			command.Run(opt, "stop", "-t", "1", testContainerName)
+			httpStopContainerWithTimeout(uClient, version, testContainerName, 1)
 
 			// Try to unpause the stopped container
 			res, err := uClient.Post(unpauseUrl, "application/json", nil)

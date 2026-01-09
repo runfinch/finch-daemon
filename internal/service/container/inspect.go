@@ -12,6 +12,8 @@ import (
 
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	"github.com/containerd/nerdctl/v2/pkg/labels"
+	"github.com/moby/moby/api/types/blkiodev"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/runfinch/finch-daemon/api/types"
 )
 
@@ -71,6 +73,17 @@ func (s *service) Inspect(ctx context.Context, cid string, sizeFlag bool) (*type
 	if err != nil {
 		return nil, fmt.Errorf("failed to get container labels: %s", err)
 	}
+
+	// Enrich HostConfig with fields not available in dockercompat.HostConfig
+	// These are extracted from the OCI spec and container labels.
+	if cont.HostConfig != nil {
+		spec, err := c.Spec(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get container spec: %s", err)
+		}
+		enrichHostConfigFromSpec(cont.HostConfig, spec, l)
+	}
+
 	updateNetworkSettings(ctx, cont.NetworkSettings, l)
 
 	// make sure it passes the default time value for time fields otherwise the goclient fails.
@@ -99,30 +112,67 @@ func getHostConfigFromDockerCompat(c *dockercompat.HostConfig) *types.ContainerH
 		})
 	}
 
+	// Convert blkio weight devices from dockercompat to moby types
+	var blkioWeightDevices []*blkiodev.WeightDevice
+	for _, wd := range c.BlkioWeightDevice {
+		if wd != nil {
+			blkioWeightDevices = append(blkioWeightDevices, &blkiodev.WeightDevice{
+				Path:   wd.Path,
+				Weight: wd.Weight,
+			})
+		}
+	}
+
+	// Convert blkio throttle devices from dockercompat to moby types
+	convertThrottleDevices := func(devices []*dockercompat.ThrottleDevice) []*blkiodev.ThrottleDevice {
+		var result []*blkiodev.ThrottleDevice
+		for _, td := range devices {
+			if td != nil {
+				result = append(result, &blkiodev.ThrottleDevice{
+					Path: td.Path,
+					Rate: td.Rate,
+				})
+			}
+		}
+		return result
+	}
+
 	return &types.ContainerHostConfig{
 		ContainerIDFile: c.ContainerIDFile,
 		LogConfig: types.LogConfig{
 			Type:   c.LogConfig.Driver,
 			Config: c.LogConfig.Opts,
 		},
-		PortBindings:   c.PortBindings,
-		IpcMode:        c.IpcMode,
-		PidMode:        c.PidMode,
-		ReadonlyRootfs: c.ReadonlyRootfs,
-		ShmSize:        c.ShmSize,
-		Sysctls:        c.Sysctls,
-		CPUSetMems:     c.CPUSetMems,
-		CPUSetCPUs:     c.CPUSetCPUs,
-		CPUShares:      int64(c.CPUShares),
-		CPUPeriod:      int64(c.CPUPeriod),
-		Memory:         c.Memory,
-		MemorySwap:     c.MemorySwap,
-		OomKillDisable: c.OomKillDisable,
-		Devices:        hostConfigDevices,
-		// TODO: Uncomment these when https://github.com/runfinch/finch-daemon/pull/267 gets merged
-		// CPURealtimePeriod: inspect.HostConfig.CPURealtimePeriod,
-		// CPURealtimeRuntime: inspect.HostConfig.CPURealtimeRuntime,
-		// TODO: add blkio devices which requires a change in the dockercompat response from Nerdctl
+		PortBindings:         c.PortBindings,
+		IpcMode:              c.IpcMode,
+		PidMode:              c.PidMode,
+		ReadonlyRootfs:       c.ReadonlyRootfs,
+		ShmSize:              c.ShmSize,
+		Sysctls:              c.Sysctls,
+		CPUSetMems:           c.CPUSetMems,
+		CPUSetCPUs:           c.CPUSetCPUs,
+		CPUShares:            int64(c.CPUShares),
+		CPUPeriod:            int64(c.CPUPeriod),
+		CPUQuota:             c.CPUQuota,
+		Memory:               c.Memory,
+		MemorySwap:           c.MemorySwap,
+		OomKillDisable:       c.OomKillDisable,
+		Devices:              hostConfigDevices,
+		CgroupnsMode:         types.CgroupnsMode(c.CgroupnsMode),
+		DNS:                  c.DNS,
+		DNSOptions:           c.DNSOptions,
+		DNSSearch:            c.DNSSearch,
+		ExtraHosts:           c.ExtraHosts,
+		GroupAdd:             c.GroupAdd,
+		Tmpfs:                c.Tmpfs,
+		UTSMode:              c.UTSMode,
+		Runtime:              c.Runtime,
+		BlkioWeight:          c.BlkioWeight,
+		BlkioWeightDevice:    blkioWeightDevices,
+		BlkioDeviceReadBps:   convertThrottleDevices(c.BlkioDeviceReadBps),
+		BlkioDeviceWriteBps:  convertThrottleDevices(c.BlkioDeviceWriteBps),
+		BlkioDeviceReadIOps:  convertThrottleDevices(c.BlkioDeviceReadIOps),
+		BlkioDeviceWriteIOps: convertThrottleDevices(c.BlkioDeviceWriteIOps),
 	}
 }
 
@@ -167,4 +217,119 @@ func getNetworkName(lab map[string]string, network string) string {
 	}
 
 	return network
+}
+
+// enrichHostConfigFromSpec populates HostConfig fields that are not available
+// in the upstream dockercompat.HostConfig struct. These fields are extracted
+// from the OCI spec and container labels.
+func enrichHostConfigFromSpec(hc *types.ContainerHostConfig, spec *specs.Spec, containerLabels map[string]string) {
+	if spec == nil {
+		return
+	}
+
+	// Extract capabilities from OCI spec
+	if spec.Process != nil && spec.Process.Capabilities != nil {
+		caps := spec.Process.Capabilities
+		if len(caps.Bounding) > 0 {
+			// Strip "CAP_" prefix is NOT done — Docker returns caps with CAP_ prefix
+			hc.CapAdd = caps.Bounding
+		}
+		// Detect privileged mode: if bounding set has all known capabilities
+		hc.Privileged = isPrivileged(caps.Bounding)
+	}
+
+	// Extract PidsLimit from OCI spec
+	if spec.Linux != nil && spec.Linux.Resources != nil && spec.Linux.Resources.Pids != nil && spec.Linux.Resources.Pids.Limit != nil {
+		hc.PidsLimit = *spec.Linux.Resources.Pids.Limit
+	}
+
+	// Extract Ulimits from OCI spec rlimits
+	if spec.Process != nil && len(spec.Process.Rlimits) > 0 {
+		for _, rl := range spec.Process.Rlimits {
+			// Convert OCI rlimit type (e.g., "RLIMIT_NOFILE") to Docker format (e.g., "nofile")
+			name := strings.TrimPrefix(rl.Type, "RLIMIT_")
+			name = strings.ToLower(name)
+			hc.Ulimits = append(hc.Ulimits, &types.Ulimit{
+				Name: name,
+				Hard: int64(rl.Hard),
+				Soft: int64(rl.Soft),
+			})
+		}
+	}
+
+	// Extract annotations from OCI spec (filter out internal nerdctl labels)
+	if len(spec.Annotations) > 0 {
+		annotations := make(map[string]string)
+		for k, v := range spec.Annotations {
+			if !strings.HasPrefix(k, "nerdctl/") {
+				annotations[k] = v
+			}
+		}
+		if len(annotations) > 0 {
+			hc.Annotations = annotations
+		}
+	}
+
+	// Extract NetworkMode from container labels
+	if networksJSON, ok := containerLabels[labels.Networks]; ok {
+		var networks []string
+		if err := json.Unmarshal([]byte(networksJSON), &networks); err == nil && len(networks) > 0 {
+			hc.NetworkMode = networks[0]
+		}
+	}
+
+	// Extract AutoRemove from container labels
+	if autoRemove, ok := containerLabels[labels.ContainerAutoRemove]; ok {
+		hc.AutoRemove, _ = strconv.ParseBool(autoRemove)
+	}
+
+	// Extract Binds from container labels (nerdctl/mounts)
+	if mountsJSON, ok := containerLabels[labels.Mounts]; ok {
+		var mounts []mountInfo
+		if err := json.Unmarshal([]byte(mountsJSON), &mounts); err == nil {
+			for _, m := range mounts {
+				if m.Type == "bind" {
+					bind := m.Source + ":" + m.Destination
+					if m.Mode != "" {
+						bind += ":" + m.Mode
+					}
+					hc.Binds = append(hc.Binds, bind)
+				}
+			}
+		}
+	}
+
+	// Extract SecurityOpt from OCI spec
+	if spec.Process != nil && spec.Process.ApparmorProfile != "" {
+		hc.SecurityOpt = append(hc.SecurityOpt, "apparmor="+spec.Process.ApparmorProfile)
+	}
+	if spec.Process != nil && spec.Process.SelinuxLabel != "" {
+		hc.SecurityOpt = append(hc.SecurityOpt, "label="+spec.Process.SelinuxLabel)
+	}
+
+	// Extract Init from OCI spec — check if init process is configured
+	if spec.Process != nil && len(spec.Process.Args) > 0 {
+		// nerdctl uses tini as init; check if the entrypoint is an init binary
+		arg0 := spec.Process.Args[0]
+		if strings.HasSuffix(arg0, "tini") || strings.HasSuffix(arg0, "docker-init") {
+			initTrue := true
+			hc.Init = &initTrue
+		}
+	}
+}
+
+// mountInfo is a minimal struct for parsing nerdctl mount labels.
+type mountInfo struct {
+	Type        string `json:"Type"`
+	Source      string `json:"Source"`
+	Destination string `json:"Destination"`
+	Mode        string `json:"Mode"`
+}
+
+// isPrivileged checks if the bounding capability set contains all known capabilities.
+// This is a heuristic — a container is considered privileged if it has a very large set of capabilities.
+func isPrivileged(boundingCaps []string) bool {
+	// A privileged container typically has 40+ capabilities.
+	// The exact number varies by kernel version, but 38+ is a strong signal.
+	return len(boundingCaps) >= 38
 }
