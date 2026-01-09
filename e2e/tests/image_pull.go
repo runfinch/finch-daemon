@@ -45,7 +45,7 @@ func ImagePull(opt *option.Option) {
 			imageShouldExist(opt, defaultImage)
 		})
 		It("should do nothing if image already exists", func() {
-			command.Run(opt, "pull", defaultImage)
+			httpPullImage(uClient, version, defaultImage)
 			relativeUrl := fmt.Sprintf("/images/create?fromImage=%s", defaultImage)
 			url := client.ConvertToFinchUrl(version, relativeUrl)
 			resp, err := uClient.Post(url, "application/json", nil)

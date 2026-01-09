@@ -145,7 +145,7 @@ func ContainerStats(opt *option.Option) {
 
 			go func() {
 				time.Sleep(time.Second * 5)
-				command.Run(opt, "rm", "-f", testContainerName)
+				httpRemoveContainerForce(uClient, version, testContainerName)
 			}()
 
 			relativeUrl := fmt.Sprintf("/containers/%s/stats", testContainerName)
@@ -172,10 +172,8 @@ func ContainerStats(opt *option.Option) {
 			Expect(num).Should(BeNumerically("<", 10))
 		})
 		It("should stream stats for a stopped container", func() {
-			cid := command.StdoutStr(
-				opt, "run", "-d", "--name", testContainerName, defaultImage, "echo", "hello",
-			)
-			command.Run(opt, "wait", testContainerName)
+			cid := httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"echo", "hello"})
+			httpWaitContainer(uClient, version, testContainerName)
 
 			res, err := uClient.Get(client.ConvertToFinchUrl(version, fmt.Sprintf("/containers/%s/json", cid)))
 			Expect(err).Should(BeNil())
@@ -188,7 +186,7 @@ func ContainerStats(opt *option.Option) {
 
 			go func() {
 				time.Sleep(time.Second * 5)
-				command.Run(opt, "rm", "-f", testContainerName)
+				httpRemoveContainerForce(uClient, version, testContainerName)
 			}()
 
 			relativeUrl := fmt.Sprintf("/containers/%s/stats", testContainerName)
@@ -225,7 +223,7 @@ func ContainerStats(opt *option.Option) {
 
 			go func() {
 				time.Sleep(time.Second * 5)
-				command.Run(opt, "rm", "-f", testContainerName)
+				httpRemoveContainerForce(uClient, version, testContainerName)
 			}()
 
 			relativeUrl := fmt.Sprintf("/containers/%s/stats", testContainerName)
@@ -252,8 +250,8 @@ func ContainerStats(opt *option.Option) {
 			Expect(num).Should(BeNumerically("<", 10))
 		})
 		It("should stream stats with multiple network interfaces", func() {
-			command.Run(opt, "network", "create", "net1")
-			command.Run(opt, "network", "create", "net2")
+			httpCreateNetwork(uClient, version, "net1")
+			httpCreateNetwork(uClient, version, "net2")
 			cid := command.StdoutStr(
 				opt,
 				"run",
@@ -270,7 +268,7 @@ func ContainerStats(opt *option.Option) {
 
 			go func() {
 				time.Sleep(time.Second * 5)
-				command.Run(opt, "rm", "-f", testContainerName)
+				httpRemoveContainerForce(uClient, version, testContainerName)
 			}()
 
 			relativeUrl := fmt.Sprintf("/containers/%s/stats", testContainerName)

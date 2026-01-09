@@ -81,7 +81,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// start container and verify output
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 			out := command.StdoutStr(opt, "logs", testContainerName)
 			Expect(out).Should(Equal("hello world"))
 		})
@@ -116,7 +116,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// start container and verify network settings
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 			verifyNetworkSettings(opt, testContainerName, "bridge")
 		})
 		It("should attach container to the bridge network for default network mode", func() {
@@ -130,7 +130,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// start container and verify network settings
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 			verifyNetworkSettings(opt, testContainerName, "bridge")
 		})
 		It("should attach container to the specified network using network name", func() {
@@ -139,7 +139,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			options.HostConfig.NetworkMode = testNetwork
 
 			// create network
-			command.Run(opt, "network", "create", testNetwork)
+			httpCreateNetwork(uClient, version, testNetwork)
 
 			// create container
 			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
@@ -147,12 +147,12 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// start container and verify network settings
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 			verifyNetworkSettings(opt, testContainerName, testNetwork)
 		})
 		It("should attach container to the specified network using network id", func() {
 			// create network
-			netId := command.StdoutStr(opt, "network", "create", testNetwork)
+			netId := httpCreateNetwork(uClient, version, testNetwork)
 			Expect(netId).ShouldNot(BeEmpty())
 
 			// define options
@@ -165,7 +165,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// start container and verify network settings
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 			verifyNetworkSettings(opt, testContainerName, testNetwork)
 		})
 		It("should create a container with specified port mappings", func() {
@@ -190,7 +190,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
 			Expect(statusCode).Should(Equal(http.StatusCreated))
 			Expect(ctr.ID).ShouldNot(BeEmpty())
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// inspect container
 			resp := command.Stdout(opt, "inspect", testContainerName)
@@ -225,7 +225,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
 			Expect(statusCode).Should(Equal(http.StatusCreated))
 			Expect(ctr.ID).ShouldNot(BeEmpty())
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// inspect container
 			resp := command.Stdout(opt, "inspect", testContainerName)
@@ -265,7 +265,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
 			Expect(statusCode).Should(Equal(http.StatusCreated))
 			Expect(ctr.ID).ShouldNot(BeEmpty())
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// ensure that mounted file exists in container
 			fileShouldExistInContainer(opt, testContainerName, ctrFilepath, fileContent)
@@ -274,7 +274,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			fileContent2 := "hello world again"
 			filename2 := "test-file2"
 			cmd := fmt.Sprintf("echo -n %s > %s", fileContent2, filepath.Join(filepath.Dir(ctrFilepath), filename2))
-			command.Run(opt, "exec", testContainerName, "sh", "-c", cmd)
+			httpExecContainer(uClient, version, testContainerName, []string{"sh", "-c", cmd})
 			fileShouldExist(filepath.Join(filepath.Dir(hostFilepath), filename2), fileContent2)
 		})
 		It("should create a container with a directory mounted from the host with read-only permissions", func() {
@@ -293,7 +293,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
 			Expect(statusCode).Should(Equal(http.StatusCreated))
 			Expect(ctr.ID).ShouldNot(BeEmpty())
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// ensure that mounted file exists in container
 			fileShouldExistInContainer(opt, testContainerName, ctrFilepath, fileContent)
@@ -310,7 +310,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			ctrFilepath := "/mnt/test-volume/test-file"
 
 			// create volume
-			command.Run(opt, "volume", "create", testVolumeName)
+			httpCreateVolume(uClient, version, testVolumeName, nil)
 
 			// define options
 			options.HostConfig.Binds = []string{
@@ -322,17 +322,17 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
 			Expect(statusCode).Should(Equal(http.StatusCreated))
 			Expect(ctr.ID).ShouldNot(BeEmpty())
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// write file in the mounted volume
 			cmd := fmt.Sprintf("echo -n %s > %s", fileContent, ctrFilepath)
-			command.Run(opt, "exec", testContainerName, "sh", "-c", cmd)
+			httpExecContainer(uClient, version, testContainerName, []string{"sh", "-c", cmd})
 
 			// ensure that created file exists in another container with the same volume mount
 			statusCode, ctr = createContainer(uClient, url, testContainerName2, options)
 			Expect(statusCode).Should(Equal(http.StatusCreated))
 			Expect(ctr.ID).ShouldNot(BeEmpty())
-			command.Run(opt, "start", testContainerName2)
+			httpStartContainer(uClient, version, testContainerName2)
 			fileShouldExistInContainer(opt, testContainerName2, ctrFilepath, fileContent)
 		})
 
@@ -384,7 +384,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// start container
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// inspect container
 			resp := command.Stdout(opt, "inspect", testContainerName)
@@ -439,7 +439,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// start container
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// verify memory allocation from stats command
 			resp := command.StdoutStr(opt, "stats", "--no-stream", "--format", "'{{ json .}}'", testContainerName)
@@ -653,7 +653,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// start a container and verify network settings
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 			verifyNetworkSettings(opt, testContainerName, "bridge")
 		})
 
@@ -671,8 +671,8 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// start and kill a container
-			command.Run(opt, "start", testContainerName)
-			command.Run(opt, "kill", "--signal=SIGKILL", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
+			httpKillContainerWithSignal(uClient, version, testContainerName, "SIGKILL")
 
 			// check every 500 ms if container restarted
 			ticker := time.NewTicker(500 * time.Millisecond)
@@ -708,7 +708,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// Start container
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// Inspect the container using native format to verify OomKillDisable
 			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
@@ -744,7 +744,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// Start container
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// Inspect using the native format to verify network mode is "none"
 			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
@@ -775,7 +775,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// Start container
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// Inspect container using Docker-compatible format
 			resp := command.Stdout(opt, "inspect", testContainerName)
@@ -805,7 +805,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// start container
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// Get native container configuration
 			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
@@ -911,7 +911,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// start container
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// inspect container
 			resp := command.Stdout(opt, "inspect", testContainerName)
@@ -946,10 +946,10 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			// Create named volumes
 			rwVolName := tID + "-rw"
 			roVolName := tID + "-ro"
-			command.Run(opt, "volume", "create", rwVolName)
-			command.Run(opt, "volume", "create", roVolName)
-			defer command.Run(opt, "volume", "rm", "-f", rwVolName)
-			defer command.Run(opt, "volume", "rm", "-f", roVolName)
+			httpCreateVolume(uClient, version, rwVolName, nil)
+			httpCreateVolume(uClient, version, roVolName, nil)
+			defer httpRemoveVolume(uClient, version, rwVolName)
+			defer httpRemoveVolume(uClient, version, roVolName)
 
 			// Create source container with multiple volume types
 			fromContainerName := tID + "-from"
@@ -966,8 +966,8 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			// Create and start source container
 			statusCode, _ := createContainer(uClient, url, fromContainerName, sourceOptions)
 			Expect(statusCode).Should(Equal(http.StatusCreated))
-			command.Run(opt, "start", fromContainerName)
-			defer command.Run(opt, "rm", "-f", fromContainerName)
+			httpStartContainer(uClient, version, fromContainerName)
+			defer httpRemoveContainer(uClient, version, fromContainerName)
 
 			// Create target container with volumes-from
 			toContainerName := tID + "-to"
@@ -979,17 +979,17 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			// Create and start target container
 			statusCode, _ = createContainer(uClient, url, toContainerName, targetOptions)
 			Expect(statusCode).Should(Equal(http.StatusCreated))
-			command.Run(opt, "start", toContainerName)
-			defer command.Run(opt, "rm", "-f", toContainerName)
+			httpStartContainer(uClient, version, toContainerName)
+			defer httpRemoveContainer(uClient, version, toContainerName)
 
 			// Test write permissions
-			command.Run(opt, "exec", toContainerName, "sh", "-exc", "echo -n str1 > /mnt1/file1")
+			httpExecContainer(uClient, version, toContainerName, []string{"sh", "-exc", "echo -n str1 > /mnt1/file1"})
 			command.RunWithoutSuccessfulExit(opt, "exec", toContainerName, "sh", "-exc", "echo -n str2 > /mnt2/file2")
-			command.Run(opt, "exec", toContainerName, "sh", "-exc", "echo -n str3 > /mnt3/file3")
+			httpExecContainer(uClient, version, toContainerName, []string{"sh", "-exc", "echo -n str3 > /mnt3/file3"})
 			command.RunWithoutSuccessfulExit(opt, "exec", toContainerName, "sh", "-exc", "echo -n str4 > /mnt4/file4")
 
 			// Remove target container
-			command.Run(opt, "rm", "-f", toContainerName)
+			httpRemoveContainer(uClient, version, toContainerName)
 
 			// Create a new container to verify data persistence
 			verifyOptions := types.ContainerCreateRequest{}
@@ -1001,7 +1001,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(statusCode).Should(Equal(http.StatusCreated))
 			out := command.StdoutStr(opt, "start", "-a", "verify-container")
 			Expect(out).Should(Equal("str1str3"))
-			defer command.Run(opt, "rm", "-f", "verify-container")
+			defer httpRemoveContainer(uClient, version, "verify-container")
 		})
 
 		It("should create a container with tmpfs mounts", func() {
@@ -1018,7 +1018,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// Start container
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// Verify tmpfs mounts using native inspect
 			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
@@ -1067,7 +1067,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// Start container
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// Inspect using native format to verify UTS namespace configuration
 			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
@@ -1104,7 +1104,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			statusCode, hostCtr := createContainer(uClient, url, "host-container", hostOptions)
 			Expect(statusCode).Should(Equal(http.StatusCreated))
 			Expect(hostCtr.ID).ShouldNot(BeEmpty())
-			command.Run(opt, "start", "host-container")
+			httpStartContainer(uClient, version, "host-container")
 
 			// Define options for the container with pid mode
 			options.Cmd = []string{"sleep", "Infinity"}
@@ -1126,7 +1126,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(inspect[0].HostConfig.PidMode).Should(Equal(hostCtr.ID))
 
 			// Cleanup
-			command.Run(opt, "rm", "-f", "host-container")
+			httpRemoveContainer(uClient, version, "host-container")
 		})
 
 		It("should create a container with private IPC mode", func() {
@@ -1137,7 +1137,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(statusCode).Should(Equal(http.StatusCreated))
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
 			var nativeInspect []map[string]interface{}
@@ -1175,7 +1175,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// Start container
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// Inspect the container using native format
 			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
@@ -1245,7 +1245,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// Start container
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// Inspect container using Docker-compatible format
 			resp := command.Stdout(opt, "inspect", testContainerName)
@@ -1272,7 +1272,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// Start container
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// Verify sysctls using native inspect
 			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
@@ -1305,7 +1305,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// Start container
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// Verify runtime using native inspect
 			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
@@ -1364,7 +1364,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// Start container
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// Inspect using native format to verify annotation
 			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
@@ -1392,7 +1392,7 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// Start container
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// Inspect using native format to verify cgroup namespace configuration
 			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
@@ -1469,13 +1469,13 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// Start container
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// Inspect using native format
 			nativeResp := command.Stdout(opt, "inspect", "--mode=native", testContainerName)
 			var nativeInspect []map[string]interface{}
-			err := json.Unmarshal(nativeResp, &nativeInspect)
-			Expect(err).Should(BeNil())
+			err2 := json.Unmarshal(nativeResp, &nativeInspect)
+			Expect(err2).Should(BeNil())
 			Expect(nativeInspect).Should(HaveLen(1))
 
 			// Navigate to the linux section

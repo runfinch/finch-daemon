@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/docker/go-connections/nat"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/runfinch/common-tests/command"
@@ -16,6 +17,7 @@ import (
 	"github.com/runfinch/common-tests/fnet"
 	"github.com/runfinch/common-tests/option"
 
+	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/e2e/client"
 )
 
@@ -39,7 +41,16 @@ func ImagePush(opt *option.Option) {
 			`, defaultImage))
 			DeferCleanup(os.RemoveAll, buildContext)
 			port = fnet.GetFreePort()
-			command.Run(opt, "run", "-dp", fmt.Sprintf("%d:5000", port), "--name", "registry", registryImage)
+			httpRunContainerWithOptions(uClient, version, "registry", types.ContainerCreateRequest{
+				ContainerConfig: types.ContainerConfig{
+					Image: registryImage,
+				},
+				HostConfig: types.ContainerHostConfig{
+					PortBindings: nat.PortMap{
+						"5000/tcp": []nat.PortBinding{{HostIP: "0.0.0.0", HostPort: fmt.Sprintf("%d", port)}},
+					},
+				},
+			})
 		})
 
 		AfterEach(func() {
@@ -48,6 +59,7 @@ func ImagePush(opt *option.Option) {
 
 		It("should push an image successfully", func() {
 			name := fmt.Sprintf(`localhost:%d/test-push:tag`, port)
+			// Note: build command kept as CLI since HTTP build requires tar context
 			command.Run(opt, "build", "-t", name, buildContext)
 			relativeUrl := fmt.Sprintf("/images/%s/push", name)
 			url := client.ConvertToFinchUrl(version, relativeUrl)
@@ -55,35 +67,45 @@ func ImagePush(opt *option.Option) {
 
 			Expect(err).Should(BeNil())
 			Expect(resp.StatusCode).Should(Equal(http.StatusOK))
-			command.Run(opt, "rmi", name)
-			command.Run(opt, "pull", name)
+			httpRemoveImage(uClient, version, name)
+			httpPullImage(uClient, version, name)
 			imageShouldExist(opt, name)
 		})
 		It("should successfully push an image into two different registry", func() {
 			name := fmt.Sprintf(`localhost:%d/test-push:tag`, port)
+			// Note: build command kept as CLI since HTTP build requires tar context
 			command.Run(opt, "build", "-t", name, buildContext)
 			relativeUrl := fmt.Sprintf("/images/%s/push", name)
 			url := client.ConvertToFinchUrl(version, relativeUrl)
 			resp, err := uClient.Post(url, "application/json", nil)
 			Expect(err).Should(BeNil())
 			Expect(resp.StatusCode).Should(Equal(http.StatusOK))
-			command.Run(opt, "rmi", name)
-			command.Run(opt, "pull", name)
+			httpRemoveImage(uClient, version, name)
+			httpPullImage(uClient, version, name)
 			imageShouldExist(opt, name)
 
 			// spin off a second registry and tag the previously built image and push it to the second registry.
 			secondRegistryPort := fnet.GetFreePort()
-			command.Run(opt, "run", "-dp", fmt.Sprintf("%d:5000", secondRegistryPort), "--name", "second-registry", registryImage)
+			httpRunContainerWithOptions(uClient, version, "second-registry", types.ContainerCreateRequest{
+				ContainerConfig: types.ContainerConfig{
+					Image: registryImage,
+				},
+				HostConfig: types.ContainerHostConfig{
+					PortBindings: nat.PortMap{
+						"5000/tcp": []nat.PortBinding{{HostIP: "0.0.0.0", HostPort: fmt.Sprintf("%d", secondRegistryPort)}},
+					},
+				},
+			})
 
 			name2 := fmt.Sprintf(`localhost:%d/test-push:tag`, secondRegistryPort)
-			command.Run(opt, "tag", name, name2)
+			httpTagImage(uClient, version, name, name2)
 			relativeUrl = fmt.Sprintf("/images/%s/push", name2)
 			url = client.ConvertToFinchUrl(version, relativeUrl)
 			resp, err = uClient.Post(url, "application/json", nil)
 			Expect(err).Should(BeNil())
 			Expect(resp.StatusCode).Should(Equal(http.StatusOK))
-			command.Run(opt, "rmi", name2)
-			command.Run(opt, "pull", name2)
+			httpRemoveImage(uClient, version, name2)
+			httpPullImage(uClient, version, name2)
 			imageShouldExist(opt, name2)
 		})
 
@@ -100,6 +122,7 @@ func ImagePush(opt *option.Option) {
 			// pass the wrong port to mimic network failure
 			freePort := fnet.GetFreePort()
 			name := fmt.Sprintf(`localhost:%d/test-push:tag`, freePort)
+			// Note: build command kept as CLI since HTTP build requires tar context
 			command.Run(opt, "build", "-t", name, buildContext)
 			relativeUrl := fmt.Sprintf("/images/%s/push", name)
 			url := client.ConvertToFinchUrl(version, relativeUrl)

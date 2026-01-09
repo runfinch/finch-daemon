@@ -36,7 +36,7 @@ func ContainerRename(opt *option.Option) {
 		})
 
 		It("should rename the container", func() {
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
 			containerShouldBeRunning(opt, testContainerName)
 			containerShouldNotExist(opt, testContainerName2)
 
@@ -48,8 +48,8 @@ func ContainerRename(opt *option.Option) {
 			containerShouldBeRunning(opt, testContainerName2)
 		})
 		It("should fail to rename a container to taken name", func() {
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
-			command.Run(opt, "run", "-d", "--name", testContainerName2, defaultImage, "sleep", "infinity")
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
+			httpRunContainer(uClient, version, testContainerName2, defaultImage, []string{"sleep", "infinity"})
 			containerShouldBeRunning(opt, testContainerName)
 			containerShouldBeRunning(opt, testContainerName2)
 
