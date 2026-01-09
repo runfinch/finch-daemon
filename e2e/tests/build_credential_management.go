@@ -4,6 +4,7 @@
 package tests
 
 import (
+	"archive/tar"
 	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -14,18 +15,16 @@ import (
 	"time"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
+	"github.com/docker/go-connections/nat"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/ffs"
 	"github.com/runfinch/common-tests/fnet"
 	"github.com/runfinch/common-tests/option"
 
+	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/e2e/client"
-	"github.com/runfinch/finch-daemon/pkg/archive"
-	"github.com/runfinch/finch-daemon/pkg/ecc"
-	"github.com/runfinch/finch-daemon/pkg/flog"
 )
 
 func CredentialHelper(opt *option.Option, pOpt func([]string, ...option.Modifier) (*option.Option, error)) {
@@ -43,9 +42,9 @@ func CredentialHelper(opt *option.Option, pOpt func([]string, ...option.Modifier
 		)
 
 		BeforeEach(func() {
-			command.RemoveAll(opt)
 			uClient = client.NewClient(GetDockerHostUrl())
 			version = GetDockerApiVersion()
+			httpRemoveAll(uClient, version)
 		})
 
 		BeforeEach(func() {
@@ -58,28 +57,27 @@ func CredentialHelper(opt *option.Option, pOpt func([]string, ...option.Modifier
 
 			// Set up authenticated registry
 			port := fnet.GetFreePort()
-			containerID := command.StdoutStr(opt, "run",
-				"-dp", fmt.Sprintf("%d:5000", port),
-				"--name", "registry",
-				"-v", fmt.Sprintf("%s:/auth", htpasswdDir),
-				"-e", "REGISTRY_AUTH=htpasswd",
-				"-e", "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm",
-				"-e", fmt.Sprintf("REGISTRY_AUTH_HTPASSWD_PATH=/auth/%s", filename),
-				registryImage)
-			// Wait for container to be running
-			tries := 0
-			for command.StdoutStr(opt, "inspect", "-f", "{{.State.Running}}", containerID) != "true" {
-				if tries >= 5 {
-					Fail("Registry container failed to start after 5 seconds")
-				}
-				time.Sleep(1 * time.Second)
-				tries++
-			}
-			// Wait for registry service to be ready
-			time.Sleep(10 * time.Second)
+			httpRunContainerWithOptions(uClient, version, "registry", types.ContainerCreateRequest{
+				ContainerConfig: types.ContainerConfig{
+					Image: registryImage,
+					Env: []string{
+						"REGISTRY_AUTH=htpasswd",
+						"REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm",
+						fmt.Sprintf("REGISTRY_AUTH_HTPASSWD_PATH=/auth/%s", filename),
+					},
+				},
+				HostConfig: types.ContainerHostConfig{
+					Binds: []string{fmt.Sprintf("%s:/auth", htpasswdDir)},
+					PortBindings: nat.PortMap{
+						"5000/tcp": []nat.PortBinding{{HostIP: "0.0.0.0", HostPort: fmt.Sprintf("%d", port)}},
+					},
+				},
+			})
 			registry = fmt.Sprintf(`localhost:%d`, port)
 
-			command.Run(opt, "pull", defaultImage)
+			waitForRegistry(port)
+
+			httpPullImage(uClient, version, defaultImage)
 
 			authImageTag = fmt.Sprintf(`%s/test-login:tag`, registry)
 			buildContext = ffs.CreateBuildContext(fmt.Sprintf(`FROM %s
@@ -87,19 +85,23 @@ func CredentialHelper(opt *option.Option, pOpt func([]string, ...option.Modifier
 		`, defaultImage))
 			DeferCleanup(os.RemoveAll, buildContext)
 
-			command.Run(opt, "build", "-t", authImageTag, buildContext)
+			httpBuildImage(uClient, version, authImageTag, buildContext)
 
-			command.New(opt, "login", registry, "-u", testUser, "--password-stdin").
-				WithStdin(gbytes.BufferWithBytes([]byte(testPassword))).Run()
+			httpRegistryLogin(uClient, version, registry, testUser, testPassword)
 			DeferCleanup(func() {
-				command.Run(opt, "logout", registry)
+				httpRegistryLogout(registry)
 			})
-			command.Run(opt, "push", authImageTag)
-			command.Run(opt, "rmi", authImageTag)
+			authHeader := b64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`{
+  "username": "%s",
+  "password": "%s",
+  "serveraddress": "%s"
+}`, testUser, testPassword, registry)))
+			httpPushImageWithAuth(uClient, version, authImageTag, authHeader)
+			httpRemoveImage(uClient, version, authImageTag)
 		})
 
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 
 		It("should successfully build with registry credentials via API", func() {
@@ -144,7 +146,7 @@ func CredentialHelper(opt *option.Option, pOpt func([]string, ...option.Modifier
 			Expect(res).To(HaveHTTPStatus(http.StatusOK))
 			Expect(string(respBody)).ShouldNot(ContainSubstring("error"))
 
-			imageShouldExist(opt, resultTag)
+			imageShouldExist(resultTag)
 		})
 
 		It("should fail to build without registry credentials", func() {
@@ -178,7 +180,7 @@ func CredentialHelper(opt *option.Option, pOpt func([]string, ...option.Modifier
 			Expect(string(respBody)).Should(ContainSubstring(""))
 
 			// Verify image was not built
-			imageShouldNotExist(opt, resultTag)
+			imageShouldNotExist(resultTag)
 		})
 
 		It("should prevent credential sharing between parallel builds", func() {
@@ -258,14 +260,14 @@ func CredentialHelper(opt *option.Option, pOpt func([]string, ...option.Modifier
 
 			Expect(quickRes).To(HaveHTTPStatus(http.StatusInternalServerError))
 			Expect(string(quickRespBody)).Should(ContainSubstring(""))
-			imageShouldNotExist(opt, quickResultTag)
+			imageShouldNotExist(quickResultTag)
 
 			<-slowDone
 			Expect(slowErr).Should(BeNil())
 			Expect(slowRes).To(HaveHTTPStatus(http.StatusOK))
 			Expect(string(slowRespBody)).ShouldNot(ContainSubstring("error"))
 
-			imageShouldExist(opt, slowResultTag)
+			imageShouldExist(slowResultTag)
 		})
 
 		It("should return unauthorized error when requesting credentials from another parent process", func() {
@@ -349,32 +351,53 @@ func CredentialHelper(opt *option.Option, pOpt func([]string, ...option.Modifier
 			Expect(string(respBody)).ShouldNot(ContainSubstring("error"))
 
 			// Verify the image was built successfully
-			imageShouldExist(opt, resultTag)
+			imageShouldExist(resultTag)
 		})
 	})
 }
 
-// createTarFromBuildContext creates a tar archive from the build context directory.
+// createTarFromBuildContext creates a tar archive from the build context directory
+// using pure Go (archive/tar) to avoid dependency on system tar binary.
 func createTarFromBuildContext(buildContextPath string) (io.Reader, error) {
-	logger := flog.NewLogrus()
-	eccCreator := ecc.NewExecCmdCreator()
-	tarCreator := archive.NewTarCreator(eccCreator, logger)
-
-	cmd, err := tarCreator.CreateTarCommand(buildContextPath, true)
-	if err != nil {
-		return nil, err
-	}
-
 	pr, pw := io.Pipe()
-	cmd.SetStdout(pw)
-
 	go func() {
-		err := cmd.Run()
+		tw := tar.NewWriter(pw)
+		err := filepath.Walk(buildContextPath, func(filePath string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			relPath, err := filepath.Rel(buildContextPath, filePath)
+			if err != nil {
+				return err
+			}
+			if relPath == "." {
+				return nil
+			}
+			hdr, err := tar.FileInfoHeader(info, "")
+			if err != nil {
+				return err
+			}
+			hdr.Name = relPath
+			if err := tw.WriteHeader(hdr); err != nil {
+				return err
+			}
+			if !info.IsDir() {
+				f, err := os.Open(filepath.Clean(filePath))
+				if err != nil {
+					return err
+				}
+				defer f.Close()
+				if _, err := io.Copy(tw, f); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
 		if err != nil {
-			logger.Errorf("Error running tar command: %v", err)
+			pw.CloseWithError(err)
+			return
 		}
-		pw.Close()
+		pw.CloseWithError(tw.Close())
 	}()
-
 	return pr, nil
 }

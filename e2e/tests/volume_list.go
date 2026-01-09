@@ -12,7 +12,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
 
 	"github.com/runfinch/finch-daemon/api/types"
@@ -27,17 +26,17 @@ func VolumeList(opt *option.Option) {
 			version string
 		)
 		BeforeEach(func() {
-			command.Run(opt, "volume", "create", testVolumeName, "--label", "foo=bar")
-			command.Run(opt, "volume", "create", testVolumeName2, "--label", "baz=biz")
-			volumeShouldExist(opt, testVolumeName)
-			volumeShouldExist(opt, testVolumeName2)
 			// create a custom client to use http over unix sockets
 			uClient = client.NewClient(GetDockerHostUrl())
 			// get the docker api version that will be tested
 			version = GetDockerApiVersion()
+			httpCreateVolume(uClient, version, testVolumeName, map[string]string{"foo": "bar"})
+			httpCreateVolume(uClient, version, testVolumeName2, map[string]string{"baz": "biz"})
+			volumeShouldExist(testVolumeName)
+			volumeShouldExist(testVolumeName2)
 		})
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 		It("should list volumes", func() {
 			url := client.ConvertToFinchUrl(version, "/volumes")

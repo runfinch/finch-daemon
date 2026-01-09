@@ -12,8 +12,8 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
+
 	"github.com/runfinch/finch-daemon/pkg/config"
 
 	"github.com/runfinch/finch-daemon/e2e/tests"
@@ -48,15 +48,15 @@ func createTestOption() (*option.Option, error) {
 	return option.New([]string{*Subject, "--namespace", config.DefaultNamespace})
 }
 
-func setupTestSuite(opt *option.Option) {
+func setupTestSuite() {
 	ginkgo.SynchronizedBeforeSuite(func() []byte {
-		tests.SetupLocalRegistry(opt)
+		tests.SetupLocalRegistry()
 		return nil
 	}, func(bytes []byte) {})
 
 	ginkgo.SynchronizedAfterSuite(func() {
-		tests.CleanupLocalRegistry(opt)
-		command.RemoveAll(opt)
+		tests.CleanupLocalRegistry()
+		tests.RemoveAll()
 	}, func() {})
 }
 
@@ -70,7 +70,7 @@ func runOPATests(t *testing.T) {
 		log.Fatal("failed to create test option:", err)
 	}
 
-	setupTestSuite(opt)
+	setupTestSuite()
 
 	ginkgo.Describe(opaTestDescription, func() {
 		tests.OpaMiddlewareTest(opt)
@@ -89,7 +89,7 @@ func runE2ETests(t *testing.T) {
 		log.Fatal("failed to create test option:", err)
 	}
 
-	setupTestSuite(opt)
+	setupTestSuite()
 
 	pOpt := createPrefixedOption()
 

@@ -27,13 +27,13 @@ func SystemEvents(opt *option.Option) {
 			imageId string
 		)
 		BeforeEach(func() {
-			imageId = pullImage(opt, defaultImage)
+			imageId = pullImage(defaultImage)
 			uClient = client.NewClient(GetDockerHostUrl())
 			version = GetDockerApiVersion()
 			tagUrl = client.ConvertToFinchUrl(version, fmt.Sprintf("/images/%s/tag?repo=test&tag=test", defaultImage))
 		})
 		AfterEach(func() {
-			removeImage(opt, defaultImage)
+			removeImage(defaultImage)
 		})
 		It("should successfully stream image tag events", func() {
 			relativeUrl := "/events"
@@ -44,7 +44,7 @@ func SystemEvents(opt *option.Option) {
 
 			_, err = uClient.Post(tagUrl, "application/json", nil)
 			Expect(err).Should(BeNil())
-			defer removeImage(opt, "test:test")
+			defer removeImage("test:test")
 
 			scanner := bufio.NewScanner(res.Body)
 			scanner.Scan()
@@ -70,7 +70,7 @@ func SystemEvents(opt *option.Option) {
 
 			_, err = uClient.Post(tagUrl, "application/json", nil)
 			Expect(err).Should(BeNil())
-			defer removeImage(opt, "test:test")
+			defer removeImage("test:test")
 
 			scanner := bufio.NewScanner(res.Body)
 			scanner.Scan()

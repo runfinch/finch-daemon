@@ -11,7 +11,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
 
 	"github.com/runfinch/finch-daemon/api/response"
@@ -35,23 +34,23 @@ func ContainerStop(opt *option.Option) {
 			apiUrl = client.ConvertToFinchUrl(version, relativeUrl)
 		})
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 
 		It("should stop the container", func() {
 			// start a container that keeps running
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
-			containerShouldBeRunning(opt, testContainerName)
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
+			containerShouldBeRunning(testContainerName)
 
 			res, err := uClient.Post(apiUrl, "application/json", nil)
 			Expect(err).Should(BeNil())
 			Expect(res.StatusCode).Should(Equal(http.StatusNoContent))
-			containerShouldNotBeRunning(opt, testContainerName)
+			containerShouldNotBeRunning(testContainerName)
 		})
 		It("should fail to stop a stopped container", func() {
 			// start a container that exits as soon as starts
-			command.Run(opt, "run", "--name", testContainerName, defaultImage, "echo", "foo")
-			command.Run(opt, "wait", testContainerName)
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"echo", "foo"})
+			httpWaitContainer(uClient, version, testContainerName)
 
 			res, err := uClient.Post(apiUrl, "application/json", nil)
 			Expect(err).Should(BeNil())
@@ -67,10 +66,10 @@ func ContainerStop(opt *option.Option) {
 			Expect(err).Should(BeNil())
 			Expect(errResponse.Message).Should(Not(BeEmpty()))
 		})
-		It("should stop the container", func() {
+		It("should stop the container with timeout", func() {
 			// start a container that keeps running
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
-			containerShouldBeRunning(opt, testContainerName)
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
+			containerShouldBeRunning(testContainerName)
 
 			// stop the container with a timeout of 10 seconds
 			now := time.Now()
@@ -85,9 +84,9 @@ func ContainerStop(opt *option.Option) {
 		})
 		It("should stop the container with SIGINT signal", func() {
 			// Start a container that only logs the signal it receives
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage,
-				"sh", "-c", `trap 'echo "Received signal: SIGINT"' SIGINT; while true; do sleep 1; done`)
-			containerShouldBeRunning(opt, testContainerName)
+			httpRunContainer(uClient, version, testContainerName, defaultImage,
+				[]string{"sh", "-c", `trap 'echo "Received signal: SIGINT"' SIGINT; while true; do sleep 1; done`})
+			containerShouldBeRunning(testContainerName)
 
 			// Stop the container with SIGINT signal
 			relativeUrl := fmt.Sprintf("/containers/%s/stop?signal=SIGINT", testContainerName)
@@ -98,10 +97,10 @@ func ContainerStop(opt *option.Option) {
 			Expect(res.StatusCode).Should(Equal(http.StatusNoContent))
 
 			// Verify container is stopped by the API
-			containerShouldNotBeRunning(opt, testContainerName)
+			containerShouldNotBeRunning(testContainerName)
 
-			logs := command.Run(opt, "logs", testContainerName)
-			Expect(string(logs.Out.Contents())).Should(ContainSubstring("Received signal: SIGINT"))
+			logs := httpContainerLogs(uClient, version, testContainerName)
+			Expect(logs).Should(ContainSubstring("Received signal: SIGINT"))
 		})
 	})
 }

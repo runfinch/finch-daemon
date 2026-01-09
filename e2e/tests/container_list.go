@@ -11,9 +11,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
-	"github.com/runfinch/common-tests/option"
 
+	"github.com/runfinch/common-tests/option"
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/e2e/client"
 )
@@ -35,11 +34,11 @@ func ContainerList(opt *option.Option) {
 			wantContainerName2 = fmt.Sprintf("/%s", testContainerName2)
 		})
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 
 		It("should list the running containers with no query parameter", func() {
-			id := command.StdoutStr(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
+			id := httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
 			want := []types.ContainerListItem{
 				{
 					Id:    id[:12],
@@ -58,8 +57,8 @@ func ContainerList(opt *option.Option) {
 			Expect(got).Should(ContainElements(want))
 		})
 		It("should list all the containers with all is true", func() {
-			id1 := command.StdoutStr(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
-			id2 := command.StdoutStr(opt, "run", "-d", "--name", testContainerName2, defaultImage)
+			id1 := httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
+			id2 := httpRunContainer(uClient, version, testContainerName2, defaultImage, nil)
 			want := []types.ContainerListItem{
 				{
 					Id:    id1[:12],
@@ -82,8 +81,8 @@ func ContainerList(opt *option.Option) {
 			Expect(got).Should(ContainElements(want))
 		})
 		It("should list all the containers with all is true and limit is 1", func() {
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
-			id2 := command.StdoutStr(opt, "run", "-d", "--name", testContainerName2, defaultImage)
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
+			id2 := httpRunContainer(uClient, version, testContainerName2, defaultImage, nil)
 			want := []types.ContainerListItem{
 				{
 					Id:    id2[:12],
@@ -112,7 +111,7 @@ func ContainerList(opt *option.Option) {
 			Expect(len(got)).Should(Equal(0))
 		})
 		It("should list the running containers as normal with size is true", func() {
-			id := command.StdoutStr(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
+			id := httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
 			want := []types.ContainerListItem{
 				{
 					Id:    id[:12],
@@ -131,8 +130,8 @@ func ContainerList(opt *option.Option) {
 			Expect(got).Should(ContainElements(want))
 		})
 		It("should list the running containers with all is true and filters including exited status", func() {
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
-			id2 := command.StdoutStr(opt, "run", "-d", "--name", testContainerName2, defaultImage)
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
+			id2 := httpRunContainer(uClient, version, testContainerName2, defaultImage, nil)
 			want := []types.ContainerListItem{
 				{
 					Id:    id2[:12],
@@ -151,7 +150,13 @@ func ContainerList(opt *option.Option) {
 			Expect(got).Should(ContainElements(want))
 		})
 		It("should list the running containers with filters including labels", func() {
-			id := command.StdoutStr(opt, "run", "-d", "--name", testContainerName, "--label", "com.example.foo=bar", defaultImage, "sleep", "infinity")
+			id := httpRunContainerWithOptions(uClient, version, testContainerName, types.ContainerCreateRequest{
+				ContainerConfig: types.ContainerConfig{
+					Image:  defaultImage,
+					Cmd:    []string{"sleep", "infinity"},
+					Labels: map[string]string{"com.example.foo": "bar"},
+				},
+			})
 			want := []types.ContainerListItem{
 				{
 					Id:    id[:12],
@@ -170,8 +175,16 @@ func ContainerList(opt *option.Option) {
 			Expect(got).Should(ContainElements(want))
 		})
 		It("should list the running containers with filters including network", func() {
-			command.Run(opt, "network", "create", testNetwork)
-			id := command.StdoutStr(opt, "run", "-d", "--name", testContainerName, "--network", testNetwork, defaultImage, "sleep", "infinity")
+			httpCreateNetwork(uClient, version, testNetwork)
+			id := httpRunContainerWithOptions(uClient, version, testContainerName, types.ContainerCreateRequest{
+				ContainerConfig: types.ContainerConfig{
+					Image: defaultImage,
+					Cmd:   []string{"sleep", "infinity"},
+				},
+				HostConfig: types.ContainerHostConfig{
+					NetworkMode: testNetwork,
+				},
+			})
 			want := []types.ContainerListItem{
 				{
 					Id:    id[:12],
@@ -230,7 +243,13 @@ func ContainerList(opt *option.Option) {
 			Expect(body).Should(MatchJSON(`{"message": "` + errorMsg + `"}`))
 		})
 		It("should list the running containers with new filter format", func() {
-			id := command.StdoutStr(opt, "run", "-d", "--name", testContainerName, "--label", "com.example.foo=bar", defaultImage, "sleep", "infinity")
+			id := httpRunContainerWithOptions(uClient, version, testContainerName, types.ContainerCreateRequest{
+				ContainerConfig: types.ContainerConfig{
+					Image:  defaultImage,
+					Cmd:    []string{"sleep", "infinity"},
+					Labels: map[string]string{"com.example.foo": "bar"},
+				},
+			})
 			want := []types.ContainerListItem{
 				{
 					Id:    id[:12],
