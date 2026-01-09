@@ -40,7 +40,7 @@ func ContainerStop(opt *option.Option) {
 
 		It("should stop the container", func() {
 			// start a container that keeps running
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
 			containerShouldBeRunning(opt, testContainerName)
 
 			res, err := uClient.Post(apiUrl, "application/json", nil)
@@ -50,8 +50,8 @@ func ContainerStop(opt *option.Option) {
 		})
 		It("should fail to stop a stopped container", func() {
 			// start a container that exits as soon as starts
-			command.Run(opt, "run", "--name", testContainerName, defaultImage, "echo", "foo")
-			command.Run(opt, "wait", testContainerName)
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"echo", "foo"})
+			httpWaitContainer(uClient, version, testContainerName)
 
 			res, err := uClient.Post(apiUrl, "application/json", nil)
 			Expect(err).Should(BeNil())
@@ -67,9 +67,9 @@ func ContainerStop(opt *option.Option) {
 			Expect(err).Should(BeNil())
 			Expect(errResponse.Message).Should(Not(BeEmpty()))
 		})
-		It("should stop the container", func() {
+		It("should stop the container with timeout", func() {
 			// start a container that keeps running
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
 			containerShouldBeRunning(opt, testContainerName)
 
 			// stop the container with a timeout of 10 seconds
@@ -85,8 +85,8 @@ func ContainerStop(opt *option.Option) {
 		})
 		It("should stop the container with SIGINT signal", func() {
 			// Start a container that only logs the signal it receives
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage,
-				"sh", "-c", `trap 'echo "Received signal: SIGINT"' SIGINT; while true; do sleep 1; done`)
+			httpRunContainer(uClient, version, testContainerName, defaultImage,
+				[]string{"sh", "-c", `trap 'echo "Received signal: SIGINT"' SIGINT; while true; do sleep 1; done`})
 			containerShouldBeRunning(opt, testContainerName)
 
 			// Stop the container with SIGINT signal
@@ -100,8 +100,8 @@ func ContainerStop(opt *option.Option) {
 			// Verify container is stopped by the API
 			containerShouldNotBeRunning(opt, testContainerName)
 
-			logs := command.Run(opt, "logs", testContainerName)
-			Expect(string(logs.Out.Contents())).Should(ContainSubstring("Received signal: SIGINT"))
+			logs := httpContainerLogs(uClient, version, testContainerName)
+			Expect(logs).Should(ContainSubstring("Received signal: SIGINT"))
 		})
 	})
 }

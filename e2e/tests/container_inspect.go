@@ -132,7 +132,7 @@ func ContainerInspect(opt *option.Option, pOpt util.NewOpt) {
 			statusCode, ctr := createContainer(uClient, containerCreateUrl, testContainerName2, createOptions)
 			Expect(statusCode).Should(Equal(http.StatusCreated))
 			Expect(ctr.ID).ShouldNot(BeEmpty())
-			command.Run(opt, "start", testContainerName2)
+			httpStartContainer(uClient, version, testContainerName2)
 
 			// inspect container
 			res, err := uClient.Get(client.ConvertToFinchUrl(version, fmt.Sprintf("/containers/%s/json", ctr.ID)))

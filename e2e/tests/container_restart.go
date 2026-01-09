@@ -28,12 +28,12 @@ func ContainerRestart(opt *option.Option) {
 			version string
 		)
 		BeforeEach(func() {
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage,
-				"/bin/sh", "-c", `date; sleep infinity`)
 			// create a custom client to use http over unix sockets
 			uClient = client.NewClient(GetDockerHostUrl())
 			// get the docker api version that will be tested
 			version = GetDockerApiVersion()
+			httpRunContainer(uClient, version, testContainerName, defaultImage,
+				[]string{"/bin/sh", "-c", `date; sleep infinity`})
 		})
 		AfterEach(func() {
 			command.RemoveAll(opt)

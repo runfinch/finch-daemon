@@ -13,6 +13,7 @@ import (
 	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
 
+	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/e2e/client"
 )
 
@@ -35,7 +36,7 @@ func NetworkRemove(opt *option.Option) {
 			command.RemoveAll(opt)
 		})
 		It("should remove the network by name", func() {
-			command.Run(opt, "network", "create", testNetwork)
+			httpCreateNetwork(uClient, version, testNetwork)
 			req, err := http.NewRequest(http.MethodDelete, apiUrl, nil)
 			Expect(err).Should(BeNil())
 			res, err := uClient.Do(req)
@@ -53,8 +54,16 @@ func NetworkRemove(opt *option.Option) {
 			Expect(res.StatusCode).Should(Equal(http.StatusNoContent))
 		})
 		It("should not remove a network in use", func() {
-			command.Run(opt, "network", "create", testNetwork)
-			command.Run(opt, "run", "-d", "--network", testNetwork, defaultImage, "sleep", "infinity")
+			httpCreateNetwork(uClient, version, testNetwork)
+			httpRunContainerWithOptions(uClient, version, testContainerName, types.ContainerCreateRequest{
+				ContainerConfig: types.ContainerConfig{
+					Image: defaultImage,
+					Cmd:   []string{"sleep", "infinity"},
+				},
+				HostConfig: types.ContainerHostConfig{
+					NetworkMode: testNetwork,
+				},
+			})
 			req, err := http.NewRequest(http.MethodDelete, apiUrl, nil)
 			Expect(err).Should(BeNil())
 			res, err := uClient.Do(req)
@@ -66,7 +75,7 @@ func NetworkRemove(opt *option.Option) {
 			Expect(res.StatusCode).Should(Equal(http.StatusForbidden))
 		})
 		It("should return an error when network is not found", func() {
-			command.Run(opt, "network", "create", "notfound")
+			httpCreateNetwork(uClient, version, "notfound")
 			req, err := http.NewRequest(http.MethodDelete, apiUrl, nil)
 			Expect(err).ShouldNot(HaveOccurred())
 			res, err := uClient.Do(req)

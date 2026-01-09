@@ -59,12 +59,6 @@ func NetworkCreate(opt *option.Option, pOpt util.NewOpt) {
 			return response
 		}
 
-		cleanupNetwork := func(id string) func() {
-			return func() {
-				command.Run(opt, "network", "remove", id)
-			}
-		}
-
 		cleanupNetworkWithHTTP := func(network string) func() {
 			return func() {
 				relativeUrl := fmt.Sprintf("/networks/%s", network)
@@ -85,7 +79,7 @@ func NetworkCreate(opt *option.Option, pOpt util.NewOpt) {
 
 				response := unmarshallHTTPResponse(httpResponse)
 				Expect(response.ID).ShouldNot(BeEmpty())
-				DeferCleanup(cleanupNetwork(response.ID))
+				DeferCleanup(cleanupNetworkWithHTTP(response.ID))
 				Expect(response.Warning).Should(BeEmpty())
 			})
 		})
@@ -99,7 +93,7 @@ func NetworkCreate(opt *option.Option, pOpt util.NewOpt) {
 
 				response := unmarshallHTTPResponse(httpResponse)
 				Expect(response.ID).ShouldNot(BeEmpty())
-				DeferCleanup(cleanupNetwork(response.ID))
+				DeferCleanup(cleanupNetworkWithHTTP(response.ID))
 				Expect(response.Warning).Should(BeEmpty())
 			})
 		})
@@ -113,7 +107,7 @@ func NetworkCreate(opt *option.Option, pOpt util.NewOpt) {
 
 				response := unmarshallHTTPResponse(httpResponse)
 				Expect(response.ID).ShouldNot(BeEmpty())
-				DeferCleanup(cleanupNetwork(response.ID))
+				DeferCleanup(cleanupNetworkWithHTTP(response.ID))
 				Expect(response.Warning).Should(BeEmpty())
 			})
 		})
@@ -127,7 +121,7 @@ func NetworkCreate(opt *option.Option, pOpt util.NewOpt) {
 
 				response := unmarshallHTTPResponse(httpResponse)
 				Expect(response.ID).ShouldNot(BeEmpty())
-				DeferCleanup(cleanupNetwork(response.ID))
+				DeferCleanup(cleanupNetworkWithHTTP(response.ID))
 				Expect(response.Warning).Should(BeEmpty())
 			})
 		})
@@ -152,7 +146,7 @@ func NetworkCreate(opt *option.Option, pOpt util.NewOpt) {
 				response := unmarshallHTTPResponse(httpResponse)
 				Expect(response.ID).ShouldNot(BeEmpty())
 				Expect(response.Warning).Should(BeEmpty())
-				DeferCleanup(cleanupNetwork(response.ID))
+				DeferCleanup(cleanupNetworkWithHTTP(response.ID))
 
 				expected := response.ID
 

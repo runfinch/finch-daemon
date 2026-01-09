@@ -49,7 +49,7 @@ func NetworkList(opt *option.Option) {
 		})
 		It("should return a list with a new network", func() {
 			expName := "test-net"
-			command.Run(opt, "network", "create", expName)
+			httpCreateNetwork(uClient, version, expName)
 			relativeUrl := client.ConvertToFinchUrl(version, "/networks")
 
 			res, err := uClient.Get(relativeUrl)

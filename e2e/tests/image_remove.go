@@ -56,7 +56,7 @@ func ImageRemove(opt *option.Option) {
 			})
 			It("should fail to remove the image of a running container", func() {
 				// start a container that keeps running
-				command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
+				httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
 				res, err := uClient.Do(req)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(res.StatusCode).Should(Equal(http.StatusConflict))
@@ -64,8 +64,8 @@ func ImageRemove(opt *option.Option) {
 			})
 			It("should fail to remove the image used in a stopped container", func() {
 				// start a container that exits as soon as starts
-				command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage)
-				command.Run(opt, "wait", testContainerName)
+				httpRunContainer(uClient, version, testContainerName, defaultImage, nil)
+				httpWaitContainer(uClient, version, testContainerName)
 				res, err := uClient.Do(req)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(res.StatusCode).Should(Equal(http.StatusConflict))
@@ -73,8 +73,8 @@ func ImageRemove(opt *option.Option) {
 			})
 			It("should successfully remove an image used in a stopped container with force=true", func() {
 				// start a container that exits as soon as starts
-				command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage)
-				command.Run(opt, "wait", testContainerName)
+				httpRunContainer(uClient, version, testContainerName, defaultImage, nil)
+				httpWaitContainer(uClient, version, testContainerName)
 				req, err := http.NewRequest(http.MethodDelete, apiUrl+"?force=true", nil)
 				Expect(err).ShouldNot(HaveOccurred())
 				res, err := uClient.Do(req)
@@ -106,7 +106,7 @@ func ImageRemove(opt *option.Option) {
 			})
 			It("should fail to remove if multiple image with same id", func() {
 				// create a new tag will create a reference with same id
-				command.Run(opt, "image", "tag", defaultImage, "custom-image:latest")
+				httpTagImage(uClient, version, defaultImage, "custom-image:latest")
 				imageShouldExist(opt, "custom-image:latest")
 				res, err := uClient.Do(req)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -117,7 +117,7 @@ func ImageRemove(opt *option.Option) {
 				req, err := http.NewRequest(http.MethodDelete, apiUrl+"?force=true", nil)
 				Expect(err).ShouldNot(HaveOccurred())
 				// create a new tag will create a reference with same id
-				command.Run(opt, "image", "tag", defaultImage, "custom-image:latest")
+				httpTagImage(uClient, version, defaultImage, "custom-image:latest")
 				imageShouldExist(opt, "custom-image:latest")
 
 				res, err := uClient.Do(req)

@@ -12,7 +12,6 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
 	"github.com/runfinch/finch-daemon/pkg/config"
 
@@ -56,7 +55,7 @@ func setupTestSuite(opt *option.Option) {
 
 	ginkgo.SynchronizedAfterSuite(func() {
 		tests.CleanupLocalRegistry(opt)
-		command.RemoveAll(opt)
+		// command.RemoveAll(opt)
 	}, func() {})
 }
 

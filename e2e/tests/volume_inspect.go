@@ -34,7 +34,7 @@ func VolumeInspect(opt *option.Option) {
 			command.RemoveAll(opt)
 		})
 		It("should return volume details", func() {
-			command.Run(opt, "volume", "create", testVolumeName, "--label", "foo=bar")
+			httpCreateVolume(uClient, version, testVolumeName, map[string]string{"foo": "bar"})
 			volumeShouldExist(opt, testVolumeName)
 
 			apiUrl := client.ConvertToFinchUrl(version, "/volumes/"+testVolumeName)

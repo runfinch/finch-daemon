@@ -14,6 +14,7 @@ import (
 	"github.com/runfinch/common-tests/option"
 
 	"github.com/runfinch/finch-daemon/api/response"
+	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/e2e/client"
 )
 
@@ -25,11 +26,15 @@ func ContainerStart(opt *option.Option) {
 			version string
 		)
 		BeforeEach(func() {
-			command.Run(opt, "create", "--name", testContainerName, defaultImage, "echo", "foo")
 			// create a custom client to use http over unix sockets
 			uClient = client.NewClient(GetDockerHostUrl())
 			// get the docker api version that will be tested
 			version = GetDockerApiVersion()
+			// create container using HTTP API
+			options := types.ContainerCreateRequest{}
+			options.Image = defaultImage
+			options.Cmd = []string{"echo", "foo"}
+			httpCreateContainer(uClient, version, testContainerName, options)
 		})
 		AfterEach(func() {
 			command.RemoveAll(opt)

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
+	"github.com/docker/go-connections/nat"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -22,6 +23,7 @@ import (
 	"github.com/runfinch/common-tests/fnet"
 	"github.com/runfinch/common-tests/option"
 
+	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/e2e/client"
 	"github.com/runfinch/finch-daemon/pkg/archive"
 	"github.com/runfinch/finch-daemon/pkg/ecc"
@@ -58,17 +60,25 @@ func CredentialHelper(opt *option.Option, pOpt func([]string, ...option.Modifier
 
 			// Set up authenticated registry
 			port := fnet.GetFreePort()
-			command.Run(opt, "run",
-				"-dp", fmt.Sprintf("%d:5000", port),
-				"--name", "registry",
-				"-v", fmt.Sprintf("%s:/auth", htpasswdDir),
-				"-e", "REGISTRY_AUTH=htpasswd",
-				"-e", "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm",
-				"-e", fmt.Sprintf("REGISTRY_AUTH_HTPASSWD_PATH=/auth/%s", filename),
-				registryImage)
+			httpRunContainerWithOptions(uClient, version, "registry", types.ContainerCreateRequest{
+				ContainerConfig: types.ContainerConfig{
+					Image: registryImage,
+					Env: []string{
+						"REGISTRY_AUTH=htpasswd",
+						"REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm",
+						fmt.Sprintf("REGISTRY_AUTH_HTPASSWD_PATH=/auth/%s", filename),
+					},
+				},
+				HostConfig: types.ContainerHostConfig{
+					Binds: []string{fmt.Sprintf("%s:/auth", htpasswdDir)},
+					PortBindings: nat.PortMap{
+						"5000/tcp": []nat.PortBinding{{HostIP: "0.0.0.0", HostPort: fmt.Sprintf("%d", port)}},
+					},
+				},
+			})
 			registry = fmt.Sprintf(`localhost:%d`, port)
 
-			command.Run(opt, "pull", defaultImage)
+			httpPullImage(uClient, version, defaultImage)
 
 			authImageTag = fmt.Sprintf(`%s/test-login:tag`, registry)
 			buildContext = ffs.CreateBuildContext(fmt.Sprintf(`FROM %s
@@ -76,15 +86,17 @@ func CredentialHelper(opt *option.Option, pOpt func([]string, ...option.Modifier
 		`, defaultImage))
 			DeferCleanup(os.RemoveAll, buildContext)
 
+			// Note: build command kept as CLI since HTTP build requires tar context
 			command.Run(opt, "build", "-t", authImageTag, buildContext)
 
+			// Note: login/logout commands kept as CLI since there's no HTTP API equivalent
 			command.New(opt, "login", registry, "-u", testUser, "--password-stdin").
 				WithStdin(gbytes.BufferWithBytes([]byte(testPassword))).Run()
 			DeferCleanup(func() {
 				command.Run(opt, "logout", registry)
 			})
-			command.Run(opt, "push", authImageTag)
-			command.Run(opt, "rmi", authImageTag)
+			httpPushImage(uClient, version, authImageTag)
+			httpRemoveImage(uClient, version, authImageTag)
 		})
 
 		AfterEach(func() {
