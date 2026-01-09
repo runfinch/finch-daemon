@@ -10,7 +10,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
 
 	"github.com/runfinch/finch-daemon/api/response"
@@ -32,26 +31,26 @@ func ContainerRename(opt *option.Option) {
 			version = GetDockerApiVersion()
 		})
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 
 		It("should rename the container", func() {
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
-			containerShouldBeRunning(opt, testContainerName)
-			containerShouldNotExist(opt, testContainerName2)
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
+			containerShouldBeRunning(testContainerName)
+			containerShouldNotExist(testContainerName2)
 
 			relativeUrl := fmt.Sprintf("/containers/%s/rename?name=%s", testContainerName, testContainerName2)
 			apiUrl = client.ConvertToFinchUrl(version, relativeUrl)
 			res, err := uClient.Post(apiUrl, "application/json", nil)
 			Expect(err).Should(BeNil())
 			Expect(res.StatusCode).Should(Equal(http.StatusNoContent))
-			containerShouldBeRunning(opt, testContainerName2)
+			containerShouldBeRunning(testContainerName2)
 		})
 		It("should fail to rename a container to taken name", func() {
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
-			command.Run(opt, "run", "-d", "--name", testContainerName2, defaultImage, "sleep", "infinity")
-			containerShouldBeRunning(opt, testContainerName)
-			containerShouldBeRunning(opt, testContainerName2)
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
+			httpRunContainer(uClient, version, testContainerName2, defaultImage, []string{"sleep", "infinity"})
+			containerShouldBeRunning(testContainerName)
+			containerShouldBeRunning(testContainerName2)
 
 			relativeUrl := fmt.Sprintf("/containers/%s/rename?name=%s", testContainerName, testContainerName2)
 			apiUrl = client.ConvertToFinchUrl(version, relativeUrl)
@@ -60,7 +59,7 @@ func ContainerRename(opt *option.Option) {
 			Expect(res.StatusCode).Should(Equal(http.StatusConflict))
 		})
 		It("should fail to rename a container that does not exist", func() {
-			containerShouldNotExist(opt, testContainerName)
+			containerShouldNotExist(testContainerName)
 
 			relativeUrl := fmt.Sprintf("/containers/%s/rename?name=%s", testContainerName, testContainerName2)
 			apiUrl = client.ConvertToFinchUrl(version, relativeUrl)

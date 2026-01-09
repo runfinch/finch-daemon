@@ -9,7 +9,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
 
 	"github.com/runfinch/finch-daemon/e2e/client"
@@ -36,7 +35,7 @@ func ImageRemove(opt *option.Option) {
 			Expect(err).Should(BeNil())
 		})
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 
 		Context("by name", func() {
@@ -48,39 +47,39 @@ func ImageRemove(opt *option.Option) {
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 			It("should remove the image", func() {
-				pullImage(opt, defaultImage)
+				pullImage(defaultImage)
 				res, err := uClient.Do(req)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(res.StatusCode).Should(Equal(http.StatusOK))
-				imageShouldNotExist(opt, defaultImage)
+				imageShouldNotExist(defaultImage)
 			})
 			It("should fail to remove the image of a running container", func() {
 				// start a container that keeps running
-				command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
+				httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
 				res, err := uClient.Do(req)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(res.StatusCode).Should(Equal(http.StatusConflict))
-				imageShouldExist(opt, defaultImage)
+				imageShouldExist(defaultImage)
 			})
 			It("should fail to remove the image used in a stopped container", func() {
 				// start a container that exits as soon as starts
-				command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage)
-				command.Run(opt, "wait", testContainerName)
+				httpRunContainer(uClient, version, testContainerName, defaultImage, nil)
+				httpWaitContainer(uClient, version, testContainerName)
 				res, err := uClient.Do(req)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(res.StatusCode).Should(Equal(http.StatusConflict))
-				imageShouldExist(opt, defaultImage)
+				imageShouldExist(defaultImage)
 			})
 			It("should successfully remove an image used in a stopped container with force=true", func() {
 				// start a container that exits as soon as starts
-				command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage)
-				command.Run(opt, "wait", testContainerName)
+				httpRunContainer(uClient, version, testContainerName, defaultImage, nil)
+				httpWaitContainer(uClient, version, testContainerName)
 				req, err := http.NewRequest(http.MethodDelete, apiUrl+"?force=true", nil)
 				Expect(err).ShouldNot(HaveOccurred())
 				res, err := uClient.Do(req)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(res.StatusCode).Should(Equal(http.StatusOK))
-				imageShouldNotExist(opt, defaultImage)
+				imageShouldNotExist(defaultImage)
 			})
 			It("should fail to remove as image does not exist", func() {
 				// don't pull the image and try to delete
@@ -91,7 +90,7 @@ func ImageRemove(opt *option.Option) {
 		})
 		Context("by id", func() {
 			BeforeEach(func() {
-				imageID := pullImage(opt, defaultImage)
+				imageID := pullImage(defaultImage)
 				relativeUrl := fmt.Sprintf("/images/%s", imageID)
 				apiUrl = client.ConvertToFinchUrl(version, relativeUrl)
 				var err error
@@ -102,29 +101,31 @@ func ImageRemove(opt *option.Option) {
 				res, err := uClient.Do(req)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(res.StatusCode).Should(Equal(http.StatusOK))
-				imageShouldNotExist(opt, defaultImage)
+				imageShouldNotExist(defaultImage)
 			})
 			It("should fail to remove if multiple image with same id", func() {
-				// create a new tag will create a reference with same id
-				command.Run(opt, "image", "tag", defaultImage, "custom-image:latest")
-				imageShouldExist(opt, "custom-image:latest")
+				// Use a localhost-prefixed tag to avoid Docker Hub name normalization
+				customTag := "localhost/custom-image:latest"
+				httpTagImage(uClient, version, defaultImage, customTag)
+				imageShouldExist(customTag)
 				res, err := uClient.Do(req)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(res.StatusCode).Should(Equal(http.StatusConflict))
-				imageShouldExist(opt, defaultImage)
+				imageShouldExist(defaultImage)
 			})
 			It("should successfully remove multiple images with same id using force=true", func() {
 				req, err := http.NewRequest(http.MethodDelete, apiUrl+"?force=true", nil)
 				Expect(err).ShouldNot(HaveOccurred())
-				// create a new tag will create a reference with same id
-				command.Run(opt, "image", "tag", defaultImage, "custom-image:latest")
-				imageShouldExist(opt, "custom-image:latest")
+				// Use a localhost-prefixed tag to avoid Docker Hub name normalization
+				customTag := "localhost/custom-image:latest"
+				httpTagImage(uClient, version, defaultImage, customTag)
+				imageShouldExist(customTag)
 
 				res, err := uClient.Do(req)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(res.StatusCode).Should(Equal(http.StatusOK))
-				imageShouldNotExist(opt, defaultImage)
-				imageShouldNotExist(opt, "custom-image:latest")
+				imageShouldNotExist(defaultImage)
+				imageShouldNotExist(customTag)
 			})
 			// TODO: need to add a e2e test to make sure proper untagged and deleted value is generated for image remove api.
 		})

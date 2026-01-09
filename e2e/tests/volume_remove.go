@@ -8,9 +8,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
 
+	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/e2e/client"
 )
 
@@ -28,40 +28,50 @@ func VolumeRemove(opt *option.Option) {
 			version = GetDockerApiVersion()
 		})
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 		It("should remove a volume", func() {
-			command.Run(opt, "volume", "create", testVolumeName)
-			volumeShouldExist(opt, testVolumeName)
+			httpCreateVolume(uClient, version, testVolumeName, nil)
+			volumeShouldExist(testVolumeName)
 			apiUrl := client.ConvertToFinchUrl(version, "/volumes/"+testVolumeName)
 			req, err := http.NewRequest(http.MethodDelete, apiUrl, nil)
 			Expect(err).Should(BeNil())
 			res, err := uClient.Do(req)
 			Expect(err).Should(BeNil())
 			Expect(res.StatusCode).Should(Equal(http.StatusNoContent))
-			volumeShouldNotExist(opt, testVolumeName)
+			volumeShouldNotExist(testVolumeName)
 		})
 		It("should remove a volume with force=true", func() {
-			command.Run(opt, "volume", "create", testVolumeName)
-			volumeShouldExist(opt, testVolumeName)
+			httpCreateVolume(uClient, version, testVolumeName, nil)
+			volumeShouldExist(testVolumeName)
 			apiUrl := client.ConvertToFinchUrl(version, "/volumes/"+testVolumeName+"?force=true")
 			req, err := http.NewRequest(http.MethodDelete, apiUrl, nil)
 			Expect(err).Should(BeNil())
 			res, err := uClient.Do(req)
 			Expect(err).Should(BeNil())
 			Expect(res.StatusCode).Should(Equal(http.StatusNoContent))
-			volumeShouldNotExist(opt, testVolumeName)
+			volumeShouldNotExist(testVolumeName)
 		})
 		It("should fail to remove a volume that is in use", func() {
-			command.Run(opt, "run", "-d", "--name", testContainerName, "-v", testVolumeName+":/data",
-				defaultImage, "sleep", "infinity")
+			// Create volume first
+			httpCreateVolume(uClient, version, testVolumeName, nil)
+			// Run container with volume mount
+			httpRunContainerWithOptions(uClient, version, testContainerName, types.ContainerCreateRequest{
+				ContainerConfig: types.ContainerConfig{
+					Image: defaultImage,
+					Cmd:   []string{"sleep", "infinity"},
+				},
+				HostConfig: types.ContainerHostConfig{
+					Binds: []string{testVolumeName + ":/data"},
+				},
+			})
 			apiUrl := client.ConvertToFinchUrl(version, "/volumes/"+testVolumeName)
 			req, err := http.NewRequest(http.MethodDelete, apiUrl, nil)
 			Expect(err).Should(BeNil())
 			res, err := uClient.Do(req)
 			Expect(err).Should(BeNil())
 			Expect(res.StatusCode).Should(Equal(http.StatusBadRequest))
-			volumeShouldExist(opt, testVolumeName)
+			volumeShouldExist(testVolumeName)
 		})
 	})
 }

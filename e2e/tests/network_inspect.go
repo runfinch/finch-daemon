@@ -10,7 +10,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
 
 	"github.com/runfinch/finch-daemon/api/response"
@@ -32,11 +31,11 @@ func NetworkInspect(opt *option.Option) {
 			version = GetDockerApiVersion()
 		})
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 		It("should inspect network by network name", func() {
 			// create network
-			netId := command.StdoutStr(opt, "network", "create", testNetwork)
+			netId := httpCreateNetwork(uClient, version, testNetwork)
 
 			// call inspect network api
 			relativeUrl := client.ConvertToFinchUrl(version, fmt.Sprintf("/networks/%s", testNetwork))
@@ -56,7 +55,7 @@ func NetworkInspect(opt *option.Option) {
 		})
 		It("should inspect network by long network id", func() {
 			// create network
-			netId := command.StdoutStr(opt, "network", "create", testNetwork)
+			netId := httpCreateNetwork(uClient, version, testNetwork)
 
 			// call inspect network api
 			relativeUrl := client.ConvertToFinchUrl(version, fmt.Sprintf("/networks/%s", netId))
@@ -76,7 +75,7 @@ func NetworkInspect(opt *option.Option) {
 		})
 		It("should inspect network by short network id", func() {
 			// create network
-			netId := command.StdoutStr(opt, "network", "create", testNetwork)
+			netId := httpCreateNetwork(uClient, version, testNetwork)
 
 			// call inspect network api
 			relativeUrl := client.ConvertToFinchUrl(version, fmt.Sprintf("/networks/%s", netId[:12]))
@@ -96,7 +95,7 @@ func NetworkInspect(opt *option.Option) {
 		})
 		It("should inspect network with labels", func() {
 			// create network
-			netId := command.StdoutStr(opt, "network", "create", "--label", "testLabel=testValue", testNetwork)
+			netId := httpCreateNetworkWithLabels(uClient, version, testNetwork, map[string]string{"testLabel": "testValue"})
 
 			// call inspect network api
 			relativeUrl := client.ConvertToFinchUrl(version, fmt.Sprintf("/networks/%s", testNetwork))
