@@ -175,7 +175,7 @@ jobs:
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Checkout SAM CLI
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: aws/aws-sam-cli
           submodules: recursive
@@ -240,7 +240,7 @@ jobs:
           sudo rm -rf /tmp/finch-* || true
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df
