@@ -24,10 +24,11 @@ func (s *service) Inspect(ctx context.Context, networkId string) (*types.Network
 	}
 
 	netObject := &types.NetworkInspectResponse{
-		Name:   network.Name,
-		ID:     network.ID,
-		IPAM:   network.IPAM,
-		Labels: network.Labels,
+		Name:       network.Name,
+		ID:         network.ID,
+		IPAM:       network.IPAM,
+		Containers: network.Containers,
+		Labels:     network.Labels,
 	}
 
 	return netObject, nil
