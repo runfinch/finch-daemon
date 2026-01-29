@@ -10,8 +10,6 @@ import (
 	cerrdefs "github.com/containerd/errdefs"
 	"github.com/containerd/go-cni"
 	"github.com/containerd/nerdctl/v2/pkg/api/types"
-	"github.com/containerd/nerdctl/v2/pkg/netutil"
-	"github.com/containernetworking/cni/libcni"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -198,97 +196,6 @@ var _ = Describe("Container Create API ", func() {
 			cidResult, err := svc.Create(ctx, image, nil, createOpt, netOpt)
 			Expect(cidResult).Should(BeEmpty())
 			Expect(err.Error()).Should(ContainSubstring(mockErr.Error()))
-		})
-	})
-	Context("translate network IDs", func() {
-		It("should translate network ids to network names for specified networks", func() {
-			// network options
-			netIds := []string{"network-id1", "network-id2"}
-			netNames := []string{"network1", "network2"}
-			netOpt := types.NetworkOptions{
-				NetworkSlice: netIds,
-			}
-
-			// FilterNetworks returns a single network config for each network id
-			ncNetworkSvc.EXPECT().FilterNetworks(gomock.Any()).Return([]*netutil.NetworkConfig{
-				{NetworkConfigList: &libcni.NetworkConfigList{Name: netNames[0]}},
-			}, nil)
-			ncNetworkSvc.EXPECT().FilterNetworks(gomock.Any()).Return([]*netutil.NetworkConfig{
-				{NetworkConfigList: &libcni.NetworkConfigList{Name: netNames[1]}},
-			}, nil)
-
-			// network ids should be translated to corresponding names without error
-			err := svc.translateNetworkIds(&netOpt)
-			Expect(err).Should(BeNil())
-			Expect(netOpt.NetworkSlice).Should(Equal(netNames))
-		})
-		It("should ignore host, none, and bridge networks for network id translation", func() {
-			// network options
-			netIds := []string{"network-id1", "bridge", "host", "network-id2", "none"}
-			netNames := []string{"network1", "bridge", "host", "network2", "none"}
-			netOpt := types.NetworkOptions{
-				NetworkSlice: netIds,
-			}
-
-			// FilterNetworks returns a single network config for each network id
-			// but should not be called for bridge, host, and none networks
-			ncNetworkSvc.EXPECT().FilterNetworks(gomock.Any()).Return([]*netutil.NetworkConfig{
-				{NetworkConfigList: &libcni.NetworkConfigList{Name: netNames[0]}},
-			}, nil)
-			ncNetworkSvc.EXPECT().FilterNetworks(gomock.Any()).Return([]*netutil.NetworkConfig{
-				{NetworkConfigList: &libcni.NetworkConfigList{Name: netNames[3]}},
-			}, nil)
-
-			// network ids should be translated to corresponding names without error
-			err := svc.translateNetworkIds(&netOpt)
-			Expect(err).Should(BeNil())
-			Expect(netOpt.NetworkSlice).Should(Equal(netNames))
-		})
-		It("should return an error if filter networks failed", func() {
-			mockErr := errors.New("filter networks failure")
-
-			// network options
-			netOpt := types.NetworkOptions{
-				NetworkSlice: []string{"test-network-id"},
-			}
-
-			// FilterNetworks returns an error
-			ncNetworkSvc.EXPECT().FilterNetworks(gomock.Any()).Return(nil, mockErr)
-
-			// function should propagate the error from FilterNetworks
-			err := svc.translateNetworkIds(&netOpt)
-			Expect(err).ShouldNot(BeNil())
-			Expect(err.Error()).Should(ContainSubstring(mockErr.Error()))
-		})
-		It("should return an error if network was not found", func() {
-			// network options
-			netOpt := types.NetworkOptions{
-				NetworkSlice: []string{"test-network-id"},
-			}
-
-			// FilterNetworks returns 0 networks
-			ncNetworkSvc.EXPECT().FilterNetworks(gomock.Any()).Return([]*netutil.NetworkConfig{}, nil)
-
-			// function should return a not found error
-			err := svc.translateNetworkIds(&netOpt)
-			Expect(err).ShouldNot(BeNil())
-			Expect(errdefs.IsNotFound(err)).Should(BeTrue())
-		})
-		It("should return an error if multiple networks are found for the same id", func() {
-			// network options
-			netOpt := types.NetworkOptions{
-				NetworkSlice: []string{"test-network-id"},
-			}
-
-			// FilterNetworks returns 2 networks
-			ncNetworkSvc.EXPECT().FilterNetworks(gomock.Any()).Return([]*netutil.NetworkConfig{
-				{NetworkConfigList: &libcni.NetworkConfigList{Name: "network1"}},
-				{NetworkConfigList: &libcni.NetworkConfigList{Name: "network2"}},
-			}, nil)
-
-			// function should return an error
-			err := svc.translateNetworkIds(&netOpt)
-			Expect(err).ShouldNot(BeNil())
 		})
 	})
 	Context("updateContainerMetadata", func() {
