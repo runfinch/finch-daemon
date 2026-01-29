@@ -15,7 +15,6 @@ import (
 	"github.com/containerd/nerdctl/v2/pkg/clientutil"
 	"github.com/containerd/nerdctl/v2/pkg/labels"
 	"github.com/containerd/nerdctl/v2/pkg/logging"
-	"github.com/containerd/nerdctl/v2/pkg/netutil"
 	"github.com/sirupsen/logrus"
 
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
@@ -32,15 +31,8 @@ func (s *service) Create(ctx context.Context, image string, cmd []string, create
 		createOpt.NerdctlArgs = []string{}
 	}
 
-	// translate network IDs to names because nerdctl currently does not recognize networks by their IDs during create.
-	// TODO: remove this when the issue is fixed upstream.
-	if err := s.translateNetworkIds(&netOpt); err != nil {
-		return "", err
-	}
-
 	netManager, err := s.nctlContainerSvc.NewNetworkingOptionsManager(netOpt)
 	if err != nil {
-		logrus.Debugf("error creating network manager for the given network options: %s", err)
 		return "", err
 	}
 
@@ -69,30 +61,6 @@ func (s *service) Create(ctx context.Context, image string, cmd []string, create
 	updateContainerMetadata(ctx, createOpt, netOpt, cont)
 
 	return cont.ID(), nil
-}
-
-// translateNetworkIds translates network IDs to corresponding network names in network options.
-func (s *service) translateNetworkIds(netOpt *types.NetworkOptions) error {
-	for i, netId := range netOpt.NetworkSlice {
-		if netId == "host" || netId == "none" || netId == "bridge" {
-			continue
-		}
-
-		netList, err := s.nctlContainerSvc.FilterNetworks(func(networkConfig *netutil.NetworkConfig) bool {
-			return networkConfig.Name == netId || *networkConfig.NerdctlID == netId
-		})
-		if err != nil {
-			return err
-		}
-		if len(netList) == 0 {
-			return errdefs.NewNotFound(fmt.Errorf("network not found: %s", netId))
-		} else if len(netList) > 1 {
-			return fmt.Errorf("multiple networks found for id: %s", netId)
-		}
-		netOpt.NetworkSlice[i] = netList[0].Name
-	}
-
-	return nil
 }
 
 func updateContainerMetadata(ctx context.Context, createOpt types.ContainerCreateOptions, netOpt types.NetworkOptions, cont containerd.Container) error {
