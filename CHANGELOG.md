@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.1](https://github.com/runfinch/finch-daemon/compare/v0.22.0...v0.22.1) (2026-01-30)
+
+
+### Bug Fixes
+
+* simplify network calls to nerdctl ([#397](https://github.com/runfinch/finch-daemon/issues/397)) ([f3fe743](https://github.com/runfinch/finch-daemon/commit/f3fe743ee1cbbff952bb3c7b9bcfe4c8750201bd))
+
 ## [0.22.0](https://github.com/runfinch/finch-daemon/compare/v0.21.0...v0.22.0) (2026-01-14)
 
 
