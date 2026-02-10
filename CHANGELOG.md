@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.22.0](https://github.com/runfinch/finch-daemon/compare/v0.21.0...v0.22.0) (2026-01-14)
+
+
+### Features
+
+* add containers field in network inspect response ([#384](https://github.com/runfinch/finch-daemon/issues/384)) ([356ed67](https://github.com/runfinch/finch-daemon/commit/356ed672bbbeabf6bb7291fce1315e027e31108c))
+
+
+### Bug Fixes
+
+* add grace period to allow registry to start up ([#393](https://github.com/runfinch/finch-daemon/issues/393)) ([0847813](https://github.com/runfinch/finch-daemon/commit/084781395f298ff0409e0665963d15d528429170))
+* **ci:** fix Python version and timeout of SAM CLI workflows ([#383](https://github.com/runfinch/finch-daemon/issues/383)) ([c7c8fec](https://github.com/runfinch/finch-daemon/commit/c7c8fecadd2389c293533cef42c5aa9003bdec60))
+
 ## [0.21.0](https://github.com/runfinch/finch-daemon/compare/v0.20.0...v0.21.0) (2025-12-24)
 
 

@@ -168,6 +168,30 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			command.Run(opt, "start", testContainerName)
 			verifyNetworkSettings(opt, testContainerName, testNetwork)
 		})
+		It("should create a container with container:<id> network mode", func() {
+			// create and start the first container
+			options.Cmd = []string{"sleep", "Infinity"}
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+			command.Run(opt, "start", testContainerName)
+
+			// create second container using first container's network
+			proxyContainerName := testContainerName + "-proxy"
+			options.HostConfig.NetworkMode = "container:" + ctr.ID
+			statusCode, proxyCtr := createContainer(uClient, url, proxyContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(proxyCtr.ID).ShouldNot(BeEmpty())
+			command.Run(opt, "start", proxyContainerName)
+
+			// verify proxy container started successfully (shares network with first container)
+			resp := command.Stdout(opt, "inspect", proxyContainerName)
+			var inspect []*dockercompat.Container
+			err := json.Unmarshal(resp, &inspect)
+			Expect(err).Should(BeNil())
+			Expect(inspect).Should(HaveLen(1))
+			Expect(inspect[0].State.Running).Should(BeTrue())
+		})
 		It("should create a container with specified port mappings", func() {
 			hostPort := "8001"
 			ctrPort := "8000"

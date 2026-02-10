@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -53,7 +54,7 @@ func DistributionInspect(opt *option.Option) {
 			htpasswdDir := filepath.Dir(ffs.CreateTempFile(filename, htpasswd))
 			DeferCleanup(os.RemoveAll, htpasswdDir)
 			port := fnet.GetFreePort()
-			command.Run(opt, "run",
+			containerID := command.StdoutStr(opt, "run",
 				"-dp", fmt.Sprintf("%d:5000", port),
 				"--name", "registry",
 				"-v", fmt.Sprintf("%s:/auth", htpasswdDir),
@@ -61,6 +62,17 @@ func DistributionInspect(opt *option.Option) {
 				"-e", "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm",
 				"-e", fmt.Sprintf("REGISTRY_AUTH_HTPASSWD_PATH=/auth/%s", filename),
 				registryImage)
+			// Wait for container to be running
+			tries := 0
+			for command.StdoutStr(opt, "inspect", "-f", "{{.State.Running}}", containerID) != "true" {
+				if tries >= 5 {
+					Fail("Registry container failed to start after 5 seconds")
+				}
+				time.Sleep(1 * time.Second)
+				tries++
+			}
+			// Wait for registry service to be ready
+			time.Sleep(10 * time.Second)
 			registry = fmt.Sprintf(`localhost:%d`, port)
 			authImageTag = fmt.Sprintf(`%s/test-login:tag`, registry)
 			buildContext := ffs.CreateBuildContext(fmt.Sprintf(`FROM %s
