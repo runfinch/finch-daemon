@@ -4,11 +4,6 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - 'scripts/samcli-vm/**'
-      - 'scripts/cleanup-aws-resources.sh'
-      - 'scripts/validate-test-results.sh'
-      - '.github/workflows/samcli-vm.yaml'
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:
@@ -124,12 +119,23 @@ jobs:
       - name: Make Finch Daemon
         run: |
           su ec2-user -c "cd $GITHUB_WORKSPACE/finch-daemon-pr && STATIC=1 GOPROXY=direct GOOS=linux GOARCH=\$(go env GOARCH) make"
+          su ec2-user -c "mkdir -p /Applications/Finch/finch-daemon"
           su ec2-user -c "cp $GITHUB_WORKSPACE/finch-daemon-pr/bin/finch-daemon /Applications/Finch/finch-daemon/finch-daemon"
+          su ec2-user -c "cp $GITHUB_WORKSPACE/finch-daemon-pr/bin/finch-hook /Applications/Finch/finch-daemon/finch-hook"
+          su ec2-user -c "cp $GITHUB_WORKSPACE/finch-daemon-pr/bin/docker-credential-finch /Applications/Finch/finch-daemon/docker-credential-finch"
 
       - name: Initializing Finch VM
         run: |
           su ec2-user -c 'finch vm init'
           su ec2-user -c 'while ! finch vm status | grep -q "Running"; do echo "Waiting for VM..."; sleep 5; done'
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl copy /Applications/Finch/finch-daemon/finch-daemon finch:/tmp/finch-daemon'
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl copy /Applications/Finch/finch-daemon/finch-hook finch:/tmp/finch-hook'
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl copy /Applications/Finch/finch-daemon/docker-credential-finch finch:/tmp/docker-credential-finch'
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch sudo install -m 755 /tmp/finch-daemon /usr/local/bin/finch-daemon'
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch sudo install -m 755 /tmp/finch-hook /usr/local/bin/finch-hook'
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch sudo install -m 755 /tmp/docker-credential-finch /usr/local/bin/docker-credential-finch'
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch sudo nohup /usr/local/bin/finch-daemon --debug --socket-owner 501 > /tmp/finch-daemon.log 2>&1 &'
+          sleep 5
 
       - name: Pinging Finch Daemon socket
         run: |
@@ -171,6 +177,8 @@ jobs:
       - name: Get latest SAM CLI tag
         id: sam-tag
         run: |
+          # Pin to specific version or use latest
+          # TAG="v1.151.0"  # Uncomment to pin to specific version
           TAG=$(curl -s https://api.github.com/repos/aws/aws-sam-cli/releases/latest | jq -r .tag_name)
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
@@ -196,25 +204,31 @@ jobs:
         shell: bash
 
       - name: Run unit tests
+        continue-on-error: true
         run: ./finch-daemon-pr/scripts/samcli-vm/run-unit-tests.sh
 
       - name: Run invoke tests
+        continue-on-error: true
         timeout-minutes: 50
         run: ./finch-daemon-pr/scripts/samcli-vm/run-invoke-tests.sh
 
       - name: Run start-api tests
+        continue-on-error: true
         timeout-minutes: 80
         run: ./finch-daemon-pr/scripts/samcli-vm/run-start-api-tests.sh
 
       - name: Run sync tests
+        continue-on-error: true
         timeout-minutes: 30
         run: ./finch-daemon-pr/scripts/samcli-vm/run-sync-tests.sh
 
       - name: Run package tests
+        continue-on-error: true
         timeout-minutes: 15
         run: ./finch-daemon-pr/scripts/samcli-vm/run-package-tests.sh
 
       - name: Run start-lambda tests
+        continue-on-error: true
         timeout-minutes: 40
         run: ./finch-daemon-pr/scripts/samcli-vm/run-start-lambda-tests.sh
 
