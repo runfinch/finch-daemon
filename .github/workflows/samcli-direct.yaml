@@ -12,6 +12,8 @@ on:
 
 env:
   GO_VERSION: '1.24.11'
+  AWS_DEFAULT_ROLE: "${{ secrets.SAMCLI_DIRECT_ROLE_BASE }}"
+  AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
 
 permissions:
   id-token: write
@@ -26,20 +28,18 @@ jobs:
       matrix:
         test_type: [unit, package, invoke, start-lambda, start-api]
     env:
-      AWS_DEFAULT_REGION: "${{ secrets.REGION }}"
       DOCKER_HOST: unix:///var/run/finch.sock
       DOCKER_CONFIG: $HOME/.finch
       BY_CANARY: true # allows full testing
       SAM_CLI_DEV: 1
       SAM_CLI_TELEMETRY: 0
     steps:
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
-          role-to-assume: ${{secrets.SAMCLI_DIRECT_ROLE_BASE}}
+          role-to-assume: ${{ env.AWS_DEFAULT_ROLE }}
           role-session-name: samcli-${{ matrix.test_type }}-tests
-          aws-region: ${{ secrets.REGION }}
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
           role-duration-seconds: 2000
 
       - name: Set up Go
@@ -124,9 +124,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df
         with:
-          role-to-assume: ${{ secrets.SAMCLI_DIRECT_ROLE_BASE }}
+          role-to-assume: ${{ env.AWS_DEFAULT_ROLE }}
           role-session-name: cleanup-samcli-direct
-          aws-region: ${{ secrets.REGION }}
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
 
       - name: Comprehensive AWS resource cleanup
         timeout-minutes: 10
