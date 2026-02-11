@@ -1,6 +1,6 @@
 module github.com/runfinch/finch-daemon
 
-go 1.24.11
+go 1.25.0
 
 require (
 	github.com/containerd/cgroups/v3 v3.1.2
