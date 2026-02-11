@@ -4,11 +4,6 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - 'scripts/samcli-vm/**'
-      - 'scripts/cleanup-aws-resources.sh'
-      - 'scripts/validate-test-results.sh'
-      - '.github/workflows/samcli-vm.yaml'
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:

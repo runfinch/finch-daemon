@@ -16,7 +16,6 @@ import (
 	"github.com/containerd/nerdctl/v2/pkg/config"
 	toml "github.com/pelletier/go-toml/v2"
 
-	finchconfig "github.com/runfinch/finch-daemon/pkg/config"
 	"github.com/runfinch/finch-daemon/api/router"
 	"github.com/runfinch/finch-daemon/internal/backend"
 	"github.com/runfinch/finch-daemon/internal/service/builder"
@@ -28,6 +27,7 @@ import (
 	"github.com/runfinch/finch-daemon/internal/service/system"
 	"github.com/runfinch/finch-daemon/internal/service/volume"
 	"github.com/runfinch/finch-daemon/pkg/archive"
+	finchconfig "github.com/runfinch/finch-daemon/pkg/config"
 	"github.com/runfinch/finch-daemon/pkg/credential"
 	"github.com/runfinch/finch-daemon/pkg/ecc"
 	"github.com/runfinch/finch-daemon/pkg/flog"
@@ -74,14 +74,14 @@ func initializeConfig(options *DaemonOptions) (*config.Config, error) {
 	return conf, nil
 }
 
-// createNerdctlWrapper creates the Nerdctl wrapper and checks for the nerdctl binary.
+// createNerdctlWrapper creates the Nerdctl wrapper and checks for the finch-daemon binary.
 func createNerdctlWrapper(clientWrapper *backend.ContainerdClientWrapper, conf *config.Config) (*backend.NerdctlWrapper, error) {
 	// GlobalCommandOptions is actually just an alias for Config, see
 	// https://github.com/containerd/nerdctl/blob/9f8655f7722d6e6851755123730436bf1a6c9995/pkg/api/types/global.go#L21
 	globalOptions := (*types.GlobalCommandOptions)(conf)
 	ncWrapper := backend.NewNerdctlWrapper(clientWrapper, globalOptions)
-	if _, err := ncWrapper.GetNerdctlExe(); err != nil {
-		return nil, fmt.Errorf("failed to find nerdctl binary: %w", err)
+	if _, err := ncWrapper.GetDaemonBinary(); err != nil {
+		return nil, fmt.Errorf("failed to find finch-daemon binary: %w", err)
 	}
 	return ncWrapper, nil
 }

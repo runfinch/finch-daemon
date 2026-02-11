@@ -21,14 +21,36 @@ import (
 )
 
 func (s *service) Create(ctx context.Context, image string, cmd []string, createOpt types.ContainerCreateOptions, netOpt types.NetworkOptions) (cid string, err error) {
-	// Set path to nerdctl binary required for OCI hooks and logging
+	// Set path to finch-daemon binary required for OCI hooks and logging
 	if createOpt.NerdctlCmd == "" {
-		ncExe, err := s.nctlContainerSvc.GetNerdctlExe()
+		ncExe, err := s.nctlContainerSvc.GetDaemonBinary()
 		if err != nil {
-			return "", fmt.Errorf("failed to find nerdctl binary: %s", err)
+			return "", fmt.Errorf("failed to find daemon binary: %s", err)
 		}
 		createOpt.NerdctlCmd = ncExe
-		createOpt.NerdctlArgs = []string{}
+		// Populate args with global options needed by the hook binary
+		// Note: nerdctl will append the event type (e.g., "createRuntime") automatically
+		createOpt.NerdctlArgs = []string{
+			"--address=" + createOpt.GOptions.Address,
+			"--namespace=" + createOpt.GOptions.Namespace,
+			"--data-root=" + createOpt.GOptions.DataRoot,
+			"--cni-path=" + createOpt.GOptions.CNIPath,
+			"--cni-netconfpath=" + createOpt.GOptions.CNINetConfPath,
+			"--snapshotter=" + createOpt.GOptions.Snapshotter,
+			"--cgroup-manager=" + createOpt.GOptions.CgroupManager,
+		}
+		// Add optional flags if they are set
+		if len(createOpt.GOptions.HostsDir) > 0 {
+			for _, dir := range createOpt.GOptions.HostsDir {
+				createOpt.NerdctlArgs = append(createOpt.NerdctlArgs, "--hosts-dir="+dir)
+			}
+		}
+		if createOpt.GOptions.BridgeIP != "" {
+			createOpt.NerdctlArgs = append(createOpt.NerdctlArgs, "--bridge-ip="+createOpt.GOptions.BridgeIP)
+		}
+		if createOpt.GOptions.HostGatewayIP != "" {
+			createOpt.NerdctlArgs = append(createOpt.NerdctlArgs, "--host-gateway-ip="+createOpt.GOptions.HostGatewayIP)
+		}
 	}
 
 	netManager, err := s.nctlContainerSvc.NewNetworkingOptionsManager(netOpt)
