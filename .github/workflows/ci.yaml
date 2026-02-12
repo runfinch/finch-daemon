@@ -96,6 +96,15 @@ jobs:
           sudo systemctl stop containerd
       - name: Install Dependencies for e2e Testing
         run: ./setup-test-env.sh --runc-version ${{ matrix.runc }} --containerd-version ${{ matrix.containerd }} --nerdctl-version ${{ matrix.nerdctl }}
+      - name: Install finch binary
+        run: |
+          # Remove conflicting packages first
+          sudo apt remove -y containerd runc || true
+          # Install finch using Ubuntu APT repository
+          curl -fsSL https://artifact.runfinch.com/deb/GPG_KEY.pub | sudo gpg --dearmor -o /usr/share/keyrings/runfinch-finch-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/runfinch-finch-archive-keyring.gpg arch=amd64] https://artifact.runfinch.com/deb noble main" | sudo tee /etc/apt/sources.list.d/runfinch-finch.list
+          sudo apt update
+          sudo apt install -y runfinch-finch
       - name: Download build artifacts
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:

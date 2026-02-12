@@ -28,7 +28,7 @@ const (
 )
 
 var (
-	Subject            = flag.String("subject", "nerdctl", `which CLI the tests are run against, defaults to "nerdctl" in the user's PATH.`)
+	Subject            = flag.String("subject", "finch", `which CLI the tests are run against, defaults to "finch" in the user's PATH.`)
 	SubjectPrefix      = flag.String("daemon-context-subject-prefix", "", `A string which prefixes the command the tests are run against, defaults to "". This string will be split by spaces.`)
 	PrefixedSubjectEnv = flag.String("daemon-context-subject-env", "", `Environment to add when running a prefixed subject, in the form of a string like "EXAMPLE=foo EXAMPLE2=bar"`)
 )
