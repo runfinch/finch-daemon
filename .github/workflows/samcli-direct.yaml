@@ -4,8 +4,15 @@ on:
   pull_request:
     branches:
       - main
-    paths-ignore:
-      - '**.md'
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/samcli-direct.yaml'
+      - 'Makefile'
+      - 'setup-test-env.sh'
+      - 'scripts/samcli-direct/**'
+      - 'scripts/cleanup-aws-resources.sh'
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:

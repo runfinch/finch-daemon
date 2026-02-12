@@ -3,13 +3,29 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - '**.md'
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/ci.yaml'
+      - 'Makefile'
+      - '.golangci.yaml'
+      - '.yamllint.yml'
+      - 'setup-test-env.sh'
+      - 'docs/sample-rego-policies/**'
   pull_request:
     branches:
       - main
-    paths-ignore:
-      - '**.md'
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/ci.yaml'
+      - 'Makefile'
+      - '.golangci.yaml'
+      - '.yamllint.yml'
+      - 'setup-test-env.sh'
+      - 'docs/sample-rego-policies/**'
   workflow_dispatch:
 env:
   GO_VERSION: '1.24.11'
