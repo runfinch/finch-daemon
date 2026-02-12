@@ -24,7 +24,7 @@ func (s *service) Unpause(ctx context.Context, cid string, options ncTypes.Conta
 	}
 	status := s.client.GetContainerStatus(ctx, cont)
 	if status != containerd.Paused {
-		//nolint:stylecheck // Maintaining Docker-compatible error message format
+		//nolint:staticcheck // Maintaining Docker-compatible error message format
 		return errdefs.NewConflict(fmt.Errorf("Container %s is not paused", cid))
 	}
 
