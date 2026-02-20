@@ -161,6 +161,7 @@ func runImageTests(opt *option.Option) {
 	tests.ImageRemove(opt)
 	tests.ImagePush(opt)
 	tests.ImagePull(opt)
+	tests.ImageExport(opt)
 }
 
 // .
