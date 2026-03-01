@@ -30,7 +30,7 @@ permissions:
   contents: read
 
 jobs:
-  samcli-vm-test:
+  setup:
     runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Clean macOS runner workspace
@@ -113,7 +113,7 @@ jobs:
       - name: Checkout finch-daemon
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          path: finch-daemon-pr
+          path: finch-daemon
 
       - name: Make & install Finch
         run: |
@@ -123,8 +123,8 @@ jobs:
 
       - name: Make Finch Daemon
         run: |
-          su ec2-user -c "cd $GITHUB_WORKSPACE/finch-daemon-pr && STATIC=1 GOPROXY=direct GOOS=linux GOARCH=\$(go env GOARCH) make"
-          su ec2-user -c "cp $GITHUB_WORKSPACE/finch-daemon-pr/bin/finch-daemon /Applications/Finch/finch-daemon/finch-daemon"
+          su ec2-user -c "cd $GITHUB_WORKSPACE/finch-daemon && STATIC=1 GOPROXY=direct GOOS=linux GOARCH=\$(go env GOARCH) make"
+          su ec2-user -c "cp $GITHUB_WORKSPACE/finch-daemon/bin/finch-daemon /Applications/Finch/finch-daemon/finch-daemon"
 
       - name: Initializing Finch VM
         run: |
@@ -164,7 +164,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
           role-to-assume: ${{ secrets.SAMCLI_VM_ROLE_SYNC }}
-          role-session-name: samcli-finch-vm-sequential-tests
+          role-session-name: samcli-finch-vm-setup
           aws-region: ${{ secrets.REGION }}
           role-duration-seconds: 14400
 
@@ -195,33 +195,99 @@ jobs:
           su ec2-user -c 'cd /Users/ec2-user/aws-sam-cli && export PATH="/Users/ec2-user/Library/Python/${{ env.PYTHON_VERSION }}/bin:$PATH" && samdev --version'
         shell: bash
 
+  unit-tests:
+    runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
+    needs: setup
+    steps:
+      - name: Checkout finch-daemon
+        uses: actions/checkout@v4
+
       - name: Run unit tests
-        run: ./finch-daemon-pr/scripts/samcli-vm/run-unit-tests.sh
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          command: ./scripts/samcli-vm/run-unit-tests.sh
+
+  invoke-tests:
+    runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
+    needs: unit-tests
+    timeout-minutes: 50
+    steps:
+      - name: Checkout finch-daemon
+        uses: actions/checkout@v4
 
       - name: Run invoke tests
-        timeout-minutes: 50
-        run: ./finch-daemon-pr/scripts/samcli-vm/run-invoke-tests.sh
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 50
+          max_attempts: 3
+          command: ./scripts/samcli-vm/run-invoke-tests.sh
+
+  start-api-tests:
+    runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
+    needs: invoke-tests
+    timeout-minutes: 80
+    steps:
+      - name: Checkout finch-daemon
+        uses: actions/checkout@v4
 
       - name: Run start-api tests
-        timeout-minutes: 80
-        run: ./finch-daemon-pr/scripts/samcli-vm/run-start-api-tests.sh
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 80
+          max_attempts: 3
+          command: ./scripts/samcli-vm/run-start-api-tests.sh
+
+  sync-tests:
+    runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
+    needs: start-api-tests
+    timeout-minutes: 30
+    steps:
+      - name: Checkout finch-daemon
+        uses: actions/checkout@v4
 
       - name: Run sync tests
-        timeout-minutes: 30
-        run: ./finch-daemon-pr/scripts/samcli-vm/run-sync-tests.sh
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          command: ./scripts/samcli-vm/run-sync-tests.sh
+
+  package-tests:
+    runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
+    needs: sync-tests
+    timeout-minutes: 15
+    steps:
+      - name: Checkout finch-daemon
+        uses: actions/checkout@v4
 
       - name: Run package tests
-        timeout-minutes: 15
-        run: ./finch-daemon-pr/scripts/samcli-vm/run-package-tests.sh
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 15
+          max_attempts: 3
+          command: ./scripts/samcli-vm/run-package-tests.sh
+
+  start-lambda-tests:
+    runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
+    needs: package-tests
+    timeout-minutes: 40
+    steps:
+      - name: Checkout finch-daemon
+        uses: actions/checkout@v4
 
       - name: Run start-lambda tests
-        timeout-minutes: 40
-        run: ./finch-daemon-pr/scripts/samcli-vm/run-start-lambda-tests.sh
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 40
+          max_attempts: 3
+          command: ./scripts/samcli-vm/run-start-lambda-tests.sh
 
   # ensuring resources are clean post-test
   cleanup:
     runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
-    needs: samcli-vm-test
+    needs: [setup, unit-tests, invoke-tests, start-api-tests, sync-tests, package-tests, start-lambda-tests]
     if: always()
     steps:
       - name: Final cleanup
