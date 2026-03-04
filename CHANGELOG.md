@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.23.0](https://github.com/runfinch/finch-daemon/compare/v0.22.0...v0.23.0) (2026-03-04)
+
+
+### Features
+
+* add GET /images/{name}/get export endpoint ([#413](https://github.com/runfinch/finch-daemon/issues/413)) ([3d7d449](https://github.com/runfinch/finch-daemon/commit/3d7d4499a08c3888e72d3deb5123ca636d021696))
+
+
+### Bug Fixes
+
+* remove samcli-vm workflow and stabilize direct testing  ([dbd821f](https://github.com/runfinch/finch-daemon/commit/dbd821f8ec240170fc1a97780be76371f41e279b))
+* remove samcli-vm workflow and stabilize direct testing ([#414](https://github.com/runfinch/finch-daemon/issues/414)) ([dbd821f](https://github.com/runfinch/finch-daemon/commit/dbd821f8ec240170fc1a97780be76371f41e279b))
+* simplify network calls to nerdctl ([#397](https://github.com/runfinch/finch-daemon/issues/397)) ([f3fe743](https://github.com/runfinch/finch-daemon/commit/f3fe743ee1cbbff952bb3c7b9bcfe4c8750201bd))
+
 ## [0.22.0](https://github.com/runfinch/finch-daemon/compare/v0.21.0...v0.22.0) (2026-01-14)
 
 
