@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 env:
-  GO_VERSION: '1.24.11'
+  GO_VERSION: '1.25.7'
 
 permissions:
   id-token: write
@@ -40,7 +40,7 @@ jobs:
           role-to-assume: ${{secrets.SAMCLI_DIRECT_ROLE_BASE}}
           role-session-name: samcli-${{ matrix.test_type }}-tests
           aws-region: ${{ secrets.REGION }}
-          role-duration-seconds: 2000
+          role-duration-seconds: 14400
 
       - name: Set up Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
@@ -56,6 +56,10 @@ jobs:
 
       - name: Checkout finch-daemon
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Pre-test AWS resource cleanup
+        timeout-minutes: 10
+        run: ./scripts/cleanup-aws-resources.sh
 
       - name: Stop pre-existing services
         run: |
@@ -102,6 +106,8 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           make init
+          # Pin chardet to avoid 6.0.0 which breaks requests compatibility (released Feb 22, 2026)
+          python -m pip install 'chardet<6.0.0'
           samdev --version
 
       - name: Run ${{ matrix.test_type }} tests
