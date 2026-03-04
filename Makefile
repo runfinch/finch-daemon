@@ -16,6 +16,7 @@ CRED_HELPER_BINDIR ?= $(CRED_HELPER_PREFIX)/bin
 
 BINARY = $(addprefix bin/,finch-daemon)
 CREDENTIAL_HELPER = $(addprefix bin/,docker-credential-finch)
+SHIM_BINARY = $(addprefix bin/,finch-shim)
 
 PACKAGE := github.com/runfinch/finch-daemon
 VERSION ?= $(shell git describe --match 'v[0-9]*' --dirty='.modified' --always --tags)
@@ -28,7 +29,7 @@ endif
 LDFLAGS_BASE := -X $(PACKAGE)/version.Version=$(VERSION) -X $(PACKAGE)/version.GitCommit=$(GITCOMMIT) $(EXTRA_LDFLAGS)
 
 .PHONY: build
-build: build-daemon build-credential-helper
+build: build-daemon build-credential-helper build-shim
 
 .PHONY: build-daemon
 build-daemon:
@@ -60,6 +61,21 @@ else
 		-v -o $(CREDENTIAL_HELPER) $(PACKAGE)/cmd/finch-credential-helper
 endif
 
+.PHONY: build-shim
+build-shim:
+ifeq ($(STATIC),)
+	@echo "Building Dynamic Shim"
+	CGO_ENABLED=1 GOOS=linux go build \
+		-ldflags "$(LDFLAGS_BASE)" \
+		-v -o $(SHIM_BINARY) $(PACKAGE)/cmd/finch-shim
+else
+	@echo "Building Static Shim"
+	CGO_ENABLED=0 GOOS=linux go build \
+		-tags netgo \
+		-ldflags "$(LDFLAGS_BASE) -extldflags '-static'" \
+		-v -o $(SHIM_BINARY) $(PACKAGE)/cmd/finch-shim
+endif
+
 clean:
 	@rm -f $(BINARIES)
 	@rm -rf $(BIN)
@@ -71,8 +87,9 @@ ifneq ($(shell uname), Linux)
 endif
 
 .PHONY: start
-start: linux build unlink
-	sudo $(BINARY) --debug --socket-owner $${UID}
+start: linux build install unlink
+	sudo mkdir -p /run/finch
+	sudo env PATH=/usr/local/bin:/usr/sbin:/sbin:/usr/bin:/bin /usr/local/bin/finch-daemon --debug --socket-owner $${UID}
 
 DLV=$(BIN)/dlv
 $(DLV):
@@ -83,22 +100,33 @@ start-debug: linux build $(DLV) unlink
 	sudo $(DLV) --listen=:2345 --headless=true --api-version=2 exec $(BINARY) -- --debug --socket-owner $${UID}
 
 install: linux
-	install -d $(DESTDIR)$(BINDIR)
-	install $(BINARY) $(DESTDIR)$(BINDIR)
-	install $(CREDENTIAL_HELPER) $(DESTDIR)$(CRED_HELPER_BINDIR)
+	sudo install -d $(DESTDIR)$(BINDIR)
+	sudo install $(BINARY) $(DESTDIR)$(BINDIR)
+	sudo install $(CREDENTIAL_HELPER) $(DESTDIR)$(CRED_HELPER_BINDIR)
+	sudo install $(SHIM_BINARY) $(DESTDIR)$(BINDIR)
 
 uninstall:
 	@rm -f $(addprefix $(DESTDIR)$(BINDIR)/,$(notdir $(BINARY)))
 	@rm -f $(addprefix $(DESTDIR)$(CRED_HELPER_BINDIR)/,$(notdir $(CREDENTIAL_HELPER)))
+	@rm -f $(addprefix $(DESTDIR)$(BINDIR)/,$(notdir $(SHIM_BINARY)))
+
+# Kill any running finch-daemon processes
+.PHONY: kill-daemon
+kill-daemon: linux
+	@sudo pkill -9 finch-daemon || true
+	@sleep 1
 
 # Unlink the unix socket if the link does not get cleaned up properly (or if finch-daemon is already running)
 .PHONY: unlink
-unlink: linux
+unlink: linux kill-daemon
 ifneq ("$(wildcard /run/finch.sock)","")
 	sudo unlink /run/finch.sock
 endif
 ifneq ("$(wildcard /run/finch/credential.sock)","")
 	sudo unlink /run/finch/credential.sock
+endif
+ifneq ("$(wildcard /run/finch.pid)","")
+	sudo rm /run/finch.pid
 endif
 
 .PHONY:  gen-code
@@ -135,14 +163,14 @@ test-unit-debug: linux $(DLV)
 	sudo $(DLV) --listen=:2345 --headless=true --api-version=2 test $(PKG_DIR)
 
 .PHONY: test-e2e
-test-e2e: linux
+test-e2e: linux install
 	DOCKER_HOST="unix:///run/finch.sock" \
 	DOCKER_API_VERSION="v1.41" \
 	TEST_E2E=1 \
 	$(GINKGO) $(GFLAGS) ./e2e/...
 
 .PHONY: test-e2e-opa
-test-e2e-opa: linux
+test-e2e-opa: linux install
 	DOCKER_HOST="unix:///run/finch.sock" \
 	DOCKER_API_VERSION="v1.41" \
 	MIDDLEWARE_E2E=1 \

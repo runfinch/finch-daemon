@@ -5,6 +5,7 @@ package tests
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -13,7 +14,6 @@ import (
 	dockertypes "github.com/docker/docker/api/types/container"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
 
 	"github.com/runfinch/finch-daemon/api/response"
@@ -68,7 +68,7 @@ func ContainerStats(opt *option.Option) {
 			wantContainerName = fmt.Sprintf("/%s", testContainerName)
 		})
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 
 		It("should return a 404 error if container does not exist", func() {
@@ -82,9 +82,7 @@ func ContainerStats(opt *option.Option) {
 			Expect(errResponse.Message).ShouldNot(BeEmpty())
 		})
 		It("should return container stats from container name without streaming", func() {
-			cid := command.StdoutStr(
-				opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "Infinity",
-			)
+			cid := httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "Infinity"})
 
 			isRunning := waitForContainerRunning(uClient, version, cid, 10)
 			Expect(isRunning).Should(BeTrue(), "Container should be in running state before checking stats")
@@ -100,9 +98,7 @@ func ContainerStats(opt *option.Option) {
 			expectValidStats(&statsJSON, wantContainerName, cid, 1)
 		})
 		It("should return container stats from long container ID without streaming", func() {
-			cid := command.StdoutStr(
-				opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "Infinity",
-			)
+			cid := httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "Infinity"})
 
 			isRunning := waitForContainerRunning(uClient, version, cid, 10)
 			Expect(isRunning).Should(BeTrue(), "Container should be in running state before checking stats")
@@ -118,9 +114,7 @@ func ContainerStats(opt *option.Option) {
 			expectValidStats(&statsJSON, wantContainerName, cid, 1)
 		})
 		It("should return container stats from short container ID without streaming", func() {
-			cid := command.StdoutStr(
-				opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "Infinity",
-			)
+			cid := httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "Infinity"})
 
 			isRunning := waitForContainerRunning(uClient, version, cid, 10)
 			Expect(isRunning).Should(BeTrue(), "Container should be in running state before checking stats")
@@ -136,16 +130,14 @@ func ContainerStats(opt *option.Option) {
 			expectValidStats(&statsJSON, wantContainerName, cid, 1)
 		})
 		It("should stream container stats until the container is removed", func() {
-			cid := command.StdoutStr(
-				opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "Infinity",
-			)
+			cid := httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "Infinity"})
 
 			isRunning := waitForContainerRunning(uClient, version, cid, 10)
 			Expect(isRunning).Should(BeTrue(), "Container should be in running state before checking stats")
 
 			go func() {
 				time.Sleep(time.Second * 5)
-				command.Run(opt, "rm", "-f", testContainerName)
+				httpRemoveContainerForce(uClient, version, testContainerName)
 			}()
 
 			relativeUrl := fmt.Sprintf("/containers/%s/stats", testContainerName)
@@ -172,10 +164,8 @@ func ContainerStats(opt *option.Option) {
 			Expect(num).Should(BeNumerically("<", 10))
 		})
 		It("should stream stats for a stopped container", func() {
-			cid := command.StdoutStr(
-				opt, "run", "-d", "--name", testContainerName, defaultImage, "echo", "hello",
-			)
-			command.Run(opt, "wait", testContainerName)
+			cid := httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"echo", "hello"})
+			httpWaitContainer(uClient, version, testContainerName)
 
 			res, err := uClient.Get(client.ConvertToFinchUrl(version, fmt.Sprintf("/containers/%s/json", cid)))
 			Expect(err).Should(BeNil())
@@ -188,7 +178,7 @@ func ContainerStats(opt *option.Option) {
 
 			go func() {
 				time.Sleep(time.Second * 5)
-				command.Run(opt, "rm", "-f", testContainerName)
+				httpRemoveContainerForce(uClient, version, testContainerName)
 			}()
 
 			relativeUrl := fmt.Sprintf("/containers/%s/stats", testContainerName)
@@ -210,22 +200,22 @@ func ContainerStats(opt *option.Option) {
 			Expect(num).Should(BeNumerically("<", 10))
 		})
 		It("should stream stats when no network interface is created", func() {
-			cid := command.StdoutStr(
-				opt,
-				"run",
-				"-d",
-				"--net", "none",
-				"--name", testContainerName,
-				defaultImage,
-				"sleep", "Infinity",
-			)
+			cid := httpRunContainerWithOptions(uClient, version, testContainerName, types.ContainerCreateRequest{
+				ContainerConfig: types.ContainerConfig{
+					Image: defaultImage,
+					Cmd:   []string{"sleep", "Infinity"},
+				},
+				HostConfig: types.ContainerHostConfig{
+					NetworkMode: "none",
+				},
+			})
 
 			isRunning := waitForContainerRunning(uClient, version, cid, 10)
 			Expect(isRunning).Should(BeTrue(), "Container should be in running state before checking stats")
 
 			go func() {
 				time.Sleep(time.Second * 5)
-				command.Run(opt, "rm", "-f", testContainerName)
+				httpRemoveContainerForce(uClient, version, testContainerName)
 			}()
 
 			relativeUrl := fmt.Sprintf("/containers/%s/stats", testContainerName)
@@ -252,25 +242,30 @@ func ContainerStats(opt *option.Option) {
 			Expect(num).Should(BeNumerically("<", 10))
 		})
 		It("should stream stats with multiple network interfaces", func() {
-			command.Run(opt, "network", "create", "net1")
-			command.Run(opt, "network", "create", "net2")
-			cid := command.StdoutStr(
-				opt,
-				"run",
-				"-d",
-				"--net", "net1",
-				"--net", "net2",
-				"--name", testContainerName,
-				defaultImage,
-				"sleep", "Infinity",
-			)
+			httpCreateNetwork(uClient, version, "net1")
+			httpCreateNetwork(uClient, version, "net2")
+			cid := httpRunContainerWithOptions(uClient, version, testContainerName, types.ContainerCreateRequest{
+				ContainerConfig: types.ContainerConfig{
+					Image: defaultImage,
+					Cmd:   []string{"sleep", "Infinity"},
+				},
+				HostConfig: types.ContainerHostConfig{
+					NetworkMode: "net1",
+				},
+			})
+			// Connect to second network via API
+			connectUrl := client.ConvertToFinchUrl(version, "/networks/net2/connect")
+			connectBody, _ := json.Marshal(map[string]string{"Container": cid})
+			connectResp, connectErr := uClient.Post(connectUrl, "application/json", bytes.NewReader(connectBody))
+			Expect(connectErr).Should(BeNil())
+			Expect(connectResp.StatusCode).Should(Equal(http.StatusOK))
 
 			isRunning := waitForContainerRunning(uClient, version, cid, 10)
 			Expect(isRunning).Should(BeTrue(), "Container should be in running state before checking stats")
 
 			go func() {
 				time.Sleep(time.Second * 5)
-				command.Run(opt, "rm", "-f", testContainerName)
+				httpRemoveContainerForce(uClient, version, testContainerName)
 			}()
 
 			relativeUrl := fmt.Sprintf("/containers/%s/stats", testContainerName)

@@ -12,9 +12,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
-	"github.com/runfinch/common-tests/option"
 
+	"github.com/runfinch/common-tests/option"
 	"github.com/runfinch/finch-daemon/e2e/client"
 )
 
@@ -34,11 +33,11 @@ func ContainerTop(opt *option.Option) {
 			version = GetDockerApiVersion()
 		})
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 
 		It("should return process list with default ps args", func() {
-			command.StdoutStr(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
 
 			res, err := uClient.Get(client.ConvertToFinchUrl(version, fmt.Sprintf("/containers/%s/top", testContainerName)))
 			Expect(err).Should(BeNil())
@@ -69,7 +68,7 @@ func ContainerTop(opt *option.Option) {
 		})
 
 		It("should return process list with custom ps args", func() {
-			command.StdoutStr(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
 
 			// Call the top API with custom ps args that produce a specific format
 			// Using "-o pid,comm" which will return just PID and command name columns
@@ -115,7 +114,7 @@ func ContainerTop(opt *option.Option) {
 		})
 
 		It("should return 400 for invalid ps args", func() {
-			command.StdoutStr(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "infinity"})
 
 			// Call the top API with invalid ps args
 			invalidArgs := "--invalid-arg"

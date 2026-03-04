@@ -12,6 +12,8 @@ import (
 
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	"github.com/containerd/nerdctl/v2/pkg/labels"
+	"github.com/moby/moby/api/types/blkiodev"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/runfinch/finch-daemon/api/types"
 )
 
@@ -71,6 +73,16 @@ func (s *service) Inspect(ctx context.Context, cid string, sizeFlag bool) (*type
 	if err != nil {
 		return nil, fmt.Errorf("failed to get container labels: %s", err)
 	}
+
+	// Fetch the OCI spec to populate HostConfig fields that dockercompat omits.
+	if cont.HostConfig != nil {
+		spec, err := c.Spec(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get container spec: %s", err)
+		}
+		enrichHostConfigFromSpec(cont.HostConfig, spec, l)
+	}
+
 	updateNetworkSettings(ctx, cont.NetworkSettings, l)
 
 	// make sure it passes the default time value for time fields otherwise the goclient fails.
@@ -99,6 +111,31 @@ func getHostConfigFromDockerCompat(c *dockercompat.HostConfig) *types.ContainerH
 		})
 	}
 
+	// Convert blkio weight devices from dockercompat to moby types
+	var blkioWeightDevices []*blkiodev.WeightDevice
+	for _, wd := range c.BlkioWeightDevice {
+		if wd != nil {
+			blkioWeightDevices = append(blkioWeightDevices, &blkiodev.WeightDevice{
+				Path:   wd.Path,
+				Weight: wd.Weight,
+			})
+		}
+	}
+
+	// Convert blkio throttle devices from dockercompat to moby types
+	convertThrottleDevices := func(devices []*dockercompat.ThrottleDevice) []*blkiodev.ThrottleDevice {
+		var result []*blkiodev.ThrottleDevice
+		for _, td := range devices {
+			if td != nil {
+				result = append(result, &blkiodev.ThrottleDevice{
+					Path: td.Path,
+					Rate: td.Rate,
+				})
+			}
+		}
+		return result
+	}
+
 	return &types.ContainerHostConfig{
 		ContainerIDFile: c.ContainerIDFile,
 		LogConfig: types.LogConfig{
@@ -115,14 +152,29 @@ func getHostConfigFromDockerCompat(c *dockercompat.HostConfig) *types.ContainerH
 		CPUSetCPUs:     c.CPUSetCPUs,
 		CPUShares:      int64(c.CPUShares),
 		CPUPeriod:      int64(c.CPUPeriod),
+		CPUQuota:       c.CPUQuota,
 		Memory:         c.Memory,
 		MemorySwap:     c.MemorySwap,
 		OomKillDisable: c.OomKillDisable,
 		Devices:        hostConfigDevices,
 		// TODO: Uncomment these when https://github.com/runfinch/finch-daemon/pull/267 gets merged
-		// CPURealtimePeriod: inspect.HostConfig.CPURealtimePeriod,
-		// CPURealtimeRuntime: inspect.HostConfig.CPURealtimeRuntime,
-		// TODO: add blkio devices which requires a change in the dockercompat response from Nerdctl
+		// CPURealtimePeriod: c.CPURealtimePeriod,
+		// CPURealtimeRuntime: c.CPURealtimeRuntime,
+		CgroupnsMode:         types.CgroupnsMode(c.CgroupnsMode),
+		DNS:                  c.DNS,
+		DNSOptions:           c.DNSOptions,
+		DNSSearch:            c.DNSSearch,
+		ExtraHosts:           c.ExtraHosts,
+		GroupAdd:             c.GroupAdd,
+		Tmpfs:                c.Tmpfs,
+		UTSMode:              c.UTSMode,
+		Runtime:              c.Runtime,
+		BlkioWeight:          c.BlkioWeight,
+		BlkioWeightDevice:    blkioWeightDevices,
+		BlkioDeviceReadBps:   convertThrottleDevices(c.BlkioDeviceReadBps),
+		BlkioDeviceWriteBps:  convertThrottleDevices(c.BlkioDeviceWriteBps),
+		BlkioDeviceReadIOps:  convertThrottleDevices(c.BlkioDeviceReadIOps),
+		BlkioDeviceWriteIOps: convertThrottleDevices(c.BlkioDeviceWriteIOps),
 	}
 }
 
@@ -167,4 +219,96 @@ func getNetworkName(lab map[string]string, network string) string {
 	}
 
 	return network
+}
+
+// defaultCaps mirrors containerd's defaultUnixCaps() — the 14 capabilities
+// granted to non-privileged containers. Used as the baseline for CapAdd/CapDrop.
+var defaultCaps = map[string]struct{}{
+	"CAP_CHOWN":            {},
+	"CAP_DAC_OVERRIDE":     {},
+	"CAP_FSETID":           {},
+	"CAP_FOWNER":           {},
+	"CAP_MKNOD":            {},
+	"CAP_NET_RAW":          {},
+	"CAP_SETGID":           {},
+	"CAP_SETUID":           {},
+	"CAP_SETFCAP":          {},
+	"CAP_SETPCAP":          {},
+	"CAP_NET_BIND_SERVICE": {},
+	"CAP_SYS_CHROOT":       {},
+	"CAP_KILL":             {},
+	"CAP_AUDIT_WRITE":      {},
+}
+
+// enrichHostConfigFromSpec populates HostConfig fields from the OCI runtime
+// spec. These fields (CapAdd, CapDrop, PidsLimit, etc.) are not exposed by
+// nerdctl's dockercompat struct, so we read the spec directly.
+func enrichHostConfigFromSpec(hc *types.ContainerHostConfig, spec *specs.Spec, containerLabels map[string]string) {
+	if spec == nil {
+		return
+	}
+
+	// CapAdd/CapDrop: diff the OCI bounding set against containerd's 14 default caps.
+	// CapAdd = added beyond defaults, CapDrop = removed.
+	if spec.Process != nil && spec.Process.Capabilities != nil {
+		caps := spec.Process.Capabilities
+
+		bounding := make(map[string]struct{}, len(caps.Bounding))
+		for _, c := range caps.Bounding {
+			bounding[c] = struct{}{}
+		}
+
+		for _, c := range caps.Bounding {
+			if _, isDefault := defaultCaps[c]; !isDefault {
+				hc.CapAdd = append(hc.CapAdd, c)
+			}
+		}
+		for c := range defaultCaps {
+			if _, present := bounding[c]; !present {
+				hc.CapDrop = append(hc.CapDrop, c)
+			}
+		}
+	}
+
+	// PidsLimit: max processes the container can fork.
+	if spec.Linux != nil && spec.Linux.Resources != nil &&
+		spec.Linux.Resources.Pids != nil && spec.Linux.Resources.Pids.Limit != nil {
+		hc.PidsLimit = *spec.Linux.Resources.Pids.Limit
+	}
+
+	// Extract Ulimits from OCI spec rlimits
+	if spec.Process != nil && len(spec.Process.Rlimits) > 0 {
+		for _, rl := range spec.Process.Rlimits {
+			// Convert OCI rlimit type (e.g., "RLIMIT_NOFILE") to Docker format (e.g., "nofile")
+			name := strings.TrimPrefix(rl.Type, "RLIMIT_")
+			name = strings.ToLower(name)
+			hc.Ulimits = append(hc.Ulimits, &types.Ulimit{
+				Name: name,
+				Hard: int64(rl.Hard),
+				Soft: int64(rl.Soft),
+			})
+		}
+	}
+
+	// Extract annotations from OCI spec (filter out internal nerdctl labels)
+	if len(spec.Annotations) > 0 {
+		annotations := make(map[string]string)
+		for k, v := range spec.Annotations {
+			if !strings.HasPrefix(k, "nerdctl/") {
+				annotations[k] = v
+			}
+		}
+		if len(annotations) > 0 {
+			hc.Annotations = annotations
+		}
+	}
+
+	// NetworkMode: nerdctl stores attached networks as a JSON array in the
+	// "nerdctl/networks" label. The first entry is the primary network.
+	if networksJSON, ok := containerLabels[labels.Networks]; ok {
+		var networks []string
+		if err := json.Unmarshal([]byte(networksJSON), &networks); err == nil && len(networks) > 0 {
+			hc.NetworkMode = networks[0]
+		}
+	}
 }
