@@ -108,19 +108,19 @@ func (mr *MockNerdctlContainerSvcMockRecorder) GetDataStore() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDataStore", reflect.TypeOf((*MockNerdctlContainerSvc)(nil).GetDataStore))
 }
 
-// GetNerdctlExe mocks base method.
-func (m *MockNerdctlContainerSvc) GetNerdctlExe() (string, error) {
+// GetHookHelperBinary mocks base method.
+func (m *MockNerdctlContainerSvc) GetHookHelperBinary() (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetNerdctlExe")
+	ret := m.ctrl.Call(m, "GetHookHelperBinary")
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetNerdctlExe indicates an expected call of GetNerdctlExe.
-func (mr *MockNerdctlContainerSvcMockRecorder) GetNerdctlExe() *gomock.Call {
+// GetHookHelperBinary indicates an expected call of GetHookHelperBinary.
+func (mr *MockNerdctlContainerSvcMockRecorder) GetHookHelperBinary() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNerdctlExe", reflect.TypeOf((*MockNerdctlContainerSvc)(nil).GetNerdctlExe))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHookHelperBinary", reflect.TypeOf((*MockNerdctlContainerSvc)(nil).GetHookHelperBinary))
 }
 
 // InspectContainer mocks base method.

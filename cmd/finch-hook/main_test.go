@@ -1,0 +1,81 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+package main
+
+import (
+	"testing"
+
+	"github.com/containerd/nerdctl/v2/pkg/logging"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestNewApp_CommandStructure(t *testing.T) {
+	app := newApp()
+	assert.Equal(t, "finch-hook", app.Use)
+
+	// Verify "internal" subcommand exists
+	internalCmd, _, err := app.Find([]string{"internal"})
+	require.NoError(t, err, "'internal' subcommand should exist")
+	assert.Equal(t, "internal", internalCmd.Use)
+
+	// Verify "internal oci-hook" subcommand exists
+	ociHookCmd, _, err := app.Find([]string{"internal", "oci-hook"})
+	require.NoError(t, err, "'internal oci-hook' subcommand should exist")
+	assert.Equal(t, "oci-hook", ociHookCmd.Use)
+	assert.NotNil(t, ociHookCmd.RunE, "oci-hook command should have RunE set")
+}
+
+func TestNewApp_ParsesOCIHookArgs(t *testing.T) {
+	app := newApp()
+	app.SetArgs([]string{
+		"--address=/run/containerd/containerd.sock",
+		"--namespace=finch",
+		"--data-root=/tmp/test",
+		"--cni-path=/opt/cni/bin",
+		"--cni-netconfpath=/etc/cni/net.d",
+		"internal", "oci-hook", "createRuntime",
+	})
+
+	// Execute will fail at ocihook.Run (no valid OCI state on stdin),
+	// but flag parsing and command routing should succeed.
+	err := app.Execute()
+	require.Error(t, err)
+	// The error should NOT be a flag parsing error
+	assert.NotContains(t, err.Error(), "unknown flag")
+}
+
+func TestNewApp_OCIHookRequiresEventType(t *testing.T) {
+	app := newApp()
+	app.SetArgs([]string{"internal", "oci-hook"})
+
+	err := app.Execute()
+	require.Error(t, err)
+	assert.Equal(t, "event type needs to be passed", err.Error())
+}
+
+func TestAddPersistentFlags(t *testing.T) {
+	app := newApp()
+	flags := app.PersistentFlags()
+
+	// All flags read by helpers.ProcessRootCmdFlags
+	requiredFlags := []string{
+		"debug", "debug-full",
+		"address", "namespace", "snapshotter",
+		"cni-path", "cni-netconfpath", "data-root",
+		"cgroup-manager", "insecure-registry", "hosts-dir",
+		"experimental", "host-gateway-ip", "bridge-ip",
+		"kube-hide-dupe", "cdi-spec-dirs",
+		"global-dns", "global-dns-opts", "global-dns-search",
+	}
+
+	for _, name := range requiredFlags {
+		assert.NotNil(t, flags.Lookup(name), "missing required persistent flag %q (needed by helpers.ProcessRootCmdFlags)", name)
+	}
+}
+
+func TestLoggingMagicArgv(t *testing.T) {
+	assert.Equal(t, "_NERDCTL_INTERNAL_LOGGING", logging.MagicArgv1,
+		"MagicArgv1 constant should match expected value used in run()")
+}
