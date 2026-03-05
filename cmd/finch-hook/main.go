@@ -82,10 +82,5 @@ func addPersistentFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringSlice("global-dns", nil, "global DNS servers")
 	cmd.PersistentFlags().StringSlice("global-dns-opts", nil, "global DNS options")
 	cmd.PersistentFlags().StringSlice("global-dns-search", nil, "global DNS search domains")
-	cmd.PersistentFlags().String("verify", "", "Verify image")
-	cmd.PersistentFlags().String("cosign-key", "", "Cosign public key")
-	cmd.PersistentFlags().String("cosign-certificate-identity", "", "Cosign certificate identity")
-	cmd.PersistentFlags().String("cosign-certificate-identity-regexp", "", "Cosign certificate identity regexp")
-	cmd.PersistentFlags().String("cosign-certificate-oidc-issuer", "", "Cosign certificate OIDC issuer")
-	cmd.PersistentFlags().String("cosign-certificate-oidc-issuer-regexp", "", "Cosign certificate OIDC issuer regexp")
+
 }
