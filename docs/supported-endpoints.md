@@ -52,6 +52,7 @@ The finch-daemon focuses on core container orchestration functionality and omits
 | `/images/{name}/push` | POST | Push an image |
 | `/images/{name}/tag` | POST | Tag an image |
 | `/images/{name}` | DELETE | Remove an image |
+| `/images/{name}/get` | GET | Export an image |
 
 ### Network APIs
 

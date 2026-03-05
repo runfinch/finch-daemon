@@ -1,7 +1,8 @@
 #!/bin/bash
 set +e  # Continue on failures
 
-echo "=== AWS Resource Cleanup ==="
+# Default to us-east-1 if not set
+AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
 
 # Function to safely run AWS commands with retries
 safe_aws_command() {

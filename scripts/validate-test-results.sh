@@ -19,7 +19,7 @@ echo "=== FAILURES ==="
 grep "FAILED" "$OUTPUT_FILE" || echo "No failures found"
 
 # Extract actual failures
-grep "FAILED" "$OUTPUT_FILE" | grep -o "test_[^[:space:]]*" > actual_failures.txt || true
+grep "FAILED" "$OUTPUT_FILE" | sed 's/.*::\(test_[^[:space:]]*\).*/\1/' | sort -u > actual_failures.txt || true
 
 # Find unexpected failures
 UNEXPECTED=$(grep -v -f "$EXPECTED_FAILURES_FILE" actual_failures.txt 2>/dev/null || true)
