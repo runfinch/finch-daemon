@@ -32,7 +32,7 @@ func FinchhookStartup() {
 			// Simpler approach: just strip any directory that contains finch-hook.
 			cleanPath := pathWithoutBinary("finch-hook")
 
-			cmd := exec.Command(daemonExe) //nolint:gosec
+			cmd := exec.Command(daemonExe) //nolint:gosec // path is resolved from a known env var or hardcoded fallback, not user input
 			cmd.Env = append(os.Environ(), "PATH="+cleanPath)
 
 			var stderr bytes.Buffer
