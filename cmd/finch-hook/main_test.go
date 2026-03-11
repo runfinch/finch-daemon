@@ -31,7 +31,6 @@ func TestNewApp_ParsesOCIHookArgs(t *testing.T) {
 	app := newApp()
 	app.SetArgs([]string{
 		"--address=/run/containerd/containerd.sock",
-		"--namespace=finch",
 		"--data-root=/tmp/test",
 		"--cni-path=/opt/cni/bin",
 		"--cni-netconfpath=/etc/cni/net.d",
@@ -59,19 +58,25 @@ func TestAddPersistentFlags(t *testing.T) {
 	app := newApp()
 	flags := app.PersistentFlags()
 
-	// All flags read by helpers.ProcessRootCmdFlags
+	// finch-hook only registers the 5 flags it actually consumes.
+	// It intentionally does not register the full nerdctl global flagset —
+	// see addPersistentFlags and parseHookOptions in main.go.
 	requiredFlags := []string{
-		"debug", "debug-full",
-		"address", "namespace", "snapshotter",
-		"cni-path", "cni-netconfpath", "data-root",
-		"cgroup-manager", "insecure-registry", "hosts-dir",
-		"experimental", "host-gateway-ip", "bridge-ip",
-		"kube-hide-dupe", "cdi-spec-dirs",
-		"global-dns", "global-dns-opts", "global-dns-search",
+		"address", "data-root", "cni-path", "cni-netconfpath", "bridge-ip",
+	}
+	for _, name := range requiredFlags {
+		assert.NotNil(t, flags.Lookup(name), "missing required persistent flag %q", name)
 	}
 
-	for _, name := range requiredFlags {
-		assert.NotNil(t, flags.Lookup(name), "missing required persistent flag %q (needed by helpers.ProcessRootCmdFlags)", name)
+	// Flags that belonged to the old nerdctl global flagset but are not consumed
+	// by finch-hook should NOT be registered.
+	removedFlags := []string{
+		"debug", "debug-full", "namespace", "snapshotter", "cgroup-manager",
+		"insecure-registry", "hosts-dir", "experimental", "host-gateway-ip",
+		"kube-hide-dupe", "cdi-spec-dirs", "global-dns", "global-dns-opts", "global-dns-search",
+	}
+	for _, name := range removedFlags {
+		assert.Nil(t, flags.Lookup(name), "flag %q should not be registered in finch-hook", name)
 	}
 }
 
