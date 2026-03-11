@@ -139,6 +139,9 @@ func runContainerTests(opt *option.Option, pOpt func([]string, ...option.Modifie
 	tests.ContainerInspect(opt, pOpt)
 	tests.ContainerWait(opt)
 	tests.ContainerPause(opt)
+	tests.FinchhookNetworking(opt)
+	tests.FinchhookLogging(opt)
+	tests.FinchhookStartup()
 }
 
 // functional test for volume APIs.
