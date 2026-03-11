@@ -92,16 +92,17 @@ func FinchhookNetworking(opt *option.Option) {
 		})
 
 		It("should publish a port and make it reachable from the host, confirming nerdctl/ports labels were written", func() {
-			// Run a minimal HTTP server inside the container on port 8080.
-			// busybox httpd is available in the alpine image.
+			// nginx serves HTTP on port 80 with no configuration needed and is already
+			// pulled as part of the test suite setup — no alpine tooling assumptions.
 			options := types.ContainerCreateRequest{}
-			options.Image = defaultImage
-			options.Cmd = []string{
-				"sh", "-c",
-				`mkdir -p /www && echo "ok" > /www/index.html && httpd -p 8080 -h /www && sleep 30`,
+			options.Image = nginxImage
+			// ExposedPorts must be set so nerdctl writes the nerdctl/ports label,
+			// which the OCI hook reads to configure port forwarding rules.
+			options.ExposedPorts = nat.PortSet{
+				"80/tcp": struct{}{},
 			}
 			options.HostConfig.PortBindings = nat.PortMap{
-				"8080/tcp": []nat.PortBinding{{HostIP: "127.0.0.1", HostPort: "18080"}},
+				"80/tcp": []nat.PortBinding{{HostIP: "127.0.0.1", HostPort: "18080"}},
 			}
 
 			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
@@ -110,12 +111,12 @@ func FinchhookNetworking(opt *option.Option) {
 
 			command.Run(opt, "start", testContainerName)
 
-			// Give httpd a moment to start.
+			// Give nginx a moment to start.
 			time.Sleep(2 * time.Second)
 
 			// Verify the published port is reachable from the host.
 			// This confirms the nerdctl/ports label was written and the OCI hook processed it.
-			resp, err := http.Get("http://127.0.0.1:18080/index.html") //nolint:noctx
+			resp, err := http.Get("http://127.0.0.1:18080/") //nolint:noctx // test helper, no request cancellation needed
 			Expect(err).Should(BeNil(), fmt.Sprintf("published port 18080 not reachable: container ID %s", ctr.ID))
 			Expect(resp.StatusCode).Should(Equal(http.StatusOK))
 			_ = resp.Body.Close()
