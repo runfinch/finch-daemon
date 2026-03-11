@@ -8,12 +8,26 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/containerd/nerdctl/v2/cmd/nerdctl/helpers"
 	"github.com/containerd/nerdctl/v2/pkg/clientutil"
+	"github.com/containerd/nerdctl/v2/pkg/fs"
 	"github.com/containerd/nerdctl/v2/pkg/logging"
 	"github.com/containerd/nerdctl/v2/pkg/ocihook"
 	"github.com/spf13/cobra"
 )
+
+// hookOptions holds the only values that finch-hook needs at OCI hook time.
+// finch-hook is a single-purpose binary and intentionally does not use
+// helpers.ProcessRootCmdFlags from nerdctl — that helper requires all 19 nerdctl
+// global flags to be registered and reads many fields irrelevant to the hook path.
+// This struct is scoped to exactly what nerdctl's ocihook.Run and
+// clientutil.DataStore actually consume.
+type hookOptions struct {
+	address        string
+	dataRoot       string
+	cniPath        string
+	cniNetconfPath string
+	bridgeIP       string
+}
 
 func main() {
 	if err := run(); err != nil {
@@ -48,38 +62,55 @@ func newApp() *cobra.Command {
 }
 
 func internalOCIHookAction(cmd *cobra.Command, args []string) error {
-	globalOptions, err := helpers.ProcessRootCmdFlags(cmd)
+	opts, err := parseHookOptions(cmd)
 	if err != nil {
 		return err
 	}
 	if len(args) == 0 {
 		return errors.New("event type needs to be passed")
 	}
-	dataStore, err := clientutil.DataStore(globalOptions.DataRoot, globalOptions.Address)
+	dataStore, err := clientutil.DataStore(opts.dataRoot, opts.address)
 	if err != nil {
 		return err
 	}
-	return ocihook.Run(os.Stdin, os.Stderr, args[0], dataStore, globalOptions.CNIPath, globalOptions.CNINetConfPath, globalOptions.BridgeIP)
+	return ocihook.Run(os.Stdin, os.Stderr, args[0], dataStore, opts.cniPath, opts.cniNetconfPath, opts.bridgeIP)
 }
 
 func addPersistentFlags(cmd *cobra.Command) {
-	cmd.PersistentFlags().Bool("debug", false, "debug mode")
-	cmd.PersistentFlags().Bool("debug-full", false, "debug mode (with full output)")
+	// finch-hook only registers the flags it actually uses. It intentionally does not
+	// use helpers.ProcessRootCmdFlags, which requires all 19 nerdctl global flags to be
+	// present. These 5 flags are the complete surface area of the finch-hook binary.
 	cmd.PersistentFlags().String("address", "", "containerd address")
-	cmd.PersistentFlags().String("namespace", "", "containerd namespace")
-	cmd.PersistentFlags().String("snapshotter", "", "containerd snapshotter")
+	cmd.PersistentFlags().String("data-root", "", "root directory of persistent finch-daemon state")
 	cmd.PersistentFlags().String("cni-path", "", "cni plugins binary directory")
 	cmd.PersistentFlags().String("cni-netconfpath", "", "cni config directory")
-	cmd.PersistentFlags().String("data-root", "", "Root directory of persistent nerdctl state")
-	cmd.PersistentFlags().String("cgroup-manager", "", "Cgroup manager to use")
-	cmd.PersistentFlags().Bool("insecure-registry", false, "skips verifying HTTPS certs")
-	cmd.PersistentFlags().StringSlice("hosts-dir", nil, "hosts directory")
-	cmd.PersistentFlags().Bool("experimental", false, "experimental features")
-	cmd.PersistentFlags().String("host-gateway-ip", "", "host gateway IP")
 	cmd.PersistentFlags().String("bridge-ip", "", "bridge IP")
-	cmd.PersistentFlags().Bool("kube-hide-dupe", false, "deduplicate images for k8s")
-	cmd.PersistentFlags().StringSlice("cdi-spec-dirs", nil, "CDI spec directories")
-	cmd.PersistentFlags().StringSlice("global-dns", nil, "global DNS servers")
-	cmd.PersistentFlags().StringSlice("global-dns-opts", nil, "global DNS options")
-	cmd.PersistentFlags().StringSlice("global-dns-search", nil, "global DNS search domains")
+}
+
+// parseHookOptions reads the 5 flags that finch-hook registers and initialises
+// the filesystem helper (fs.InitFS), preserving the side effect that
+// helpers.ProcessRootCmdFlags performs in the full nerdctl CLI.
+func parseHookOptions(cmd *cobra.Command) (hookOptions, error) {
+	var opts hookOptions
+	var err error
+
+	if opts.address, err = cmd.Flags().GetString("address"); err != nil {
+		return hookOptions{}, err
+	}
+	if opts.dataRoot, err = cmd.Flags().GetString("data-root"); err != nil {
+		return hookOptions{}, err
+	}
+	if opts.cniPath, err = cmd.Flags().GetString("cni-path"); err != nil {
+		return hookOptions{}, err
+	}
+	if opts.cniNetconfPath, err = cmd.Flags().GetString("cni-netconfpath"); err != nil {
+		return hookOptions{}, err
+	}
+	if opts.bridgeIP, err = cmd.Flags().GetString("bridge-ip"); err != nil {
+		return hookOptions{}, err
+	}
+	if err = fs.InitFS(opts.dataRoot); err != nil {
+		return hookOptions{}, err
+	}
+	return opts, nil
 }

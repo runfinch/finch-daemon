@@ -28,28 +28,24 @@ func (s *service) Create(ctx context.Context, image string, cmd []string, create
 			return "", fmt.Errorf("failed to find hook helper binary: %s", err)
 		}
 		createOpt.NerdctlCmd = ncExe
-		// Populate args with global options needed by the hook binary
-		// These match what nerdctl CLI would pass to itself when generating OCI hooks
+		// Populate the minimal set of flags that finch-hook actually consumes.
+		// internalOCIHookAction reads only 5 fields from GlobalCommandOptions after parsing:
+		//   DataRoot + Address → clientutil.DataStore (constructs the dataStore path)
+		//   CNIPath, CNINetConfPath, BridgeIP → passed directly to ocihook.Run
+		// All other flags (--namespace, --snapshotter, --cgroup-manager, --hosts-dir,
+		// --host-gateway-ip, etc.) are parsed but never referenced in the hook path.
+		// --hosts-dir is image-resolution-only; --host-gateway-ip is resolved at create time
+		// into OCI spec annotations and the hook reads the pre-resolved values from there.
 		createOpt.NerdctlArgs = []string{
 			"--address=" + createOpt.GOptions.Address,
-			"--namespace=" + createOpt.GOptions.Namespace,
 			"--data-root=" + createOpt.GOptions.DataRoot,
 			"--cni-path=" + createOpt.GOptions.CNIPath,
 			"--cni-netconfpath=" + createOpt.GOptions.CNINetConfPath,
-			"--snapshotter=" + createOpt.GOptions.Snapshotter,
-			"--cgroup-manager=" + createOpt.GOptions.CgroupManager,
 		}
-		// Add optional flags if they are set
-		if len(createOpt.GOptions.HostsDir) > 0 {
-			for _, dir := range createOpt.GOptions.HostsDir {
-				createOpt.NerdctlArgs = append(createOpt.NerdctlArgs, "--hosts-dir="+dir)
-			}
-		}
+		// BridgeIP is passed to ocihook.Run → WithDefaultNetwork. Empty string is safe
+		// (falls back to DefaultCIDR), but a non-empty value must be forwarded.
 		if createOpt.GOptions.BridgeIP != "" {
 			createOpt.NerdctlArgs = append(createOpt.NerdctlArgs, "--bridge-ip="+createOpt.GOptions.BridgeIP)
-		}
-		if createOpt.GOptions.HostGatewayIP != "" {
-			createOpt.NerdctlArgs = append(createOpt.NerdctlArgs, "--host-gateway-ip="+createOpt.GOptions.HostGatewayIP)
 		}
 	}
 

@@ -51,7 +51,7 @@ var _ = Describe("Container Create API ", func() {
 		cdClient = mocks_backend.NewMockContainerdClient(mockCtrl)
 		ncContainerSvc = mocks_backend.NewMockNerdctlContainerSvc(mockCtrl)
 		ncNetworkSvc = mocks_backend.NewMockNerdctlNetworkSvc(mockCtrl)
-		ncExe = "/usr/local/bin/nerdctl"
+		ncExe = "/usr/local/bin/finch-hook"
 		image = "test-image"
 		cmd = []string{"echo", "hello world"}
 		createOpt = types.ContainerCreateOptions{}
@@ -59,12 +59,9 @@ var _ = Describe("Container Create API ", func() {
 			NerdctlCmd: ncExe,
 			NerdctlArgs: []string{
 				"--address=",
-				"--namespace=",
 				"--data-root=",
 				"--cni-path=",
 				"--cni-netconfpath=",
-				"--snapshotter=",
-				"--cgroup-manager=",
 			},
 		}
 		netOpt = types.NetworkOptions{}
@@ -199,7 +196,7 @@ var _ = Describe("Container Create API ", func() {
 			Expect(cidResult).Should(BeEmpty())
 			Expect(errdefs.IsConflict(err)).Should(BeTrue())
 		})
-		It("should return an error if nerdctl binary was not found", func() {
+		It("should return an error if finch-hook binary was not found", func() {
 			mockErr := errors.New("could not find hook helper binary")
 			ncContainerSvc.EXPECT().GetHookHelperBinary().Return("", mockErr)
 
