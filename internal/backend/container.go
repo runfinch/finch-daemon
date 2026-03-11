@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 
 	containerd "github.com/containerd/containerd/v2/client"
 	"github.com/containerd/nerdctl/v2/pkg/api/types"
@@ -141,14 +140,13 @@ func (w *NerdctlWrapper) ContainerTop(ctx context.Context, cid string, options t
 }
 
 func (w *NerdctlWrapper) GetHookHelperBinary() (string, error) {
-	if w.nerdctlExe != "" {
-		return w.nerdctlExe, nil
+	if w.hookHelperExe != "" {
+		return w.hookHelperExe, nil
 	}
-	// Look for finch-hook binary instead of nerdctl
-	exe, err := exec.LookPath("finch-hook")
+	exe, err := w.lookPath("finch-hook")
 	if err != nil {
 		return "", fmt.Errorf("finch-hook binary not found in PATH: %w", err)
 	}
-	w.nerdctlExe = exe
+	w.hookHelperExe = exe
 	return exe, nil
 }
