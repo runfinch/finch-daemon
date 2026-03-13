@@ -3,7 +3,7 @@ set -e
 
 cd aws-sam-cli
 
-python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short > package_output.txt 2>&1 || true
+python -m pytest tests/integration/package/test_package_command_image.py -v --tb=short 2>&1 | tee package_output.txt || true
 
 # test_package_with_deep_nested_template_image: Expects Docker-specific push stream pattern.
 # test_package_template_with_image_repositories_nested_stack_x: Push API stream differs from Docker.
