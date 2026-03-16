@@ -60,7 +60,7 @@ var _ = Describe("Container Exec API ", func() {
 		proc = mocks_container.NewMockProcess(mockCtrl)
 		service = NewService(
 			cdClient,
-			mockNerdctlService{ncClient, nil},
+			mockNerdctlService{ncClient, nil, nil},
 			logger,
 			fs,
 			tarCreator,
