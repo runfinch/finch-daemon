@@ -68,7 +68,7 @@ var _ = Describe("Container Stats API ", func() {
 		cdClient.EXPECT().GetContainerRemoveEvent(gomock.Any(), con).Return(removeCh, removeErrCh).AnyTimes()
 		s = service{
 			client:           cdClient,
-			nctlContainerSvc: mockNerdctlService{ncClient, nil},
+			nctlContainerSvc: mockNerdctlService{ncClient, nil, nil},
 			logger:           logger,
 			stats:            stats,
 		}

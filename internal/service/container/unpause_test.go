@@ -50,7 +50,7 @@ var _ = Describe("Container Unpause API", func() {
 
 		svc = &service{
 			client:           cdClient,
-			nctlContainerSvc: mockNerdctlService{ncContainerSvc, ncNetworkSvc},
+			nctlContainerSvc: mockNerdctlService{ncContainerSvc, ncNetworkSvc, nil},
 			logger:           logger,
 		}
 	})

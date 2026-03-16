@@ -55,7 +55,7 @@ var _ = Describe("Container List API ", func() {
 		tarExtractor = mocks_archive.NewMockTarExtractor(mockCtrl)
 		con = mocks_container.NewMockContainer(mockCtrl)
 
-		service = NewService(cdClient, mockNerdctlService{ncClient, nil}, logger, nil, nil, tarExtractor)
+		service = NewService(cdClient, mockNerdctlService{ncClient, nil, nil}, logger, nil, nil, tarExtractor)
 	})
 	Context("service", func() {
 		It("should successfully list containers", func() {

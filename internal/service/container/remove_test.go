@@ -9,9 +9,9 @@ import (
 
 	containerd "github.com/containerd/containerd/v2/client"
 	ncContainer "github.com/containerd/nerdctl/v2/pkg/cmd/container"
-	"go.uber.org/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/api/handlers/container"
 	"github.com/runfinch/finch-daemon/mocks/mocks_archive"
@@ -45,13 +45,15 @@ var _ = Describe("Container Remove API ", func() {
 		con.EXPECT().ID().Return(cid).AnyTimes()
 		tarExtractor = mocks_archive.NewMockTarExtractor(mockCtrl)
 
-		service = NewService(cdClient, mockNerdctlService{ncClient, nil}, logger, nil, nil, tarExtractor)
+		service = NewService(cdClient, mockNerdctlService{ncClient, nil, nil}, logger, nil, nil, tarExtractor)
 	})
 	Context("service", func() {
 		It("should successfully remove the container", func() {
 			// set up the mock to return a container with no error while searching for containers
 			cdClient.EXPECT().SearchContainer(gomock.Any(), gomock.Any()).Return(
 				[]containerd.Container{con}, nil)
+			// no netns labels — CNI cleanup skipped
+			con.EXPECT().Labels(ctx).Return(map[string]string{}, nil)
 
 			// set up the mock to verify the remove container is called and proper error msg was logged
 			ncClient.EXPECT().RemoveContainer(ctx, con, false, false)
@@ -100,6 +102,7 @@ var _ = Describe("Container Remove API ", func() {
 		It("should return conflict error as container is running", func() {
 			cdClient.EXPECT().SearchContainer(gomock.Any(), gomock.Any()).Return(
 				[]containerd.Container{con}, nil)
+			con.EXPECT().Labels(ctx).Return(map[string]string{}, nil)
 			// set up the mock to mimic the container is running
 			ncClient.EXPECT().RemoveContainer(gomock.Any(), con, gomock.Any(), gomock.Any()).
 				Return(ncContainer.NewStatusError(cid, containerd.Running))
@@ -114,6 +117,7 @@ var _ = Describe("Container Remove API ", func() {
 		It("should return error due to failure in deleting a container", func() {
 			cdClient.EXPECT().SearchContainer(gomock.Any(), gomock.Any()).Return(
 				[]containerd.Container{con}, nil)
+			con.EXPECT().Labels(ctx).Return(map[string]string{}, nil)
 			// set up the mock to mimic the container delete failed in containerd
 			mockErr := fmt.Errorf("some random error to delete")
 			ncClient.EXPECT().RemoveContainer(gomock.Any(), con, gomock.Any(), gomock.Any()).

@@ -9,9 +9,9 @@ import (
 	"testing"
 
 	containerd "github.com/containerd/containerd/v2/client"
-	"go.uber.org/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/mocks/mocks_backend"
 	"github.com/runfinch/finch-daemon/mocks/mocks_container"
@@ -19,9 +19,12 @@ import (
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
 
+// mockNerdctlService composes the three backend service mocks into a single
+// NerdctlService implementation for use in unit tests.
 type mockNerdctlService struct {
 	*mocks_backend.MockNerdctlContainerSvc
 	*mocks_backend.MockNerdctlNetworkSvc
+	*mocks_backend.MockContainerCNISvc
 }
 
 // TestContainerService is the entry point of container service package's unit tests using ginkgo.
@@ -53,7 +56,7 @@ var _ = Describe("Container API service common ", func() {
 		con.EXPECT().ID().Return(cid).AnyTimes()
 		s = service{
 			client:           cdClient,
-			nctlContainerSvc: mockNerdctlService{ncClient, nil},
+			nctlContainerSvc: mockNerdctlService{ncClient, nil, nil},
 			logger:           logger,
 		}
 	})

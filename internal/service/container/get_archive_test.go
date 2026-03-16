@@ -67,7 +67,7 @@ var _ = Describe("Container Get Archive API", func() {
 		con.EXPECT().ID().Return(cid).AnyTimes()
 		s = &service{
 			client:           cdClient,
-			nctlContainerSvc: mockNerdctlService{ncClient, nil},
+			nctlContainerSvc: mockNerdctlService{ncClient, nil, nil},
 			logger:           logger,
 			fs:               fs,
 			tarCreator:       tarCreator,

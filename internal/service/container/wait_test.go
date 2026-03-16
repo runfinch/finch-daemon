@@ -48,7 +48,7 @@ var _ = Describe("Container Wait API", func() {
 
 		svc = &service{
 			client:           cdClient,
-			nctlContainerSvc: mockNerdctlService{ncContainerSvc, nil},
+			nctlContainerSvc: mockNerdctlService{ncContainerSvc, nil, nil},
 			logger:           logger,
 		}
 	})
