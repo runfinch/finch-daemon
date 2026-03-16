@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.23.0](https://github.com/runfinch/finch-daemon/compare/v0.22.0...v0.23.0) (2026-03-16)
+
+
+### Build System or External Dependencies
+
+* **deps:** bump go.opentelemetry.io/otel/sdk from 1.39.0 to 1.40.0 ([#417](https://github.com/runfinch/finch-daemon/issues/417)) ([e0f86fe](https://github.com/runfinch/finch-daemon/commit/e0f86fee53694ee8e05f13cdf5fc884415301640))
+
+
+### Features
+
+* add GET /images/{name}/get export endpoint ([#413](https://github.com/runfinch/finch-daemon/issues/413)) ([3d7d449](https://github.com/runfinch/finch-daemon/commit/3d7d4499a08c3888e72d3deb5123ca636d021696))
+
+
+### Bug Fixes
+
+* include filtered containers in network inspect ([b75d116](https://github.com/runfinch/finch-daemon/commit/b75d116ad63f24a981488f53679b10530594fa2b))
+* include filtered containers in network inspect response ([#412](https://github.com/runfinch/finch-daemon/issues/412)) ([b75d116](https://github.com/runfinch/finch-daemon/commit/b75d116ad63f24a981488f53679b10530594fa2b))
+* remove samcli-vm workflow and stabilize direct testing  ([dbd821f](https://github.com/runfinch/finch-daemon/commit/dbd821f8ec240170fc1a97780be76371f41e279b))
+* remove samcli-vm workflow and stabilize direct testing ([#414](https://github.com/runfinch/finch-daemon/issues/414)) ([dbd821f](https://github.com/runfinch/finch-daemon/commit/dbd821f8ec240170fc1a97780be76371f41e279b))
+* simplify network calls to nerdctl ([#397](https://github.com/runfinch/finch-daemon/issues/397)) ([f3fe743](https://github.com/runfinch/finch-daemon/commit/f3fe743ee1cbbff952bb3c7b9bcfe4c8750201bd))
+
 ## [0.22.0](https://github.com/runfinch/finch-daemon/compare/v0.21.0...v0.22.0) (2026-01-14)
 
 
