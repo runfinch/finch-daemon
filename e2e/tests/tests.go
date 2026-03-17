@@ -390,21 +390,6 @@ func httpPauseContainer(uClient *http.Client, version, containerID string) {
 	gomega.Expect(resp.StatusCode).Should(gomega.Equal(http.StatusNoContent))
 }
 
-// httpRemoveContainer removes a container using the HTTP API.
-func httpRemoveContainer(uClient *http.Client, version, containerID string) {
-	relativeUrl := fmt.Sprintf("/containers/%s", containerID)
-	url := client.ConvertToFinchUrl(version, relativeUrl)
-	req, err := http.NewRequest(http.MethodDelete, url, nil)
-	gomega.Expect(err).Should(gomega.BeNil())
-	resp, err := uClient.Do(req)
-	gomega.Expect(err).Should(gomega.BeNil())
-	defer resp.Body.Close()
-	gomega.Expect(resp.StatusCode).Should(gomega.SatisfyAny(
-		gomega.Equal(http.StatusOK),
-		gomega.Equal(http.StatusNoContent),
-		gomega.Equal(http.StatusNotFound)))
-}
-
 // httpRemoveContainerForce removes a container with force using the HTTP API.
 func httpRemoveContainerForce(uClient *http.Client, version, containerID string) {
 	relativeUrl := fmt.Sprintf("/containers/%s?force=true", containerID)

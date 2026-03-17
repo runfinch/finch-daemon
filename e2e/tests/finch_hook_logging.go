@@ -1,10 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// TODO(remove-nerdctl-full-integration): All command.*(opt, ...) calls in this file must be
-// converted to HTTP API calls when merging remove-nerdctl-binary-dep and remove-test-dependency.
-// See .kiro/specs/finch-hook-helper-binary/hook-test-gap.md for the migration plan.
-
 package tests
 
 import (
@@ -15,8 +11,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
-	"github.com/runfinch/common-tests/option"
 
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/e2e/client"
@@ -25,7 +19,7 @@ import (
 // FinchhookLogging tests that the log URI binary:// path is correctly set to finch-hook
 // by verifying that GET /containers/{id}/logs returns the expected output after a container
 // created via the HTTP API writes to stdout.
-func FinchhookLogging(opt *option.Option) {
+func FinchhookLogging() {
 	Describe("finch-hook log URI", func() {
 		var (
 			uClient *http.Client
@@ -38,7 +32,7 @@ func FinchhookLogging(opt *option.Option) {
 			url = client.ConvertToFinchUrl(version, "/containers/create")
 		})
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 
 		It("should return stdout via GET /logs after container created through HTTP API, confirming log URI points to finch-hook", func() {
@@ -51,7 +45,7 @@ func FinchhookLogging(opt *option.Option) {
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
 			// Start the container and let it run to completion.
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 			time.Sleep(1 * time.Second)
 
 			// Retrieve logs via the HTTP API — not via nerdctl CLI.
@@ -79,7 +73,7 @@ func FinchhookLogging(opt *option.Option) {
 			Expect(statusCode).Should(Equal(http.StatusCreated))
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 			time.Sleep(1 * time.Second)
 
 			logsURL := fmt.Sprintf("/containers/%s/logs?stdout=1&stderr=1&follow=0&tail=0", testContainerName)

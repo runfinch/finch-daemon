@@ -1,10 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// TODO(remove-nerdctl-full-integration): All command.*(opt, ...) calls in this file must be
-// converted to HTTP API calls when merging remove-nerdctl-binary-dep and remove-test-dependency.
-// See .kiro/specs/finch-hook-helper-binary/hook-test-gap.md for the migration plan.
-
 package tests
 
 import (
@@ -15,8 +11,6 @@ import (
 	"github.com/docker/go-connections/nat"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
-	"github.com/runfinch/common-tests/option"
 
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/e2e/client"
@@ -26,7 +20,7 @@ import (
 // that a container attached to a bridge network receives an IP address and can reach
 // external addresses. These tests confirm the OCI createRuntime/poststop hook pipeline
 // is wired to finch-hook rather than nerdctl.
-func FinchhookNetworking(opt *option.Option) {
+func FinchhookNetworking() {
 	Describe("finch-hook CNI networking", func() {
 		var (
 			uClient *http.Client
@@ -39,7 +33,7 @@ func FinchhookNetworking(opt *option.Option) {
 			url = client.ConvertToFinchUrl(version, "/containers/create")
 		})
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 
 		It("should assign an IP address to a container on the bridge network, confirming CNI hooks ran", func() {
@@ -51,11 +45,11 @@ func FinchhookNetworking(opt *option.Option) {
 			Expect(statusCode).Should(Equal(http.StatusCreated))
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// IP assignment is the observable proof that the CNI hook fired.
 			// If finch-hook failed to run, the container would have no network interface.
-			verifyNetworkSettings(opt, testContainerName, "bridge")
+			verifyNetworkSettings(uClient, version, testContainerName, "bridge")
 		})
 
 		It("should allow a container to reach an external address, confirming CNI masquerade rules are set", func() {
@@ -69,14 +63,14 @@ func FinchhookNetworking(opt *option.Option) {
 			Expect(statusCode).Should(Equal(http.StatusCreated))
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
-			// start -a waits for the container to exit and returns its stdout.
+			// httpStartContainerAttach waits for the container to exit and returns stdout.
 			// A zero exit from wget confirms outbound connectivity via CNI.
-			out := command.StdoutStr(opt, "start", "-a", testContainerName)
+			out := httpStartContainerAttach(uClient, version, testContainerName)
 			_ = out // wget --spider writes nothing to stdout on success
 		})
 
 		It("should attach a container to a user-defined bridge network with correct IP settings", func() {
-			command.Run(opt, "network", "create", testNetwork)
+			httpCreateNetwork(uClient, version, testNetwork)
 
 			options := types.ContainerCreateRequest{}
 			options.Image = defaultImage
@@ -87,8 +81,8 @@ func FinchhookNetworking(opt *option.Option) {
 			Expect(statusCode).Should(Equal(http.StatusCreated))
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
-			command.Run(opt, "start", testContainerName)
-			verifyNetworkSettings(opt, testContainerName, testNetwork)
+			httpStartContainer(uClient, version, testContainerName)
+			verifyNetworkSettings(uClient, version, testContainerName, testNetwork)
 		})
 
 		It("should publish a port and make it reachable from the host, confirming nerdctl/ports labels were written", func() {
@@ -109,7 +103,7 @@ func FinchhookNetworking(opt *option.Option) {
 			Expect(statusCode).Should(Equal(http.StatusCreated))
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
-			command.Run(opt, "start", testContainerName)
+			httpStartContainer(uClient, version, testContainerName)
 
 			// Give nginx a moment to start.
 			time.Sleep(2 * time.Second)
