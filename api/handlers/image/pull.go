@@ -92,14 +92,11 @@ func parseNameAndTag(r *http.Request) (string, string, error) {
 
 	tagParam := r.URL.Query().Get("tag")
 
-	// If an explicit tag param is provided, strip any "@digest" suffix from fromImage.
-	// This handles "image@sha256:..." where the digest is also passed as the tag param.
-	// We do NOT split on ":" here to preserve "localhost:PORT/image" style names.
+	// If an explicit tag param is provided, use it directly.
+	// Strip any "@digest" suffix from fromImage (e.g. Docker sends
+	// "fromImage=alpine@sha256:abc&tag=sha256:abc" for digest pulls).
+	// We only strip at '@', not ':', to preserve registry URLs like "localhost:5000/image".
 	if tagParam != "" {
-		if nameParam == "" {
-			return "", "", fmt.Errorf("invalid image: %s", nameParam)
-		}
-		// Strip "@digest" suffix if present (e.g. "image@sha256:abc" -> "image")
 		name := nameParam
 		if idx := strings.IndexByte(nameParam, '@'); idx >= 0 {
 			name = nameParam[:idx]
@@ -110,7 +107,7 @@ func parseNameAndTag(r *http.Request) (string, string, error) {
 		return name, tagParam, nil
 	}
 
-	// No explicit tag param: fromImage may include an inline tag/digest after '@' or ':'
+	// No explicit tag param: parse the inline tag or digest from fromImage (split on '@' or ':').
 	parts := splitRE.Split(nameParam, 2)
 	name := parts[0]
 	if name == "" {
