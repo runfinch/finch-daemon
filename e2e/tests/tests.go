@@ -985,17 +985,23 @@ func imageTagMatches(tag, imageName string) bool {
 func imageShouldExist(imageName string) {
 	uClient := client.NewClient(GetDockerHostUrl())
 	version := GetDockerApiVersion()
-	images := httpListImages(uClient, version)
-	found := false
-	for _, img := range images {
-		for _, tag := range img.RepoTags {
-			if imageTagMatches(tag, imageName) {
-				found = true
-				break
+	waitForImageExist(uClient, version, imageName)
+}
+
+// waitForImageExist polls until the image appears in the list or times out.
+func waitForImageExist(uClient *http.Client, version, imageName string) {
+	for i := 0; i < 20; i++ {
+		images := httpListImages(uClient, version)
+		for _, img := range images {
+			for _, tag := range img.RepoTags {
+				if imageTagMatches(tag, imageName) {
+					return
+				}
 			}
 		}
+		time.Sleep(500 * time.Millisecond)
 	}
-	gomega.Expect(found).To(gomega.BeTrue(), fmt.Sprintf("image %s should exist", imageName))
+	gomega.Expect(false).To(gomega.BeTrue(), fmt.Sprintf("image %s should exist", imageName))
 }
 
 func imageShouldNotExist(imageName string) {
