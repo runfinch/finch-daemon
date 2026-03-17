@@ -116,6 +116,8 @@ jobs:
         run: echo "REGO_FILE_PATH=${{ github.workspace }}/docs/sample-rego-policies/example.rego" >> $GITHUB_ENV
       - name: Install binaries
         run: sudo make install
+      - name: Remove nerdctl binary to enforce HTTP-only e2e tests
+        run: sudo rm -f /usr/local/bin/nerdctl
       - name: Start finch-daemon with opa Authz
         run: sudo /usr/local/bin/finch-daemon --debug --experimental --rego-file ${{ github.workspace }}/docs/sample-rego-policies/example.rego --skip-rego-perm-check --socket-owner $UID --socket-addr /run/finch.sock --pidfile /run/finch.pid &
       - name: Run opa e2e tests
