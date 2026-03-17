@@ -139,6 +139,10 @@ func ContainerList(opt *option.Option) {
 				},
 			}
 
+			// Wait for id2 to fully exit before querying — alpine with no cmd exits
+			// immediately but the state transition is async.
+			waitForContainerStatus(uClient, version, id2, "exited")
+
 			res, err := uClient.Get(client.ConvertToFinchUrl(version, "/containers/json?all=true&filters={\"status\":[\"exited\"]}"))
 			Expect(err).Should(BeNil())
 			Expect(res.StatusCode).Should(Equal(http.StatusOK))

@@ -358,6 +358,24 @@ var _ = Describe("Container Inspect API ", func() {
 			Expect(result.BlkioDeviceReadIOps).Should(BeNil())
 			Expect(result.BlkioDeviceWriteIOps).Should(BeNil())
 		})
+		It("should filter all-nil blkio device slices to nil output", func() {
+			input := &dockercompat.HostConfig{
+				BlkioSettings: dockercompat.BlkioSettings{
+					BlkioWeightDevice:    []*dockercompat.WeightDevice{nil, nil, nil},
+					BlkioDeviceReadBps:   []*dockercompat.ThrottleDevice{nil, nil},
+					BlkioDeviceWriteBps:  []*dockercompat.ThrottleDevice{nil},
+					BlkioDeviceReadIOps:  []*dockercompat.ThrottleDevice{nil},
+					BlkioDeviceWriteIOps: []*dockercompat.ThrottleDevice{nil},
+				},
+			}
+			result := getHostConfigFromDockerCompat(input)
+			Expect(result).ShouldNot(BeNil())
+			Expect(result.BlkioWeightDevice).Should(BeNil())
+			Expect(result.BlkioDeviceReadBps).Should(BeNil())
+			Expect(result.BlkioDeviceWriteBps).Should(BeNil())
+			Expect(result.BlkioDeviceReadIOps).Should(BeNil())
+			Expect(result.BlkioDeviceWriteIOps).Should(BeNil())
+		})
 		It("should handle empty/zero fields gracefully", func() {
 			input := &dockercompat.HostConfig{}
 			result := getHostConfigFromDockerCompat(input)

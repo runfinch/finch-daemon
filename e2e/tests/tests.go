@@ -992,6 +992,26 @@ func waitForImageExist(uClient *http.Client, version, imageName string) {
 	gomega.Expect(false).To(gomega.BeTrue(), fmt.Sprintf("image %s should exist", imageName))
 }
 
+// waitForContainerStatus polls GET /containers/{id}/json until the container reaches the
+// expected status (e.g. "exited") or times out after 10s. Prevents races where a container
+// has been started but hasn't fully transitioned to the target state yet.
+func waitForContainerStatus(uClient *http.Client, version, containerID, status string) {
+	inspectURL := client.ConvertToFinchUrl(version, fmt.Sprintf("/containers/%s/json", containerID))
+	for i := 0; i < 20; i++ {
+		resp, err := uClient.Get(inspectURL)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			var ctr types.Container
+			if json.NewDecoder(resp.Body).Decode(&ctr) == nil && ctr.State.Status == status {
+				resp.Body.Close()
+				return
+			}
+			resp.Body.Close()
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	gomega.Expect(false).To(gomega.BeTrue(), fmt.Sprintf("container %s did not reach status %q within 10s", containerID, status))
+}
+
 func imageShouldNotExist(imageName string) {
 	uClient := client.NewClient(GetDockerHostUrl())
 	version := GetDockerApiVersion()
