@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/containerd/nerdctl/v2/pkg/config"
-	"go.uber.org/mock/gomock"
 	"github.com/gorilla/mux"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/api/events"
 	"github.com/runfinch/finch-daemon/mocks/mocks_logger"
@@ -182,8 +182,8 @@ var _ = Describe("Events API", func() {
 		filtersJSON, err := json.Marshal(filters)
 		Expect(err).Should(BeNil())
 
-		url := fmt.Sprintf("/events?filters=%s", url.QueryEscape(string(filtersJSON)))
-		req, err := http.NewRequest(http.MethodGet, url, nil)
+		filterURL := fmt.Sprintf("/events?filters=%s", url.QueryEscape(string(filtersJSON)))
+		req, err := http.NewRequest(http.MethodGet, filterURL, nil)
 		Expect(err).Should(BeNil())
 
 		s.EXPECT().SubscribeEvents(req.Context(), map[string][]string{

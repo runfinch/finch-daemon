@@ -10,7 +10,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
 
 	"github.com/runfinch/finch-daemon/api/types"
@@ -20,11 +19,15 @@ import (
 // SystemVersion tests the `Get /version` API.
 func SystemVersion(opt *option.Option) {
 	Describe("version API", func() {
-		var uClient *http.Client
+		var (
+			uClient *http.Client
+			version string
+		)
 		BeforeEach(func() {
 			// create a custom client to use http over unix sockets
 			uClient = client.NewClient(GetDockerHostUrl())
-			command.RemoveAll(opt)
+			version = GetDockerApiVersion()
+			httpRemoveAll(uClient, version)
 		})
 		It("should successfully get the version info", func() {
 			res, err := uClient.Get(client.ConvertToFinchUrl("", "/version"))

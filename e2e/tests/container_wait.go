@@ -10,7 +10,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
 
 	"github.com/runfinch/finch-daemon/api/response"
@@ -36,12 +35,12 @@ func ContainerWait(opt *option.Option) {
 		})
 
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 
 		It("should wait for the container to exit and return status code", func() {
 			// start a container and exit after 3s
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "3")
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "3"})
 
 			// call wait on this container
 			relativeUrl := fmt.Sprintf("/containers/%s/wait", testContainerName)
@@ -75,7 +74,7 @@ func ContainerWait(opt *option.Option) {
 
 		It("should reject wait condition parameter", func() {
 			// start a container
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "5")
+			httpRunContainer(uClient, version, testContainerName, defaultImage, []string{"sleep", "5"})
 
 			// try to wait with a condition
 			relativeUrl := fmt.Sprintf("/containers/%s/wait?condition=not-running", testContainerName)
