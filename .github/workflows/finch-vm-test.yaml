@@ -106,12 +106,23 @@ jobs:
       - name: Make Finch Daemon
         run: |
           su ec2-user -c "cd $GITHUB_WORKSPACE/finch-daemon-pr && STATIC=1 GOPROXY=direct GOOS=linux GOARCH=\$(go env GOARCH) make"
+          su ec2-user -c "mkdir -p /Applications/Finch/finch-daemon"
           su ec2-user -c "cp $GITHUB_WORKSPACE/finch-daemon-pr/bin/finch-daemon /Applications/Finch/finch-daemon/finch-daemon"
+          su ec2-user -c "cp $GITHUB_WORKSPACE/finch-daemon-pr/bin/finch-hook /Applications/Finch/finch-daemon/finch-hook"
+          su ec2-user -c "cp $GITHUB_WORKSPACE/finch-daemon-pr/bin/docker-credential-finch /Applications/Finch/finch-daemon/docker-credential-finch"
 
       - name: Initializing Finch VM
         run: |
           su ec2-user -c 'finch vm init'
           su ec2-user -c 'while ! finch vm status | grep -q "Running"; do echo "Waiting for VM..."; sleep 5; done'
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl copy /Applications/Finch/finch-daemon/finch-daemon finch:/tmp/finch-daemon'
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl copy /Applications/Finch/finch-daemon/finch-hook finch:/tmp/finch-hook'
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl copy /Applications/Finch/finch-daemon/docker-credential-finch finch:/tmp/docker-credential-finch'
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch sudo install -m 755 /tmp/finch-daemon /usr/local/bin/finch-daemon'
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch sudo install -m 755 /tmp/finch-hook /usr/local/bin/finch-hook'
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch sudo install -m 755 /tmp/docker-credential-finch /usr/local/bin/docker-credential-finch'
+          su ec2-user -c 'LIMA_HOME=/Applications/Finch/lima/data /Applications/Finch/lima/bin/limactl shell finch sudo nohup /usr/local/bin/finch-daemon --debug --socket-owner 501 > /tmp/finch-daemon.log 2>&1 &'
+          sleep 5
 
       - name: Pinging Finch Daemon socket
         run: |
