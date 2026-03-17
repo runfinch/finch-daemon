@@ -110,6 +110,13 @@ jobs:
           python -m pip install 'chardet<6.0.0'
           samdev --version
 
+      # Python 3.13 GC catches unclosed urllib3 responses from Docker SDK's
+      # container.attach(), causing spurious failures via filterwarnings=error.
+      - name: Patch pytest.ini for Python 3.13 compatibility
+        working-directory: aws-sam-cli
+        run: |
+          sed -i '/default::ResourceWarning/a\    ignore::pytest.PytestUnraisableExceptionWarning' pytest.ini
+
       - name: Run ${{ matrix.test_type }} tests
         run: ./scripts/samcli-direct/run-${{ matrix.test_type }}-tests.sh
 
