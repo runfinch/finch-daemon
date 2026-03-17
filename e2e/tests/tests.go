@@ -181,7 +181,7 @@ func pullImage(imageName string) string {
 	images := httpListImages(uClient, version)
 	for _, img := range images {
 		for _, tag := range img.RepoTags {
-			if tag == imageName {
+			if imageTagMatches(tag, imageName) {
 				return img.ID
 			}
 		}
@@ -978,6 +978,10 @@ func containerShouldNotExist(containerNames ...string) {
 	}
 }
 
+func imageTagMatches(tag, imageName string) bool {
+	return tag == imageName || strings.HasSuffix(tag, "/"+imageName)
+}
+
 func imageShouldExist(imageName string) {
 	uClient := client.NewClient(GetDockerHostUrl())
 	version := GetDockerApiVersion()
@@ -985,7 +989,7 @@ func imageShouldExist(imageName string) {
 	found := false
 	for _, img := range images {
 		for _, tag := range img.RepoTags {
-			if tag == imageName {
+			if imageTagMatches(tag, imageName) {
 				found = true
 				break
 			}
@@ -1001,7 +1005,7 @@ func imageShouldNotExist(imageName string) {
 	found := false
 	for _, img := range images {
 		for _, tag := range img.RepoTags {
-			if tag == imageName {
+			if imageTagMatches(tag, imageName) {
 				found = true
 				break
 			}

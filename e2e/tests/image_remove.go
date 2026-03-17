@@ -82,6 +82,8 @@ func ImageRemove(opt *option.Option) {
 				imageShouldNotExist(defaultImage)
 			})
 			It("should fail to remove as image does not exist", func() {
+				// ensure the image is not present locally before attempting delete
+				httpRemoveImageForce(uClient, version, defaultImage)
 				// don't pull the image and try to delete
 				res, err := uClient.Do(req)
 				Expect(err).ShouldNot(HaveOccurred())

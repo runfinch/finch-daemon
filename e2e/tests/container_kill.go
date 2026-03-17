@@ -40,6 +40,8 @@ func ContainerKill(opt *option.Option) {
 			res, err := uClient.Post(apiUrl, "application/json", nil)
 			Expect(err).Should(BeNil())
 			Expect(res.StatusCode).Should(Equal(http.StatusNoContent))
+			// kill is async — wait briefly for the container to exit
+			time.Sleep(1 * time.Second)
 			containerShouldNotBeRunning(testContainerName)
 		})
 		It("should fail to kill a non-existent container", func() {

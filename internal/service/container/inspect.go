@@ -219,6 +219,25 @@ func getNetworkName(lab map[string]string, network string) string {
 	return network
 }
 
+// defaultCaps is the set of capabilities granted to a container by default,
+// matching containerd's defaultUnixCaps(). Used to compute CapAdd/CapDrop deltas.
+var defaultCaps = map[string]struct{}{
+	"CAP_CHOWN":            {},
+	"CAP_DAC_OVERRIDE":     {},
+	"CAP_FSETID":           {},
+	"CAP_FOWNER":           {},
+	"CAP_MKNOD":            {},
+	"CAP_NET_RAW":          {},
+	"CAP_SETGID":           {},
+	"CAP_SETUID":           {},
+	"CAP_SETFCAP":          {},
+	"CAP_SETPCAP":          {},
+	"CAP_NET_BIND_SERVICE": {},
+	"CAP_SYS_CHROOT":       {},
+	"CAP_KILL":             {},
+	"CAP_AUDIT_WRITE":      {},
+}
+
 // enrichHostConfigFromSpec populates HostConfig fields that are not available
 // in the upstream dockercompat.HostConfig struct. These fields are extracted
 // from the OCI spec and container labels.
@@ -227,15 +246,30 @@ func enrichHostConfigFromSpec(hc *types.ContainerHostConfig, spec *specs.Spec, c
 		return
 	}
 
-	// Extract capabilities from OCI spec
+	// Extract capabilities from OCI spec.
+	// CapAdd = caps in bounding set that are NOT in the default set.
+	// CapDrop = caps in the default set that are NOT in the bounding set.
 	if spec.Process != nil && spec.Process.Capabilities != nil {
 		caps := spec.Process.Capabilities
-		if len(caps.Bounding) > 0 {
-			// Strip "CAP_" prefix is NOT done — Docker returns caps with CAP_ prefix
-			hc.CapAdd = caps.Bounding
-		}
+
 		// Detect privileged mode: if bounding set has all known capabilities
 		hc.Privileged = isPrivileged(caps.Bounding)
+
+		bounding := make(map[string]struct{}, len(caps.Bounding))
+		for _, c := range caps.Bounding {
+			bounding[c] = struct{}{}
+		}
+
+		for _, c := range caps.Bounding {
+			if _, isDefault := defaultCaps[c]; !isDefault {
+				hc.CapAdd = append(hc.CapAdd, c)
+			}
+		}
+		for c := range defaultCaps {
+			if _, present := bounding[c]; !present {
+				hc.CapDrop = append(hc.CapDrop, c)
+			}
+		}
 	}
 
 	// Extract PidsLimit from OCI spec

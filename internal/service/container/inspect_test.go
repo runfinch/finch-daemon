@@ -388,12 +388,36 @@ var _ = Describe("Container Inspect API ", func() {
 			spec := &specs.Spec{
 				Process: &specs.Process{
 					Capabilities: &specs.LinuxCapabilities{
+						// Only non-default caps — CapAdd should contain these, CapDrop should contain all defaults
 						Bounding: []string{"CAP_NET_ADMIN", "CAP_SYS_TIME"},
 					},
 				},
 			}
 			enrichHostConfigFromSpec(hc, spec, nil)
-			Expect(hc.CapAdd).Should(Equal([]string{"CAP_NET_ADMIN", "CAP_SYS_TIME"}))
+			Expect(hc.CapAdd).Should(ConsistOf("CAP_NET_ADMIN", "CAP_SYS_TIME"))
+			Expect(hc.CapDrop).Should(HaveLen(14)) // all 14 defaults are dropped
+			Expect(hc.Privileged).Should(BeFalse())
+		})
+		It("should compute CapAdd and CapDrop relative to default cap set", func() {
+			hc := &types.ContainerHostConfig{}
+			// Simulate: --cap-add NET_ADMIN SYS_TIME --cap-drop CHOWN NET_RAW
+			// Bounding = defaults - CHOWN - NET_RAW + NET_ADMIN + SYS_TIME
+			bounding := []string{
+				"CAP_DAC_OVERRIDE", "CAP_FSETID", "CAP_FOWNER", "CAP_MKNOD",
+				"CAP_SETGID", "CAP_SETUID", "CAP_SETFCAP", "CAP_SETPCAP",
+				"CAP_NET_BIND_SERVICE", "CAP_SYS_CHROOT", "CAP_KILL", "CAP_AUDIT_WRITE",
+				"CAP_NET_ADMIN", "CAP_SYS_TIME",
+			}
+			spec := &specs.Spec{
+				Process: &specs.Process{
+					Capabilities: &specs.LinuxCapabilities{
+						Bounding: bounding,
+					},
+				},
+			}
+			enrichHostConfigFromSpec(hc, spec, nil)
+			Expect(hc.CapAdd).Should(ConsistOf("CAP_NET_ADMIN", "CAP_SYS_TIME"))
+			Expect(hc.CapDrop).Should(ConsistOf("CAP_CHOWN", "CAP_NET_RAW"))
 			Expect(hc.Privileged).Should(BeFalse())
 		})
 		It("should detect privileged mode with large capability set", func() {
@@ -541,6 +565,7 @@ var _ = Describe("Container Inspect API ", func() {
 			}
 			enrichHostConfigFromSpec(hc, spec, nil)
 			Expect(hc.CapAdd).Should(BeNil())
+			Expect(hc.CapDrop).Should(HaveLen(14)) // all defaults dropped
 			Expect(hc.Privileged).Should(BeFalse())
 		})
 		It("should handle nil Process in spec without panic", func() {
@@ -663,7 +688,8 @@ var _ = Describe("Container Inspect API ", func() {
 				labels.Mounts:              `[{"Type":"bind","Source":"/a","Destination":"/b","Mode":"ro"}]`,
 			}
 			enrichHostConfigFromSpec(hc, spec, containerLabels)
-			Expect(hc.CapAdd).Should(Equal([]string{"CAP_NET_ADMIN"}))
+			Expect(hc.CapAdd).Should(ConsistOf("CAP_NET_ADMIN"))
+			Expect(hc.CapDrop).Should(HaveLen(14)) // all 14 defaults dropped since only CAP_NET_ADMIN in bounding
 			Expect(hc.Privileged).Should(BeFalse())
 			Expect(hc.PidsLimit).Should(Equal(int64(512)))
 			Expect(hc.Ulimits).Should(HaveLen(1))
