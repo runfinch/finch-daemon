@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.23.1](https://github.com/runfinch/finch-daemon/compare/v0.23.0...v0.23.1) (2026-03-17)
+
+
+### Bug Fixes
+
+* stop PytestUnraisableExceptionWarning from causing samcli test f… ([#423](https://github.com/runfinch/finch-daemon/issues/423)) ([b380d9a](https://github.com/runfinch/finch-daemon/commit/b380d9a67cab062cd2ba1323403556c65b827ddc))
+* stop PytestUnraisableExceptionWarning from causing samcli test failure ([b380d9a](https://github.com/runfinch/finch-daemon/commit/b380d9a67cab062cd2ba1323403556c65b827ddc))
+
 ## [0.23.0](https://github.com/runfinch/finch-daemon/compare/v0.22.0...v0.23.0) (2026-03-16)
 
 
