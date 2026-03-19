@@ -5,6 +5,7 @@ package backend
 
 import (
 	"os"
+	"os/exec"
 
 	"github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/containerd/nerdctl/v2/pkg/netutil"
@@ -16,15 +17,18 @@ import (
 type NerdctlWrapper struct {
 	clientWrapper *ContainerdClientWrapper
 	globalOptions *types.GlobalCommandOptions
-	nerdctlExe    string
-	netClient     *netutil.CNIEnv
-	CNI           *libcni.CNIConfig
+	hookHelperExe string
+	// lookPath is exec.LookPath by default; overridable in tests.
+	lookPath  func(string) (string, error)
+	netClient *netutil.CNIEnv
+	CNI       *libcni.CNIConfig
 }
 
 func NewNerdctlWrapper(clientWrapper *ContainerdClientWrapper, options *types.GlobalCommandOptions) *NerdctlWrapper {
 	return &NerdctlWrapper{
 		clientWrapper: clientWrapper,
 		globalOptions: options,
+		lookPath:      exec.LookPath,
 		netClient: &netutil.CNIEnv{
 			Path:        options.CNIPath,
 			NetconfPath: options.CNINetConfPath,

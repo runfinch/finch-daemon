@@ -14,7 +14,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
 	"github.com/runfinch/finch-daemon/api/response"
 	"github.com/runfinch/finch-daemon/e2e/client"
@@ -28,19 +27,19 @@ func ContainerRestart(opt *option.Option) {
 			version string
 		)
 		BeforeEach(func() {
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage,
-				"/bin/sh", "-c", `date; sleep infinity`)
 			// create a custom client to use http over unix sockets
 			uClient = client.NewClient(GetDockerHostUrl())
 			// get the docker api version that will be tested
 			version = GetDockerApiVersion()
+			httpRunContainer(uClient, version, testContainerName, defaultImage,
+				[]string{"/bin/sh", "-c", `date; sleep infinity`})
 		})
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 
 		It("should start and restart the container", func() {
-			containerShouldBeRunning(opt, testContainerName)
+			containerShouldBeRunning(testContainerName)
 
 			// use location to ensure all times are UTC since
 			// the default location is different on different platforms
@@ -86,22 +85,22 @@ func ContainerRestart(opt *option.Option) {
 			Expect(errResponse.Message).Should(Not(BeEmpty()))
 		})
 		It("should restart a stopped container", func() {
-			containerShouldBeRunning(opt, testContainerName)
+			containerShouldBeRunning(testContainerName)
 
 			stopRelativeUrl := fmt.Sprintf("/containers/%s/stop", testContainerName)
 			res, err := uClient.Post(client.ConvertToFinchUrl(version, stopRelativeUrl), "application/json", nil)
 			Expect(err).Should(BeNil())
 			Expect(res.StatusCode).Should(Equal(http.StatusNoContent))
-			containerShouldNotBeRunning(opt, testContainerName)
+			containerShouldNotBeRunning(testContainerName)
 
 			restartRelativeUrl := fmt.Sprintf("/containers/%s/restart", testContainerName)
 			res, err = uClient.Post(client.ConvertToFinchUrl(version, restartRelativeUrl), "application/json", nil)
 			Expect(err).Should(BeNil())
 			Expect(res.StatusCode).Should(Equal(http.StatusNoContent))
-			containerShouldBeRunning(opt, testContainerName)
+			containerShouldBeRunning(testContainerName)
 		})
 		It("should restart the container with timeout", func() {
-			containerShouldBeRunning(opt, testContainerName)
+			containerShouldBeRunning(testContainerName)
 
 			// stop the container with a timeout of 5 seconds
 			now := time.Now()
@@ -113,7 +112,7 @@ func ContainerRestart(opt *option.Option) {
 			elapsed := later.Sub(now)
 			Expect(elapsed.Seconds()).Should(BeNumerically(">", 4.0))
 			Expect(elapsed.Seconds()).Should(BeNumerically("<", 10.0))
-			containerShouldBeRunning(opt, testContainerName)
+			containerShouldBeRunning(testContainerName)
 		})
 	})
 }

@@ -51,11 +51,19 @@ var _ = Describe("Container Create API ", func() {
 		cdClient = mocks_backend.NewMockContainerdClient(mockCtrl)
 		ncContainerSvc = mocks_backend.NewMockNerdctlContainerSvc(mockCtrl)
 		ncNetworkSvc = mocks_backend.NewMockNerdctlNetworkSvc(mockCtrl)
-		ncExe = "/usr/local/bin/nerdctl"
+		ncExe = "/usr/local/bin/finch-hook"
 		image = "test-image"
 		cmd = []string{"echo", "hello world"}
 		createOpt = types.ContainerCreateOptions{}
-		createOptExp = types.ContainerCreateOptions{NerdctlCmd: ncExe, NerdctlArgs: []string{}}
+		createOptExp = types.ContainerCreateOptions{
+			NerdctlCmd: ncExe,
+			NerdctlArgs: []string{
+				"--address=",
+				"--data-root=",
+				"--cni-path=",
+				"--cni-netconfpath=",
+			},
+		}
 		netOpt = types.NetworkOptions{}
 		netManager = mocks_container.NewMockNetworkOptionsManager(mockCtrl)
 		cid = "test-container-id"
@@ -72,7 +80,7 @@ var _ = Describe("Container Create API ", func() {
 	})
 	Context("service", func() {
 		It("should successfully create a container", func() {
-			ncContainerSvc.EXPECT().GetNerdctlExe().Return(ncExe, nil)
+			ncContainerSvc.EXPECT().GetHookHelperBinary().Return(ncExe, nil)
 			ncContainerSvc.EXPECT().NewNetworkingOptionsManager(netOpt).Return(netManager, nil)
 
 			// container create arguments
@@ -91,7 +99,7 @@ var _ = Describe("Container Create API ", func() {
 		})
 		It("should return internal error for network options create failure", func() {
 			mockErr := errors.New("error while creating networking options")
-			ncContainerSvc.EXPECT().GetNerdctlExe().Return(ncExe, nil)
+			ncContainerSvc.EXPECT().GetHookHelperBinary().Return(ncExe, nil)
 			ncContainerSvc.EXPECT().NewNetworkingOptionsManager(gomock.Any()).Return(nil, mockErr)
 
 			// service should return with an error
@@ -100,7 +108,7 @@ var _ = Describe("Container Create API ", func() {
 			Expect(err.Error()).Should(Equal(mockErr.Error()))
 		})
 		It("should return internal error for container create failure", func() {
-			ncContainerSvc.EXPECT().GetNerdctlExe().Return(ncExe, nil)
+			ncContainerSvc.EXPECT().GetHookHelperBinary().Return(ncExe, nil)
 			ncContainerSvc.EXPECT().NewNetworkingOptionsManager(netOpt).Return(netManager, nil)
 
 			// container create arguments
@@ -117,7 +125,7 @@ var _ = Describe("Container Create API ", func() {
 			Expect(err.Error()).Should(Equal(mockErr.Error()))
 		})
 		It("should call garbage collector upon container create failure", func() {
-			ncContainerSvc.EXPECT().GetNerdctlExe().Return(ncExe, nil)
+			ncContainerSvc.EXPECT().GetHookHelperBinary().Return(ncExe, nil)
 			ncContainerSvc.EXPECT().NewNetworkingOptionsManager(netOpt).Return(netManager, nil)
 
 			// container create arguments
@@ -141,7 +149,7 @@ var _ = Describe("Container Create API ", func() {
 			Expect(err.Error()).Should(Equal(mockErr.Error()))
 		})
 		It("should return not-found error if image was not found", func() {
-			ncContainerSvc.EXPECT().GetNerdctlExe().Return(ncExe, nil)
+			ncContainerSvc.EXPECT().GetHookHelperBinary().Return(ncExe, nil)
 			ncContainerSvc.EXPECT().NewNetworkingOptionsManager(netOpt).Return(netManager, nil)
 
 			// container create arguments
@@ -157,7 +165,7 @@ var _ = Describe("Container Create API ", func() {
 			Expect(errdefs.IsNotFound(err)).Should(BeTrue())
 		})
 		It("should return invalid-format error if the inputs are invalid", func() {
-			ncContainerSvc.EXPECT().GetNerdctlExe().Return(ncExe, nil)
+			ncContainerSvc.EXPECT().GetHookHelperBinary().Return(ncExe, nil)
 			ncContainerSvc.EXPECT().NewNetworkingOptionsManager(netOpt).Return(netManager, nil)
 
 			// container create arguments
@@ -173,7 +181,7 @@ var _ = Describe("Container Create API ", func() {
 			Expect(errdefs.IsInvalidFormat(err)).Should(BeTrue())
 		})
 		It("should return conflict error if container name already exists", func() {
-			ncContainerSvc.EXPECT().GetNerdctlExe().Return(ncExe, nil)
+			ncContainerSvc.EXPECT().GetHookHelperBinary().Return(ncExe, nil)
 			ncContainerSvc.EXPECT().NewNetworkingOptionsManager(netOpt).Return(netManager, nil)
 
 			// container create arguments
@@ -188,9 +196,9 @@ var _ = Describe("Container Create API ", func() {
 			Expect(cidResult).Should(BeEmpty())
 			Expect(errdefs.IsConflict(err)).Should(BeTrue())
 		})
-		It("should return an error if nerdctl binary was not found", func() {
-			mockErr := errors.New("could not find nerdctl binary")
-			ncContainerSvc.EXPECT().GetNerdctlExe().Return("", mockErr)
+		It("should return an error if finch-hook binary was not found", func() {
+			mockErr := errors.New("could not find hook helper binary")
+			ncContainerSvc.EXPECT().GetHookHelperBinary().Return("", mockErr)
 
 			// service should return with an error
 			cidResult, err := svc.Create(ctx, image, nil, createOpt, netOpt)

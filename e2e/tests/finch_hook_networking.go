@@ -1,0 +1,119 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+package tests
+
+import (
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/docker/go-connections/nat"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"github.com/runfinch/finch-daemon/api/types"
+	"github.com/runfinch/finch-daemon/e2e/client"
+)
+
+// FinchhookNetworking tests that CNI hooks ran correctly via finch-hook by verifying
+// that a container attached to a bridge network receives an IP address and can reach
+// external addresses. These tests confirm the OCI createRuntime/poststop hook pipeline
+// is wired to finch-hook rather than nerdctl.
+func FinchhookNetworking() {
+	Describe("finch-hook CNI networking", func() {
+		var (
+			uClient *http.Client
+			version string
+			url     string
+		)
+		BeforeEach(func() {
+			uClient = client.NewClient(GetDockerHostUrl())
+			version = GetDockerApiVersion()
+			url = client.ConvertToFinchUrl(version, "/containers/create")
+		})
+		AfterEach(func() {
+			httpRemoveAll(uClient, version)
+		})
+
+		It("should assign an IP address to a container on the bridge network, confirming CNI hooks ran", func() {
+			options := types.ContainerCreateRequest{}
+			options.Image = defaultImage
+			options.Cmd = []string{"sleep", "Infinity"}
+
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			httpStartContainer(uClient, version, testContainerName)
+
+			// IP assignment is the observable proof that the CNI hook fired.
+			// If finch-hook failed to run, the container would have no network interface.
+			verifyNetworkSettings(uClient, version, testContainerName, "bridge")
+		})
+
+		It("should allow a container to reach an external address, confirming CNI masquerade rules are set", func() {
+			options := types.ContainerCreateRequest{}
+			options.Image = defaultImage
+			// wget with a short timeout so the test fails fast if networking is broken.
+			// We only care about the TCP handshake succeeding (exit 0), not the HTTP response.
+			options.Cmd = []string{"wget", "-q", "--spider", "--timeout=5", "http://example.com"}
+
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			// httpStartContainerAttach waits for the container to exit and returns stdout.
+			// A zero exit from wget confirms outbound connectivity via CNI.
+			out := httpStartContainerAttach(uClient, version, testContainerName)
+			_ = out // wget --spider writes nothing to stdout on success
+		})
+
+		It("should attach a container to a user-defined bridge network with correct IP settings", func() {
+			httpCreateNetwork(uClient, version, testNetwork)
+
+			options := types.ContainerCreateRequest{}
+			options.Image = defaultImage
+			options.Cmd = []string{"sleep", "Infinity"}
+			options.HostConfig.NetworkMode = testNetwork
+
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			httpStartContainer(uClient, version, testContainerName)
+			verifyNetworkSettings(uClient, version, testContainerName, testNetwork)
+		})
+
+		It("should publish a port and make it reachable from the host, confirming nerdctl/ports labels were written", func() {
+			// nginx serves HTTP on port 80 with no configuration needed and is already
+			// pulled as part of the test suite setup — no alpine tooling assumptions.
+			options := types.ContainerCreateRequest{}
+			options.Image = nginxImage
+			// ExposedPorts must be set so nerdctl writes the nerdctl/ports label,
+			// which the OCI hook reads to configure port forwarding rules.
+			options.ExposedPorts = nat.PortSet{
+				"80/tcp": struct{}{},
+			}
+			options.HostConfig.PortBindings = nat.PortMap{
+				"80/tcp": []nat.PortBinding{{HostIP: "127.0.0.1", HostPort: "18080"}},
+			}
+
+			statusCode, ctr := createContainer(uClient, url, testContainerName, options)
+			Expect(statusCode).Should(Equal(http.StatusCreated))
+			Expect(ctr.ID).ShouldNot(BeEmpty())
+
+			httpStartContainer(uClient, version, testContainerName)
+
+			// Give nginx a moment to start.
+			time.Sleep(2 * time.Second)
+
+			// Verify the published port is reachable from the host.
+			// This confirms the nerdctl/ports label was written and the OCI hook processed it.
+			resp, err := http.Get("http://127.0.0.1:18080/") //nolint:noctx // test helper, no request cancellation needed
+			Expect(err).Should(BeNil(), fmt.Sprintf("published port 18080 not reachable: container ID %s", ctr.ID))
+			Expect(resp.StatusCode).Should(Equal(http.StatusOK))
+			_ = resp.Body.Close()
+		})
+	})
+}

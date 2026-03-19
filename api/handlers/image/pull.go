@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/containerd/containerd/v2/pkg/namespaces"
 
@@ -89,7 +90,24 @@ func parseNameAndTag(r *http.Request) (string, string, error) {
 		return "", "", fmt.Errorf("fromImage must be specified")
 	}
 
-	// fromImage parameter may include image tag/digest
+	tagParam := r.URL.Query().Get("tag")
+
+	// If an explicit tag param is provided, use it directly.
+	// Strip any "@digest" suffix from fromImage (e.g. Docker sends
+	// "fromImage=alpine@sha256:abc&tag=sha256:abc" for digest pulls).
+	// We only strip at '@', not ':', to preserve registry URLs like "localhost:5000/image".
+	if tagParam != "" {
+		name := nameParam
+		if idx := strings.IndexByte(nameParam, '@'); idx >= 0 {
+			name = nameParam[:idx]
+		}
+		if name == "" {
+			return "", "", fmt.Errorf("invalid image: %s", nameParam)
+		}
+		return name, tagParam, nil
+	}
+
+	// No explicit tag param: parse the inline tag or digest from fromImage (split on '@' or ':').
 	parts := splitRE.Split(nameParam, 2)
 	name := parts[0]
 	if name == "" {
@@ -98,11 +116,6 @@ func parseNameAndTag(r *http.Request) (string, string, error) {
 	var tag string
 	if len(parts) > 1 {
 		tag = parts[1]
-	}
-
-	// image tag
-	if tagParam := r.URL.Query().Get("tag"); tagParam != "" {
-		tag = tagParam
 	}
 	if tag == "" {
 		return "", "", fmt.Errorf("image tag/digest must be specified")
