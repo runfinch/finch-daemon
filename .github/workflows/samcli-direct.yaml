@@ -1,6 +1,11 @@
 name: samcli-direct
 
 on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
   pull_request:
     branches:
       - main
@@ -18,7 +23,21 @@ permissions:
   contents: read
 
 jobs:
+  set-vars:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set output variables
+        id: vars
+        run: |
+          has_creds=${{ (github.event_name == 'push' || github.repository == github.event.pull_request.head.repo.full_name) && github.actor != 'dependabot[bot]' }}
+          echo "has_creds=$has_creds" >> $GITHUB_OUTPUT
+    outputs:
+      has_creds: ${{ steps.user.outputs.has_creds }}
+
   samcli-direct-test:
+    needs: set-vars
+    # Skip if no access to creds
+    if: ${{ needs.set-vars.outputs.has_creds }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -37,7 +56,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
-          role-to-assume: ${{secrets.SAMCLI_DIRECT_ROLE_BASE}}
+          role-to-assume: ${{ secrets.SAMCLI_DIRECT_ROLE_BASE }}
           role-session-name: samcli-${{ matrix.test_type }}-tests
           aws-region: ${{ secrets.REGION }}
           role-duration-seconds: 14400
@@ -128,8 +147,10 @@ jobs:
 
   # ensuring resources are clean post-test
   cleanup:
+    needs: [set-vars, samcli-direct-test]
+    # Skip if no access to creds
+    if: ${{ needs.set-vars.outputs.has_creds }}
     runs-on: ubuntu-latest
-    needs: samcli-direct-test
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
