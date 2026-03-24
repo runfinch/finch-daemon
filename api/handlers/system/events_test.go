@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/containerd/nerdctl/v2/pkg/config"
-	"go.uber.org/mock/gomock"
 	"github.com/gorilla/mux"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/api/events"
 	"github.com/runfinch/finch-daemon/mocks/mocks_logger"
@@ -194,6 +194,7 @@ var _ = Describe("Events API", func() {
 
 		waitGroup.Add(1)
 		go func() {
+			defer GinkgoRecover()
 			defer waitGroup.Done()
 			h.events(rr, req)
 		}()
