@@ -29,15 +29,15 @@ jobs:
       - name: Set output variables
         id: vars
         run: |
-          has_creds=${{ (github.event_name == 'push' || github.repository == github.event.pull_request.head.repo.full_name) && github.actor != 'dependabot[bot]' }}
+          has_creds=${{ (github.event_name != 'pull_request' || github.repository == github.event.pull_request.head.repo.full_name) && github.actor != 'dependabot[bot]' }}
           echo "has_creds=$has_creds" >> $GITHUB_OUTPUT
     outputs:
-      has_creds: ${{ steps.user.outputs.has_creds }}
+      has_creds: ${{ steps.set-vars.outputs.has_creds }}
 
   samcli-direct-test:
     needs: set-vars
     # Skip if no access to creds
-    if: ${{ needs.set-vars.outputs.has_creds }}
+    if: ${{ needs.set-vars.outputs.has_creds == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -149,7 +149,7 @@ jobs:
   cleanup:
     needs: [set-vars, samcli-direct-test]
     # Skip if no access to creds
-    if: ${{ needs.set-vars.outputs.has_creds }}
+    if: ${{ needs.set-vars.outputs.has_creds == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
