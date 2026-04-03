@@ -15,7 +15,7 @@ env:
   GO_VERSION: '1.25.8'
 jobs:
   mac-test-e2e:
-    runs-on: codebuild-finch-daemon-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
+    runs-on: codebuild-finch-daemon-macOS26-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Configure Git for ec2-user
         run: |
