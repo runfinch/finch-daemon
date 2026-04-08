@@ -47,7 +47,7 @@ var _ = Describe("Container Stop API ", func() {
 		tarExtractor = mocks_archive.NewMockTarExtractor(mockCtrl)
 		stopOptions = ncTypes.ContainerStopOptions{}
 
-		service = NewService(cdClient, mockNerdctlService{ncClient, nil}, logger, nil, nil, tarExtractor)
+		service = NewService(cdClient, mockNerdctlService{ncClient, nil, nil}, logger, nil, nil, tarExtractor)
 	})
 	Context("service", func() {
 		It("should not return any error", func() {

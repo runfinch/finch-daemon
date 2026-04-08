@@ -46,7 +46,7 @@ var _ = Describe("Container Restart API ", func() {
 		con = mocks_container.NewMockContainer(mockCtrl)
 		con.EXPECT().ID().Return(cid).AnyTimes()
 		tarExtractor = mocks_archive.NewMockTarExtractor(mockCtrl)
-		service = NewService(cdClient, mockNerdctlService{ncClient, nil}, logger, nil, nil, tarExtractor)
+		service = NewService(cdClient, mockNerdctlService{ncClient, nil, nil}, logger, nil, nil, tarExtractor)
 		timeout = time.Duration(10)
 		options = ncTypes.ContainerRestartOptions{
 			Timeout: &timeout,

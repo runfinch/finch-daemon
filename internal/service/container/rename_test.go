@@ -48,7 +48,7 @@ var _ = Describe("Container Rename API ", func() {
 		tarExtractor = mocks_archive.NewMockTarExtractor(mockCtrl)
 
 		testContainerName = "testContainerName"
-		service = NewService(cdClient, mockNerdctlService{ncClient, nil}, logger, nil, nil, tarExtractor)
+		service = NewService(cdClient, mockNerdctlService{ncClient, nil, nil}, logger, nil, nil, tarExtractor)
 		opts = ncTypes.ContainerRenameOptions{
 			GOptions: ncTypes.GlobalCommandOptions{},
 			Stdout:   nil,
