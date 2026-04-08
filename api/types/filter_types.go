@@ -40,6 +40,7 @@ func (filters Filters) getFiltersKeys(key string) []string {
 	for key := range values {
 		slice = append(slice, key)
 	}
+	sort.Strings(slice)
 	return slice
 }
 

@@ -182,8 +182,8 @@ var _ = Describe("Events API", func() {
 		filtersJSON, err := json.Marshal(filters)
 		Expect(err).Should(BeNil())
 
-		url := fmt.Sprintf("/events?filters=%s", url.QueryEscape(string(filtersJSON)))
-		req, err := http.NewRequest(http.MethodGet, url, nil)
+		filterURL := fmt.Sprintf("/events?filters=%s", url.QueryEscape(string(filtersJSON)))
+		req, err := http.NewRequest(http.MethodGet, filterURL, nil)
 		Expect(err).Should(BeNil())
 
 		s.EXPECT().SubscribeEvents(req.Context(), map[string][]string{

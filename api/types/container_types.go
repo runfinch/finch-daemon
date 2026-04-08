@@ -133,7 +133,7 @@ type ContainerHostConfig struct {
 	// TODO: ReadonlyPaths []string
 
 	// Run a custom init inside the container, if null, use the daemon's configured settings
-	// TODO: Init *bool `json:",omitempty"`
+	Init *bool `json:",omitempty"`
 }
 
 // LogConfig represents the logging configuration of the container.
