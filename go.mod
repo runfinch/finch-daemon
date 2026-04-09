@@ -10,14 +10,14 @@ require (
 	github.com/containerd/fifo v1.1.0
 	github.com/containerd/go-cni v1.1.13
 	github.com/containerd/log v0.1.0
-	github.com/containerd/nerdctl/v2 v2.2.1
+	github.com/containerd/nerdctl/v2 v2.2.2
 	github.com/containerd/platforms v1.0.0-rc.2
 	github.com/containerd/typeurl/v2 v2.2.3
 	github.com/containernetworking/cni v1.3.0
 	github.com/coreos/go-iptables v0.8.0
 	github.com/coreos/go-systemd/v22 v22.6.0
 	github.com/distribution/reference v0.6.0
-	github.com/docker/cli v29.1.3+incompatible
+	github.com/docker/cli v29.2.0+incompatible
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.6.0
 	github.com/docker/go-units v0.5.0
