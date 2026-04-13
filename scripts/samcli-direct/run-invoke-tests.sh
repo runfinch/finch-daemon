@@ -10,12 +10,15 @@ python -m pytest tests/integration/local/invoke -k 'not Terraform' -v --tb=short
 #         but matches actual Lambda service behavior.
 # test_building_new_rapid_image_removes_old_rapid_images: Cannot remove images with same digest,
 #         Docker creates different IDs for each.
+# test_invoke_returns_expected_results_from_git_function: Layer download progress leaks into
+#         stdout. SAM CLI test issue, not finch-daemon.
 cat > expected_invoke_failures.txt << 'EOF'
 test_invoke_with_error_during_image_build
 test_invoke_with_timeout_set_0_TimeoutFunction
 test_invoke_with_timeout_set_1_TimeoutFunctionWithParameter
 test_invoke_with_timeout_set_2_TimeoutFunctionWithStringParameter
 test_building_new_rapid_image_removes_old_rapid_images
+test_invoke_returns_expected_results_from_git_function
 EOF
 
 # Validate test results
