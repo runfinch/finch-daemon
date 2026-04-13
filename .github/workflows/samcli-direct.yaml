@@ -32,7 +32,7 @@ jobs:
           has_creds=${{ (github.event_name != 'pull_request' || github.repository == github.event.pull_request.head.repo.full_name) && github.actor != 'dependabot[bot]' }}
           echo "has_creds=$has_creds" >> $GITHUB_OUTPUT
     outputs:
-      has_creds: ${{ steps.set-vars.outputs.has_creds }}
+      has_creds: ${{ steps.vars.outputs.has_creds }}
 
   samcli-direct-test:
     needs: set-vars
