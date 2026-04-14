@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
+	"sort"
 	"sync"
 	"time"
 
@@ -77,6 +79,7 @@ var _ = Describe("Events API", func() {
 
 		waitGroup.Add(1)
 		go func() {
+			defer GinkgoRecover()
 			defer waitGroup.Done()
 
 			h.events(rr, req)
@@ -129,6 +132,7 @@ var _ = Describe("Events API", func() {
 
 		waitGroup.Add(1)
 		go func() {
+			defer GinkgoRecover()
 			defer waitGroup.Done()
 
 			h.events(rr, req)
@@ -155,6 +159,7 @@ var _ = Describe("Events API", func() {
 
 		waitGroup.Add(1)
 		go func() {
+			defer GinkgoRecover()
 			defer waitGroup.Done()
 
 			h.events(rr, req)
@@ -182,14 +187,22 @@ var _ = Describe("Events API", func() {
 		filtersJSON, err := json.Marshal(filters)
 		Expect(err).Should(BeNil())
 
-		url := fmt.Sprintf("/events?filters=%s", url.QueryEscape(string(filtersJSON)))
-		req, err := http.NewRequest(http.MethodGet, url, nil)
+		filterURL := fmt.Sprintf("/events?filters=%s", url.QueryEscape(string(filtersJSON)))
+		req, err := http.NewRequest(http.MethodGet, filterURL, nil)
 		Expect(err).Should(BeNil())
 
-		s.EXPECT().SubscribeEvents(req.Context(), map[string][]string{
-			"type":   {"container"},
-			"status": {"start", "stop"},
-		}).Return(mockEventCh, mockErrCh)
+		// Order-insensitive match: map iteration in getFiltersKeys is non-deterministic,
+		// so sort each slice before comparing.
+		s.EXPECT().SubscribeEvents(req.Context(), gomock.Cond(func(x any) bool {
+			m, ok := x.(map[string][]string)
+			if !ok || len(m) != 2 {
+				return false
+			}
+			status := append([]string{}, m["status"]...)
+			sort.Strings(status)
+			return reflect.DeepEqual(m["type"], []string{"container"}) &&
+				reflect.DeepEqual(status, []string{"start", "stop"})
+		})).Return(mockEventCh, mockErrCh)
 		logger.EXPECT().Debugf("received error, exiting: %s", gomock.Any())
 
 		waitGroup.Add(1)

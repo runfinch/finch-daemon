@@ -10,7 +10,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
 
 	"github.com/runfinch/finch-daemon/e2e/client"
@@ -24,16 +23,16 @@ func ImageExport(opt *option.Option) {
 			version string
 		)
 		BeforeEach(func() {
-			command.RemoveImages(opt)
 			uClient = client.NewClient(GetDockerHostUrl())
 			version = GetDockerApiVersion()
+			httpRemoveAllImages(uClient, version)
 		})
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 
 		It("should export an image successfully", func() {
-			command.Run(opt, "pull", defaultImage)
+			httpPullImage(uClient, version, defaultImage)
 			relativeUrl := fmt.Sprintf("/images/%s/get", defaultImage)
 			url := client.ConvertToFinchUrl(version, relativeUrl)
 			resp, err := uClient.Get(url)

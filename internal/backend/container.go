@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 
 	containerd "github.com/containerd/containerd/v2/client"
 	"github.com/containerd/nerdctl/v2/pkg/api/types"
@@ -44,8 +43,8 @@ type NerdctlContainerSvc interface {
 	LoggingInitContainerLogViewer(containerLabels map[string]string, lvopts logging.LogViewOptions, stopChannel chan os.Signal, experimental bool) (contlv *logging.ContainerLogViewer, err error)
 	LoggingPrintLogsTo(stdout, stderr io.Writer, clv *logging.ContainerLogViewer) error
 
-	// GetNerdctlExe returns a path to the nerdctl binary, which is required for setting up OCI hooks and logging
-	GetNerdctlExe() (string, error)
+	// GetShimBinary returns a path to the finch-shim binary, which is required for setting up OCI hooks and logging
+	GetShimBinary() (string, error)
 }
 
 func (w *NerdctlWrapper) RemoveContainer(ctx context.Context, c containerd.Container, force bool, removeVolumes bool) error {
@@ -140,14 +139,14 @@ func (w *NerdctlWrapper) ContainerTop(ctx context.Context, cid string, options t
 	return container.Top(ctx, w.clientWrapper.client, []string{cid}, options)
 }
 
-func (w *NerdctlWrapper) GetNerdctlExe() (string, error) {
-	if w.nerdctlExe != "" {
-		return w.nerdctlExe, nil
+func (w *NerdctlWrapper) GetShimBinary() (string, error) {
+	if w.shimExe != "" {
+		return w.shimExe, nil
 	}
-	exe, err := exec.LookPath("nerdctl")
+	exe, err := w.lookPath("finch-shim")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("finch-shim binary not found in PATH: %w", err)
 	}
-	w.nerdctlExe = exe
+	w.shimExe = exe
 	return exe, nil
 }
