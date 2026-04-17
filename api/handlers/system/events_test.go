@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"sync"
 	"time"
 
@@ -77,6 +78,7 @@ var _ = Describe("Events API", func() {
 
 		waitGroup.Add(1)
 		go func() {
+			defer GinkgoRecover()
 			defer waitGroup.Done()
 
 			h.events(rr, req)
@@ -129,6 +131,7 @@ var _ = Describe("Events API", func() {
 
 		waitGroup.Add(1)
 		go func() {
+			defer GinkgoRecover()
 			defer waitGroup.Done()
 
 			h.events(rr, req)
@@ -155,6 +158,7 @@ var _ = Describe("Events API", func() {
 
 		waitGroup.Add(1)
 		go func() {
+			defer GinkgoRecover()
 			defer waitGroup.Done()
 
 			h.events(rr, req)
@@ -186,10 +190,16 @@ var _ = Describe("Events API", func() {
 		req, err := http.NewRequest(http.MethodGet, url, nil)
 		Expect(err).Should(BeNil())
 
-		s.EXPECT().SubscribeEvents(req.Context(), map[string][]string{
-			"type":   {"container"},
-			"status": {"start", "stop"},
-		}).Return(mockEventCh, mockErrCh)
+		s.EXPECT().SubscribeEvents(req.Context(), gomock.Cond(func(x any) bool {
+			m, ok := x.(map[string][]string)
+			if !ok || len(m) != 2 {
+				return false
+			}
+			return reflect.DeepEqual(m["type"], []string{"container"}) &&
+				len(m["status"]) == 2 &&
+				((m["status"][0] == "start" && m["status"][1] == "stop") ||
+					(m["status"][0] == "stop" && m["status"][1] == "start"))
+		})).Return(mockEventCh, mockErrCh)
 		logger.EXPECT().Debugf("received error, exiting: %s", gomock.Any())
 
 		waitGroup.Add(1)

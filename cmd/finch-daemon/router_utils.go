@@ -74,14 +74,14 @@ func initializeConfig(options *DaemonOptions) (*config.Config, error) {
 	return conf, nil
 }
 
-// createNerdctlWrapper creates the Nerdctl wrapper and checks for the nerdctl binary.
+// createNerdctlWrapper creates the Nerdctl wrapper and checks for the finch-hook binary.
 func createNerdctlWrapper(clientWrapper *backend.ContainerdClientWrapper, conf *config.Config) (*backend.NerdctlWrapper, error) {
 	// GlobalCommandOptions is actually just an alias for Config, see
 	// https://github.com/containerd/nerdctl/blob/9f8655f7722d6e6851755123730436bf1a6c9995/pkg/api/types/global.go#L21
 	globalOptions := (*types.GlobalCommandOptions)(conf)
 	ncWrapper := backend.NewNerdctlWrapper(clientWrapper, globalOptions)
-	if _, err := ncWrapper.GetNerdctlExe(); err != nil {
-		return nil, fmt.Errorf("failed to find nerdctl binary: %w", err)
+	if _, err := ncWrapper.GetHookHelperBinary(); err != nil {
+		return nil, fmt.Errorf("failed to find hook helper binary: %w", err)
 	}
 	return ncWrapper, nil
 }
