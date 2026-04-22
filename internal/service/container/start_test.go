@@ -53,17 +53,19 @@ var _ = Describe("Container Start API ", func() {
 		options = ncTypes.ContainerStartOptions{}
 	})
 
-	// expectCustomStartSuccess sets up mock expectations for a successful customStart flow.
-	// Note: NewFIFOSetInDir and NewDirectCIO are called inside the ioCreator closure
-	// passed to cont.NewTask. The mock NewTask does not invoke the closure, so directIO
-	// will be nil. startLogCopiers handles nil directIO gracefully.
+	// expectCustomStartSuccess sets up mock expectations for a successful customStart flow
+	// including FIFO task creation, CNI networking setup, and postStop watcher.
 	expectCustomStartSuccess := func() {
 		con.EXPECT().Task(gomock.Any(), nil).Return(nil, fmt.Errorf("no task"))
 		con.EXPECT().Spec(gomock.Any()).Return(&specs.Spec{Process: &specs.Process{}}, nil)
 		con.EXPECT().NewTask(gomock.Any(), gomock.Any()).Return(task, nil)
 		con.EXPECT().Labels(gomock.Any()).Return(map[string]string{"nerdctl/namespace": "finch"}, nil)
 		ncClient.EXPECT().GetDataStore().Return("/tmp/test-store", nil)
+		ncClient.EXPECT().GetGlobalOptions().Return(&ncTypes.GlobalCommandOptions{}).AnyTimes()
+		task.EXPECT().Pid().Return(uint32(12345)).AnyTimes()
+		task.EXPECT().Delete(gomock.Any()).Return(nil, nil).AnyTimes()
 		task.EXPECT().Start(gomock.Any()).Return(nil)
+		task.EXPECT().Wait(gomock.Any()).Return(nil, fmt.Errorf("not waiting")).AnyTimes()
 	}
 
 	Context("service", func() {
@@ -72,8 +74,6 @@ var _ = Describe("Container Start API ", func() {
 			cdClient.EXPECT().GetContainerStatus(gomock.Any(), gomock.Any()).Return(containerd.Stopped)
 			cdClient.EXPECT().SearchContainer(gomock.Any(), cid).Return(
 				[]containerd.Container{con}, nil)
-
-			// mock the customStart flow (FIFO task creation + log copiers + task.Start)
 			expectCustomStartSuccess()
 
 			logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
@@ -134,6 +134,9 @@ var _ = Describe("Container Start API ", func() {
 			con.EXPECT().NewTask(gomock.Any(), gomock.Any()).Return(task, nil)
 			con.EXPECT().Labels(gomock.Any()).Return(map[string]string{"nerdctl/namespace": "finch"}, nil)
 			ncClient.EXPECT().GetDataStore().Return("/tmp/test-store", nil)
+			ncClient.EXPECT().GetGlobalOptions().Return(&ncTypes.GlobalCommandOptions{}).AnyTimes()
+			task.EXPECT().Pid().Return(uint32(12345)).AnyTimes()
+			task.EXPECT().Delete(gomock.Any()).Return(nil, nil).AnyTimes()
 
 			expectedErr := fmt.Errorf("task start failed")
 			task.EXPECT().Start(gomock.Any()).Return(expectedErr)
@@ -174,7 +177,6 @@ var _ = Describe("Container Start API ", func() {
 			con.EXPECT().Spec(gomock.Any()).Return(&specs.Spec{Process: &specs.Process{}}, nil)
 			con.EXPECT().NewTask(gomock.Any(), gomock.Any()).Return(task, nil)
 			con.EXPECT().Labels(gomock.Any()).Return(nil, fmt.Errorf("labels error"))
-			// task should be deleted on failure
 			task.EXPECT().Delete(gomock.Any()).Return(nil, nil)
 
 			logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
@@ -197,7 +199,6 @@ var _ = Describe("Container Start API ", func() {
 			con.EXPECT().NewTask(gomock.Any(), gomock.Any()).Return(task, nil)
 			con.EXPECT().Labels(gomock.Any()).Return(map[string]string{"nerdctl/namespace": "finch"}, nil)
 			ncClient.EXPECT().GetDataStore().Return("", fmt.Errorf("datastore error"))
-			// task should be deleted on failure
 			task.EXPECT().Delete(gomock.Any()).Return(nil, nil)
 
 			logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
@@ -210,7 +211,7 @@ var _ = Describe("Container Start API ", func() {
 			Expect(err.Error()).Should(ContainSubstring("data store"))
 		})
 		It("should handle nil Process in spec without panic", func() {
-			// set up the mock with a spec that has nil Process — isTerminal should default to false
+			// set up the mock with a spec that has nil Process
 			cdClient.EXPECT().GetContainerStatus(gomock.Any(), gomock.Any()).Return(containerd.Stopped)
 			cdClient.EXPECT().SearchContainer(gomock.Any(), gomock.Any()).Return(
 				[]containerd.Container{con}, nil)
@@ -220,7 +221,11 @@ var _ = Describe("Container Start API ", func() {
 			con.EXPECT().NewTask(gomock.Any(), gomock.Any()).Return(task, nil)
 			con.EXPECT().Labels(gomock.Any()).Return(map[string]string{"nerdctl/namespace": "finch"}, nil)
 			ncClient.EXPECT().GetDataStore().Return("/tmp/test-store", nil)
+			ncClient.EXPECT().GetGlobalOptions().Return(&ncTypes.GlobalCommandOptions{}).AnyTimes()
+			task.EXPECT().Pid().Return(uint32(12345)).AnyTimes()
+			task.EXPECT().Delete(gomock.Any()).Return(nil, nil).AnyTimes()
 			task.EXPECT().Start(gomock.Any()).Return(nil)
+			task.EXPECT().Wait(gomock.Any()).Return(nil, fmt.Errorf("not waiting")).AnyTimes()
 
 			logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
 			logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
@@ -235,17 +240,19 @@ var _ = Describe("Container Start API ", func() {
 			cdClient.EXPECT().SearchContainer(gomock.Any(), cid).Return(
 				[]containerd.Container{con}, nil)
 
-			// cleanupOldTask — old task exists and is deleted
 			oldTask := mocks_container.NewMockTask(mockCtrl)
 			con.EXPECT().Task(gomock.Any(), nil).Return(oldTask, nil)
 			oldTask.EXPECT().Delete(gomock.Any()).Return(nil, nil)
 
-			// rest of customStart flow
 			con.EXPECT().Spec(gomock.Any()).Return(&specs.Spec{Process: &specs.Process{}}, nil)
 			con.EXPECT().NewTask(gomock.Any(), gomock.Any()).Return(task, nil)
 			con.EXPECT().Labels(gomock.Any()).Return(map[string]string{"nerdctl/namespace": "finch"}, nil)
 			ncClient.EXPECT().GetDataStore().Return("/tmp/test-store", nil)
+			ncClient.EXPECT().GetGlobalOptions().Return(&ncTypes.GlobalCommandOptions{}).AnyTimes()
+			task.EXPECT().Pid().Return(uint32(12345)).AnyTimes()
+			task.EXPECT().Delete(gomock.Any()).Return(nil, nil).AnyTimes()
 			task.EXPECT().Start(gomock.Any()).Return(nil)
+			task.EXPECT().Wait(gomock.Any()).Return(nil, fmt.Errorf("not waiting")).AnyTimes()
 
 			logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
 			logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
@@ -265,12 +272,16 @@ var _ = Describe("Container Start API ", func() {
 			con.EXPECT().NewTask(gomock.Any(), gomock.Any()).Return(task, nil)
 			con.EXPECT().Labels(gomock.Any()).Return(map[string]string{"nerdctl/namespace": "finch"}, nil)
 			ncClient.EXPECT().GetDataStore().Return("/tmp/test-store", nil)
+			ncClient.EXPECT().GetGlobalOptions().Return(&ncTypes.GlobalCommandOptions{}).AnyTimes()
+			task.EXPECT().Pid().Return(uint32(12345)).AnyTimes()
+			task.EXPECT().Delete(gomock.Any()).Return(nil, nil).AnyTimes()
 			task.EXPECT().Start(gomock.Any()).Return(nil)
+			task.EXPECT().Wait(gomock.Any()).Return(nil, fmt.Errorf("not waiting")).AnyTimes()
 
 			logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
 			logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
 
-			// service should succeed — terminal flag is passed through to ioCreator
+			// service should succeed
 			err := service.Start(ctx, cid, options)
 			Expect(err).Should(BeNil())
 		})

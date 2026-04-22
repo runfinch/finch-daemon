@@ -9,12 +9,9 @@ import (
 	"fmt"
 
 	containerd "github.com/containerd/containerd/v2/client"
-	"github.com/containerd/containerd/v2/pkg/cio"
 	cerrdefs "github.com/containerd/errdefs"
 	"github.com/containerd/nerdctl/v2/pkg/api/types"
-	"github.com/containerd/nerdctl/v2/pkg/clientutil"
 	"github.com/containerd/nerdctl/v2/pkg/labels"
-	"github.com/containerd/nerdctl/v2/pkg/logging"
 	"github.com/sirupsen/logrus"
 
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
@@ -78,30 +75,10 @@ func updateContainerMetadata(ctx context.Context, createOpt types.ContainerCreat
 		return err
 	}
 
-	// Reset LogURI to point to the nerdctl binary instead of finch-daemon.
-	// nerdctl's Create() sets LogURI to os.Executable() (finch-daemon), which
-	// doesn't handle the logging magic argv. This workaround ensures that
-	// containers started via nerdctl CLI still get binary-based logging.
-	// When started via the HTTP API, customStart uses FIFO-based IO instead
-	// and the LogURI is not used.
-	// See: https://github.com/containerd/nerdctl/issues/2264
-	dataStore, err := clientutil.DataStore(createOpt.GOptions.DataRoot, createOpt.GOptions.Address)
-	if err != nil {
-		logrus.Errorf("failed to get nerdctl data store: %s", err)
-		return err
-	}
-
-	args := map[string]string{
-		logging.MagicArgv1: dataStore,
-	}
-	logURI, err := cio.LogURIGenerator("binary", createOpt.NerdctlCmd, args)
-	if err != nil {
-		logrus.Errorf("failed to generate a log URI: %s", err)
-		return err
-	}
-
-	opts[labels.LogURI] = logURI.String()
-	spec.Annotations[labels.LogURI] = logURI.String()
+	// Note: OCI hooks are NOT stripped here. Containers created via the HTTP API
+	// may be started either via the HTTP API (customStart strips hooks and runs
+	// setupNetworking inline) or via nerdctl CLI (which needs hooks intact for
+	// runc to execute). Stripping hooks is done in customStart instead.
 
 	// Handle port labels for backward compatibility with nerdctl 2.1.2.
 	// nerdctl 2.1.3 changed the port publishing logic to use a dedicated portstore instead of container labels.
