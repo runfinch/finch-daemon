@@ -123,6 +123,20 @@ func (mr *MockNerdctlContainerSvcMockRecorder) GetNerdctlExe() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNerdctlExe", reflect.TypeOf((*MockNerdctlContainerSvc)(nil).GetNerdctlExe))
 }
 
+// GetGlobalOptions mocks base method.
+func (m *MockNerdctlContainerSvc) GetGlobalOptions() *types.GlobalCommandOptions {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetGlobalOptions")
+	ret0, _ := ret[0].(*types.GlobalCommandOptions)
+	return ret0
+}
+
+// GetGlobalOptions indicates an expected call of GetGlobalOptions.
+func (mr *MockNerdctlContainerSvcMockRecorder) GetGlobalOptions() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGlobalOptions", reflect.TypeOf((*MockNerdctlContainerSvc)(nil).GetGlobalOptions))
+}
+
 // InspectContainer mocks base method.
 func (m *MockNerdctlContainerSvc) InspectContainer(ctx context.Context, c client.Container, size bool) (*dockercompat.Container, error) {
 	m.ctrl.T.Helper()
