@@ -140,6 +140,7 @@ func runContainerTests(opt *option.Option, pOpt func([]string, ...option.Modifie
 	tests.ContainerWait(opt)
 	tests.ContainerPause(opt)
 	tests.FifoLogging(opt)
+	tests.HooklessNetworking(opt)
 }
 
 // functional test for volume APIs.

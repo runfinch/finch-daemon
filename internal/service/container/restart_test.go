@@ -64,7 +64,10 @@ var _ = Describe("Container Restart API ", func() {
 			con.EXPECT().NewTask(gomock.Any(), gomock.Any()).Return(task, nil)
 			con.EXPECT().Labels(gomock.Any()).Return(map[string]string{"nerdctl/namespace": "finch"}, nil)
 			ncClient.EXPECT().GetDataStore().Return("/tmp/test-store", nil)
+			ncClient.EXPECT().GetGlobalOptions().Return(&ncTypes.GlobalCommandOptions{}).AnyTimes()
+			task.EXPECT().Pid().Return(uint32(12345)).AnyTimes()
 			task.EXPECT().Start(gomock.Any()).Return(nil)
+			task.EXPECT().Wait(gomock.Any()).Return(nil, fmt.Errorf("not waiting")).AnyTimes()
 		}
 
 		It("should not return any error when Running", func() {

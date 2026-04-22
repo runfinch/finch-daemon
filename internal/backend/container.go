@@ -45,6 +45,9 @@ type NerdctlContainerSvc interface {
 
 	// GetNerdctlExe returns a path to the nerdctl binary, which is required for setting up OCI hooks and logging
 	GetNerdctlExe() (string, error)
+
+	// GetGlobalOptions returns the nerdctl global options (CNIPath, CNINetConfPath, BridgeIP, etc.)
+	GetGlobalOptions() *types.GlobalCommandOptions
 }
 
 func (w *NerdctlWrapper) RemoveContainer(ctx context.Context, c containerd.Container, force bool, removeVolumes bool) error {
@@ -144,4 +147,8 @@ func (w *NerdctlWrapper) GetNerdctlExe() (string, error) {
 	}
 	w.nerdctlExe = exe
 	return exe, nil
+}
+
+func (w *NerdctlWrapper) GetGlobalOptions() *types.GlobalCommandOptions {
+	return w.globalOptions
 }

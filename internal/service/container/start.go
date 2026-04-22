@@ -4,14 +4,19 @@
 package container
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 
 	containerd "github.com/containerd/containerd/v2/client"
 	"github.com/containerd/containerd/v2/defaults"
 	"github.com/containerd/containerd/v2/pkg/cio"
 	"github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/containerd/nerdctl/v2/pkg/labels"
+	"github.com/containerd/nerdctl/v2/pkg/ocihook"
+	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
@@ -35,13 +40,11 @@ func (s *service) Start(ctx context.Context, cid string, options types.Container
 	return nil
 }
 
-// customStart creates a container task with FIFO-based logging and starts it.
-// It replaces nerdctl's container.Start() to give finch-daemon direct control
-// over IO and task lifecycle.
+// customStart creates a container task with FIFO-based logging, sets up
+// CNI networking, and starts the container process.
 func (s *service) customStart(ctx context.Context, cid string, cont containerd.Container, options types.ContainerStartOptions) error {
 	s.cleanupOldTask(ctx, cont)
 
-	// Create a new task with FIFO-based IO for log capture.
 	task, directIO, err := s.createTaskWithFIFO(ctx, cont)
 	if err != nil {
 		return err
@@ -60,14 +63,23 @@ func (s *service) customStart(ctx context.Context, cid string, cont containerd.C
 		return fmt.Errorf("failed to get data store: %w", err)
 	}
 
-	logPath := containerLogPath(dataStore, ns, cont.ID())
+	// CNI setup — must happen after NewTask (needs task.Pid()) and before task.Start.
+	globalOpts := s.nctlContainerSvc.GetGlobalOptions()
+	if err := s.setupNetworking(ctx, cont, task, containerLabels, ns, dataStore, globalOpts); err != nil {
+		task.Delete(ctx)
+		return err
+	}
 
 	if err := task.Start(ctx); err != nil {
 		return err
 	}
 
-	// Start copiers after task.Start to avoid goroutine leaks if Start fails.
+	// Start log copiers after task.Start to avoid goroutine leaks if Start fails.
+	logPath := containerLogPath(dataStore, ns, cont.ID())
 	startLogCopiers(logPath, directIO)
+
+	// Watch for container exit and run CNI teardown.
+	watchPostStop(task, cont.ID(), containerLabels, ns, dataStore, globalOpts)
 
 	return nil
 }
@@ -117,6 +129,53 @@ func (s *service) createTaskWithFIFO(ctx context.Context, cont containerd.Contai
 		return nil, nil, fmt.Errorf("failed to create task: %w", err)
 	}
 	return task, directIO, nil
+}
+
+// setupNetworking calls ocihook.Run("createRuntime") to configure CNI networking
+// for the container. This replaces the OCI createRuntime hook that runc would
+// normally execute by forking the nerdctl binary.
+func (s *service) setupNetworking(ctx context.Context, cont containerd.Container, task containerd.Task, containerLabels map[string]string, ns, dataStore string, globalOpts *types.GlobalCommandOptions) error {
+
+	state := specs.State{
+		Version:     "1.0.0",
+		ID:          cont.ID(),
+		Status:      specs.StateCreated,
+		Pid:         int(task.Pid()),
+		Bundle:      fmt.Sprintf("/run/containerd/io.containerd.runtime.v2.task/%s/%s", ns, cont.ID()),
+		Annotations: containerLabels,
+	}
+	stateJSON, err := json.Marshal(state)
+	if err != nil {
+		return fmt.Errorf("failed to marshal hook state: %w", err)
+	}
+
+	if err := ocihook.Run(
+		bytes.NewReader(stateJSON),
+		os.Stderr,
+		"createRuntime",
+		dataStore,
+		globalOpts.CNIPath,
+		globalOpts.CNINetConfPath,
+		globalOpts.BridgeIP,
+	); err != nil {
+		return fmt.Errorf("CNI setup failed: %w", err)
+	}
+
+	s.logger.Infof("hookless CNI setup complete for container %s", cont.ID())
+	return nil
+}
+
+// watchPostStop spawns a goroutine that waits for the container to exit and
+// then runs CNI teardown. This replaces the OCI postStop hook.
+func watchPostStop(task containerd.Task, containerID string, containerLabels map[string]string, ns, dataStore string, globalOpts *types.GlobalCommandOptions) {
+	go func() {
+		exitCh, err := task.Wait(context.Background())
+		if err != nil {
+			return
+		}
+		<-exitCh
+		runPostStop(containerID, containerLabels, ns, dataStore, globalOpts)
+	}()
 }
 
 func (s *service) assertStartContainer(ctx context.Context, c containerd.Container) error {
