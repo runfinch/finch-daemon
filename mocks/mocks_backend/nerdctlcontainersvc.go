@@ -268,20 +268,6 @@ func (mr *MockNerdctlContainerSvcMockRecorder) RenameContainer(ctx, arg1, newNam
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RenameContainer", reflect.TypeOf((*MockNerdctlContainerSvc)(nil).RenameContainer), ctx, arg1, newName, options)
 }
 
-// StartContainer mocks base method.
-func (m *MockNerdctlContainerSvc) StartContainer(ctx context.Context, cid string, options types.ContainerStartOptions) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartContainer", ctx, cid, options)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// StartContainer indicates an expected call of StartContainer.
-func (mr *MockNerdctlContainerSvcMockRecorder) StartContainer(ctx, cid, options any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartContainer", reflect.TypeOf((*MockNerdctlContainerSvc)(nil).StartContainer), ctx, cid, options)
-}
-
 // StopContainer mocks base method.
 func (m *MockNerdctlContainerSvc) StopContainer(ctx context.Context, cid string, options types.ContainerStopOptions) error {
 	m.ctrl.T.Helper()
