@@ -53,7 +53,7 @@ var _ = Describe("Container Kill API", func() {
 
 		svc = &service{
 			client:           cdClient,
-			nctlContainerSvc: mockNerdctlService{ncContainerSvc, ncNetworkSvc},
+			nctlContainerSvc: mockNerdctlService{ncContainerSvc, ncNetworkSvc, nil},
 			logger:           logger,
 		}
 	})

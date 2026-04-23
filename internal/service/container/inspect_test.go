@@ -76,7 +76,7 @@ var _ = Describe("Container Inspect API ", func() {
 			},
 		}
 
-		service = NewService(cdClient, mockNerdctlService{ncClient, nil}, logger, nil, nil, nil)
+		service = NewService(cdClient, mockNerdctlService{ncClient, nil, nil}, logger, nil, nil, nil)
 	})
 	Context("service", func() {
 		It("should return the inspect object upon success", func() {

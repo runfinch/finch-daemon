@@ -22,6 +22,7 @@ import (
 type NerdctlService interface {
 	backend.NerdctlContainerSvc
 	backend.NerdctlNetworkSvc
+	backend.ContainerCNISvc
 }
 
 type service struct {

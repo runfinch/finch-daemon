@@ -52,7 +52,7 @@ var _ = Describe("Container Logs API ", func() {
 		cdClient = mocks_backend.NewMockContainerdClient(mockCtrl)
 		ncClient = mocks_backend.NewMockNerdctlContainerSvc(mockCtrl)
 		tarExtractor = mocks_archive.NewMockTarExtractor(mockCtrl)
-		service = NewService(cdClient, mockNerdctlService{ncClient, nil}, logger, nil, nil, tarExtractor)
+		service = NewService(cdClient, mockNerdctlService{ncClient, nil, nil}, logger, nil, nil, tarExtractor)
 
 		mockWriter = new(bytes.Buffer)
 		stopChannel = make(chan os.Signal, 1)
