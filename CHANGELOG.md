@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.23.1](https://github.com/runfinch/finch-daemon/compare/v0.23.0...v0.23.1) (2026-04-22)
+
+
+### Build System or External Dependencies
+
+* **deps:** bump github.com/containerd/nerdctl/v2 from 2.2.1 to 2.2.2 ([#434](https://github.com/runfinch/finch-daemon/issues/434)) ([9370553](https://github.com/runfinch/finch-daemon/commit/9370553bf279d9fd8e3e61b69cc401c3e9c600eb))
+* **deps:** bump github.com/go-jose/go-jose/v4 from 4.1.3 to 4.1.4 ([#435](https://github.com/runfinch/finch-daemon/issues/435)) ([20d9b99](https://github.com/runfinch/finch-daemon/commit/20d9b995d579c09afb4a73eb094bae55b4fbd738))
+* **deps:** bump go.opentelemetry.io/otel/sdk from 1.40.0 to 1.43.0 ([#437](https://github.com/runfinch/finch-daemon/issues/437)) ([b1b60a0](https://github.com/runfinch/finch-daemon/commit/b1b60a0e40e7dd6a0cce762edd220a8db3b00f62))
+* **deps:** bump google.golang.org/grpc from 1.77.0 to 1.79.3 ([#427](https://github.com/runfinch/finch-daemon/issues/427)) ([ec86537](https://github.com/runfinch/finch-daemon/commit/ec86537fdecef3a01b8ceaa44560afd843a5a4e5))
+
+
+### Bug Fixes
+
+* **ci:** fix events test panic ([#432](https://github.com/runfinch/finch-daemon/issues/432)) ([8616243](https://github.com/runfinch/finch-daemon/commit/86162431fddbe0a6d356f426063994c782063d8e))
+* **ci:** fix incorrect var blocking samcli-direct runs + add expected failure ([#439](https://github.com/runfinch/finch-daemon/issues/439)) ([74db782](https://github.com/runfinch/finch-daemon/commit/74db782b32f7a4f9d0f6be6ece063b941231d6b4))
+* **ci:** fix incorrect variable ref ([#431](https://github.com/runfinch/finch-daemon/issues/431)) ([ff6ed52](https://github.com/runfinch/finch-daemon/commit/ff6ed527f10b9a4d2d30fc128e134b5ac4e1bfb6))
+* **ci:** unblock samcli errors caused by missing dns field in inspect and faulty stdout check ([74db782](https://github.com/runfinch/finch-daemon/commit/74db782b32f7a4f9d0f6be6ece063b941231d6b4))
+* stop PytestUnraisableExceptionWarning from causing samcli test f… ([#423](https://github.com/runfinch/finch-daemon/issues/423)) ([b380d9a](https://github.com/runfinch/finch-daemon/commit/b380d9a67cab062cd2ba1323403556c65b827ddc))
+* stop PytestUnraisableExceptionWarning from causing samcli test failure ([b380d9a](https://github.com/runfinch/finch-daemon/commit/b380d9a67cab062cd2ba1323403556c65b827ddc))
+
 ## [0.23.0](https://github.com/runfinch/finch-daemon/compare/v0.22.0...v0.23.0) (2026-03-16)
 
 
