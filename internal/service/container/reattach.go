@@ -65,6 +65,16 @@ func reattachContainer(ctx context.Context, c containerd.Container, clientWrappe
 	}
 	ns := containerLabels[labels.Namespace]
 
+	// Only reattach containers started via the HTTP API (customStart).
+	// Containers started via nerdctl CLI use binary-based logging and OCI hooks;
+	// reopening their FIFOs or attaching postStop watchers would interfere.
+	// customStart-created tasks use FIFO-based IO, which is reflected by the
+	// absence of a binary:// LogURI or by having no LogURI at all after hook stripping.
+	logURI := containerLabels[labels.LogURI]
+	if strings.HasPrefix(logURI, "binary://") {
+		return false
+	}
+
 	// Reattach to the existing task's FIFOs. containerd stores the FIFOSet
 	// from task creation and returns it here so we can reopen the read ends.
 	var dio *cio.DirectIO
@@ -171,14 +181,24 @@ func cleanupOrphanedCNIState(ctx context.Context, containers []containerd.Contai
 
 	// For each CNI result file, check if it belongs to a non-running container.
 	// CNI result filenames contain the container ID (e.g., bridge-finch-{id}-eth0).
+	// Only clean up containers that were in our snapshot and confirmed not running.
+	// Skip containers not in our snapshot — they may have been created after we
+	// listed containers and could still be starting up.
 	cleaned := 0
 	for _, entry := range entries {
 		name := entry.Name()
-		for containerID, c := range allContainers {
+		for containerID := range allContainers {
 			if strings.Contains(name, containerID) && !runningIDs[containerID] {
+				c := allContainers[containerID]
 				containerLabels, err := c.Labels(ctx)
 				if err != nil {
 					continue
+				}
+				// Skip containers created by nerdctl CLI — their CNI state
+				// is managed by nerdctl's own hooks, not by finch-daemon.
+				logURI := containerLabels[labels.LogURI]
+				if strings.HasPrefix(logURI, "binary://") {
+					break
 				}
 				ns := containerLabels[labels.Namespace]
 				logrus.Infof("reattach: cleaning up orphaned CNI state for container %s", containerID)
