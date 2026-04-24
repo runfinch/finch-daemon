@@ -103,6 +103,7 @@ jobs:
       - name: Build and start finch-daemon
         run: |
           make build
+          sudo make install
           sudo bin/finch-daemon --debug --socket-owner $UID 2>&1 | tee finch-daemon.log &
           sleep 10
 
