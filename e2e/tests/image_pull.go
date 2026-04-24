@@ -10,7 +10,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
 
 	"github.com/runfinch/finch-daemon/e2e/client"
@@ -24,36 +23,34 @@ func ImagePull(opt *option.Option) {
 			version string
 		)
 		BeforeEach(func() {
-			command.RemoveImages(opt)
 			// create a custom client to use http over unix sockets
 			uClient = client.NewClient(GetDockerHostUrl())
 			// get the docker api version that will be tested
 			version = GetDockerApiVersion()
+			httpRemoveAllImages(uClient, version)
 		})
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 
 		It("should pull the default image successfully", func() {
-			relativeUrl := fmt.Sprintf("/images/create?fromImage=%s", defaultImage)
-			url := client.ConvertToFinchUrl(version, relativeUrl)
+			url := buildPullURL(version, defaultImage)
 			resp, err := uClient.Post(url, "application/json", nil)
 
 			Expect(err).Should(BeNil())
 			Expect(resp.StatusCode).Should(Equal(http.StatusOK))
 			waitForResponse(resp)
-			imageShouldExist(opt, defaultImage)
+			imageShouldExist(defaultImage)
 		})
 		It("should do nothing if image already exists", func() {
-			command.Run(opt, "pull", defaultImage)
-			relativeUrl := fmt.Sprintf("/images/create?fromImage=%s", defaultImage)
-			url := client.ConvertToFinchUrl(version, relativeUrl)
+			httpPullImage(uClient, version, defaultImage)
+			url := buildPullURL(version, defaultImage)
 			resp, err := uClient.Post(url, "application/json", nil)
 
 			Expect(err).Should(BeNil())
 			Expect(resp.StatusCode).Should(Equal(http.StatusOK))
 			waitForResponse(resp)
-			imageShouldExist(opt, defaultImage)
+			imageShouldExist(defaultImage)
 		})
 		It("should fail to pull a non-existent image", func() {
 			relativeUrl := fmt.Sprintf("/images/create?fromImage=%s", nonexistentImageName)
@@ -63,7 +60,7 @@ func ImagePull(opt *option.Option) {
 			Expect(err).Should(BeNil())
 			Expect(resp.StatusCode).Should(Equal(http.StatusNotFound))
 			waitForResponse(resp)
-			imageShouldNotExist(opt, nonexistentImageName)
+			imageShouldNotExist(nonexistentImageName)
 		})
 		It("should pull the alpine image using the specified image tag", func() {
 			imageName, imageTag, _ := strings.Cut(olderAlpineImage, ":")
@@ -74,8 +71,8 @@ func ImagePull(opt *option.Option) {
 			Expect(err).Should(BeNil())
 			Expect(resp.StatusCode).Should(Equal(http.StatusOK))
 			waitForResponse(resp)
-			imageShouldExist(opt, olderAlpineImage)
-			imageShouldNotExist(opt, alpineImage)
+			imageShouldExist(olderAlpineImage)
+			imageShouldNotExist(alpineImage)
 		})
 		It("should fail to pull an image with a malformed image name", func() {
 			malformedImage := "alpine:image:latest"
@@ -97,7 +94,7 @@ func ImagePull(opt *option.Option) {
 			Expect(err).Should(BeNil())
 			Expect(resp.StatusCode).Should(Equal(http.StatusBadRequest))
 			waitForResponse(resp)
-			imageShouldNotExist(opt, imageName)
+			imageShouldNotExist(imageName)
 		})
 		It("should pull the alpine image with the specified platform", func() {
 			platform := "linux/arm64"
@@ -108,7 +105,7 @@ func ImagePull(opt *option.Option) {
 			Expect(err).Should(BeNil())
 			Expect(resp.StatusCode).Should(Equal(http.StatusOK))
 			waitForResponse(resp)
-			imageShouldExist(opt, alpineImage)
+			imageShouldExist(alpineImage)
 		})
 		It("should fail to pull an image with invalid platform", func() {
 			platform := "invalid"
@@ -119,9 +116,31 @@ func ImagePull(opt *option.Option) {
 			Expect(err).Should(BeNil())
 			Expect(resp.StatusCode).Should(Equal(http.StatusInternalServerError))
 			waitForResponse(resp)
-			imageShouldNotExist(opt, alpineImage)
+			imageShouldNotExist(alpineImage)
 		})
 	})
+}
+
+// buildPullURL constructs a /images/create URL with fromImage and tag as separate
+// query params, so that images like "localhost:PORT/alpine:latest" are parsed
+// correctly by the pull handler.
+func buildPullURL(version, imageName string) string {
+	repo := imageName
+	tag := ""
+	if lastColon := strings.LastIndex(imageName, ":"); lastColon > 0 {
+		candidate := imageName[lastColon+1:]
+		if !strings.Contains(candidate, "/") {
+			repo = imageName[:lastColon]
+			tag = candidate
+		}
+	}
+	var relativeUrl string
+	if tag != "" {
+		relativeUrl = fmt.Sprintf("/images/create?fromImage=%s&tag=%s", repo, tag)
+	} else {
+		relativeUrl = fmt.Sprintf("/images/create?fromImage=%s", imageName)
+	}
+	return client.ConvertToFinchUrl(version, relativeUrl)
 }
 
 // waitForResponse waits until the http response is closed with EOF.

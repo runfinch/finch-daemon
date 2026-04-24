@@ -11,7 +11,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
 
 	"github.com/runfinch/finch-daemon/e2e/client"
@@ -30,11 +29,11 @@ func ContainerLogs(opt *option.Option) {
 			// get the docker api version that will be tested
 			version = GetDockerApiVersion()
 			// run container in detached mode, outputting 1, 2, 3 in different lines
-			command.Run(opt, "run", "-d", "--name", testContainerName, defaultImage,
-				"/bin/sh", "-c", `for VAR in 1 2 3; do echo $VAR; done; sleep infinity`)
+			httpRunContainer(uClient, version, testContainerName, defaultImage,
+				[]string{"/bin/sh", "-c", `for VAR in 1 2 3; do echo $VAR; done; sleep infinity`})
 		})
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 		It("should return a 404 status if the container is not found", func() {
 			// create url and options
@@ -117,8 +116,8 @@ func ContainerLogs(opt *option.Option) {
 		})
 		It("should succeed in logging with follow enabled", func() {
 			altCtrName := "ctr-test2"
-			command.Run(opt, "run", "-d", "--name", altCtrName, defaultImage,
-				"/bin/sh", "-c", `for VAR in 1 2 3; do echo $VAR; done; sleep 2; for VAR in a b c; do echo $VAR; done`)
+			httpRunContainer(uClient, version, altCtrName, defaultImage,
+				[]string{"/bin/sh", "-c", `for VAR in 1 2 3; do echo $VAR; done; sleep 2; for VAR in a b c; do echo $VAR; done`})
 			// create url and options
 			relativeUrl := fmt.Sprintf("/containers/%s/logs", altCtrName)
 			opts := "?stdout=1" +

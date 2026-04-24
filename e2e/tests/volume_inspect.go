@@ -10,7 +10,6 @@ import (
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/runfinch/common-tests/command"
 	"github.com/runfinch/common-tests/option"
 
 	"github.com/runfinch/finch-daemon/api/response"
@@ -31,11 +30,11 @@ func VolumeInspect(opt *option.Option) {
 			version = GetDockerApiVersion()
 		})
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 		It("should return volume details", func() {
-			command.Run(opt, "volume", "create", testVolumeName, "--label", "foo=bar")
-			volumeShouldExist(opt, testVolumeName)
+			httpCreateVolume(uClient, version, testVolumeName, map[string]string{"foo": "bar"})
+			volumeShouldExist(testVolumeName)
 
 			apiUrl := client.ConvertToFinchUrl(version, "/volumes/"+testVolumeName)
 			res, err := uClient.Get(apiUrl)

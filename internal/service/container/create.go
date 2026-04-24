@@ -21,14 +21,24 @@ import (
 )
 
 func (s *service) Create(ctx context.Context, image string, cmd []string, createOpt types.ContainerCreateOptions, netOpt types.NetworkOptions) (cid string, err error) {
-	// Set path to nerdctl binary required for OCI hooks and logging
+	// Set path to finch-shim binary required for OCI hooks and logging
 	if createOpt.NerdctlCmd == "" {
-		ncExe, err := s.nctlContainerSvc.GetNerdctlExe()
+		ncExe, err := s.nctlContainerSvc.GetShimBinary()
 		if err != nil {
-			return "", fmt.Errorf("failed to find nerdctl binary: %s", err)
+			return "", fmt.Errorf("failed to find shim binary: %s", err)
 		}
 		createOpt.NerdctlCmd = ncExe
-		createOpt.NerdctlArgs = []string{}
+		// Pass only the flags finch-shim consumes. See hookOptions in cmd/finch-shim/main.go.
+		createOpt.NerdctlArgs = []string{
+			"--address=" + createOpt.GOptions.Address,
+			"--data-root=" + createOpt.GOptions.DataRoot,
+			"--cni-path=" + createOpt.GOptions.CNIPath,
+			"--cni-netconfpath=" + createOpt.GOptions.CNINetConfPath,
+		}
+		// BridgeIP is optional; empty falls back to DefaultCIDR in ocihook.Run.
+		if createOpt.GOptions.BridgeIP != "" {
+			createOpt.NerdctlArgs = append(createOpt.NerdctlArgs, "--bridge-ip="+createOpt.GOptions.BridgeIP)
+		}
 	}
 
 	netManager, err := s.nctlContainerSvc.NewNetworkingOptionsManager(netOpt)
@@ -80,7 +90,7 @@ func updateContainerMetadata(ctx context.Context, createOpt types.ContainerCreat
 
 	// Handle log URI reset
 	// NOTE: this is a temporary workaround to fix logging issue described in https://github.com/containerd/nerdctl/issues/2264.
-	// The refactored create method in nerdctl uses self exe (finch-daemon) binary for logging instead of nerdctl binary path.
+	// The refactored create method in nerdctl uses self exe (finch-daemon) binary for logging instead of finch-shim binary path.
 	// The following workaround resets this logging binary in the OCI spec and handles port labels for backward compatibility.
 	// TODO: remove this workaround when the issue is resolved upstream.
 	dataStore, err := clientutil.DataStore(createOpt.GOptions.DataRoot, createOpt.GOptions.Address)
@@ -104,7 +114,7 @@ func updateContainerMetadata(ctx context.Context, createOpt types.ContainerCreat
 	// Handle port labels for backward compatibility with nerdctl 2.1.2.
 	// nerdctl 2.1.3 changed the port publishing logic to use a dedicated portstore instead of container labels.
 	// Though nerdctl itself is backward compatible, newer library versions will no longer create the port labels,
-	// which is not compatible with older nerdctl executables needed to run the OCI hooks for setting up the network.
+	// which is not compatible with finch-shim binary needed to run the OCI hooks for setting up the network.
 	if len(netOpt.PortMappings) > 0 {
 		portsJSON, err := json.Marshal(netOpt.PortMappings)
 		if err != nil {

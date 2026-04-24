@@ -35,10 +35,10 @@ func ContainerInspect(opt *option.Option, pOpt util.NewOpt) {
 			version = GetDockerApiVersion()
 			containerName = testContainerName
 			wantContainerName = fmt.Sprintf("/%s", containerName)
-			containerId = command.StdoutStr(opt, "run", "-d", "--name", containerName, defaultImage, "sleep", "infinity")
+			containerId = httpRunContainer(uClient, version, containerName, defaultImage, []string{"sleep", "infinity"})
 		})
 		AfterEach(func() {
-			command.RemoveAll(opt)
+			httpRemoveAll(uClient, version)
 		})
 
 		It("should inspect the container by ID", func() {
@@ -132,7 +132,7 @@ func ContainerInspect(opt *option.Option, pOpt util.NewOpt) {
 			statusCode, ctr := createContainer(uClient, containerCreateUrl, testContainerName2, createOptions)
 			Expect(statusCode).Should(Equal(http.StatusCreated))
 			Expect(ctr.ID).ShouldNot(BeEmpty())
-			command.Run(opt, "start", testContainerName2)
+			httpStartContainer(uClient, version, testContainerName2)
 
 			// inspect container
 			res, err := uClient.Get(client.ConvertToFinchUrl(version, fmt.Sprintf("/containers/%s/json", ctr.ID)))
