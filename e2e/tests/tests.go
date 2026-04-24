@@ -90,7 +90,7 @@ func SetupLocalRegistry(opt *option.Option) {
 	// Wait for the registry to be ready before pushing.
 	registryUrl := fmt.Sprintf("http://127.0.0.1:%d/v2/", hostPort)
 	for i := 0; i < 30; i++ {
-		resp, err := http.Get(registryUrl) //nolint:noctx // test helper
+		resp, err := http.Get(registryUrl) //nolint:gosec,noctx // test helper with constructed localhost URL
 		if err == nil && resp.StatusCode == http.StatusOK {
 			resp.Body.Close()
 			break
