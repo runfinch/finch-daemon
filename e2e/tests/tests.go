@@ -12,10 +12,12 @@ package tests
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
@@ -85,8 +87,19 @@ func SetupLocalRegistry(opt *option.Option) {
 	command.SetLocalRegistryImageID(imageID)
 	command.SetLocalRegistryImageName(registryImage)
 
+	// Wait for the registry to be ready before pushing.
+	registryUrl := fmt.Sprintf("http://127.0.0.1:%d/v2/", hostPort)
+	for i := 0; i < 30; i++ {
+		resp, err := http.Get(registryUrl) //nolint:noctx // test helper
+		if err == nil && resp.StatusCode == http.StatusOK {
+			resp.Body.Close()
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+
 	command.Run(opt, "pull", alpineImage)
-	defaultImage = fmt.Sprintf("localhost:%d/alpine:latest", hostPort)
+	defaultImage = fmt.Sprintf("127.0.0.1:%d/alpine:latest", hostPort)
 	command.Run(opt, "tag", alpineImage, defaultImage)
 	command.Run(opt, "push", defaultImage)
 	command.Run(opt, "rmi", alpineImage)

@@ -11,13 +11,13 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
-	"os/exec"
 
 	// #nosec
 	// register HTTP handler for /debug/pprof on the DefaultServeMux.
@@ -30,28 +30,30 @@ import (
 	credentialhandler "github.com/runfinch/finch-daemon/api/credential"
 	credentialRouter "github.com/runfinch/finch-daemon/api/credential-router"
 	"github.com/runfinch/finch-daemon/api/router"
+	"github.com/runfinch/finch-daemon/internal/backend"
 	"github.com/runfinch/finch-daemon/internal/fs/passwd"
+	"github.com/runfinch/finch-daemon/internal/service/container"
+	"github.com/runfinch/finch-daemon/pkg/config"
 	"github.com/runfinch/finch-daemon/pkg/credential"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 	"github.com/runfinch/finch-daemon/version"
-	"github.com/runfinch/finch-daemon/pkg/config"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 type DaemonOptions struct {
-	debug              bool
-	socketAddr         string
-	credentialAddr     string
-	socketOwner        int
+	debug                 bool
+	socketAddr            string
+	credentialAddr        string
+	socketOwner           int
 	credentialSocketOwner int
-	debugAddress       string
-	configPath         string
-	pidFile            string
-	regoFilePath       string
-	enableExperimental bool
-	skipRegoPermCheck  bool
+	debugAddress          string
+	configPath            string
+	pidFile               string
+	regoFilePath          string
+	enableExperimental    bool
+	skipRegoPermCheck     bool
 }
 
 var options = new(DaemonOptions)
@@ -154,10 +156,13 @@ func run(options *DaemonOptions) error {
 	credCache := credential.NewCredentialCache()
 	credService := credential.NewCredentialService(logger, credCache)
 
-	r, err := newRouter(options, logger, credService)
+	r, clientWrapper, ncWrapper, err := newRouter(options, logger, credService)
 	if err != nil {
 		return fmt.Errorf("failed to create a router: %w", err)
 	}
+
+	// Reattach log copiers for containers that were running before daemon restart
+	go container.ReattachRunningContainers(context.Background(), clientWrapper, ncWrapper)
 
 	serverWg := &sync.WaitGroup{}
 	serverWg.Add(2) // Add 2 for both main socket and credential socket
@@ -175,7 +180,7 @@ func run(options *DaemonOptions) error {
 	// Start of Build Credential Socket Implementation
 	// Set the credential address in the config package
 	config.SetCredentialAddr(options.credentialAddr)
-	
+
 	// Remove existing credential socket if it exists
 	if _, err := os.Stat(options.credentialAddr); err == nil {
 		if err := os.Remove(options.credentialAddr); err != nil {
@@ -269,31 +274,31 @@ func run(options *DaemonOptions) error {
 	return nil
 }
 
-func newRouter(options *DaemonOptions, logger *flog.Logrus, credService *credential.CredentialService) (http.Handler, error) {
+func newRouter(options *DaemonOptions, logger *flog.Logrus, credService *credential.CredentialService) (http.Handler, *backend.ContainerdClientWrapper, *backend.NerdctlWrapper, error) {
 	conf, err := initializeConfig(options)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	clientWrapper, err := createContainerdClient(conf)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	ncWrapper, err := createNerdctlWrapper(clientWrapper, conf)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	var regoFilePath string
 
 	if options.regoFilePath != "" {
 		if !options.enableExperimental {
-			return nil, fmt.Errorf("rego file provided without experimental flag - OPA middleware is an experimental feature, please enable it with '--experimental' flag")
+			return nil, nil, nil, fmt.Errorf("rego file provided without experimental flag - OPA middleware is an experimental feature, please enable it with '--experimental' flag")
 		}
 		regoFilePath, err = checkRegoFileValidity(options, logger)
 		if err != nil {
-			return nil, err
+			return nil, nil, nil, err
 		}
 	} else if options.enableExperimental {
 		// Only experimental flag set
@@ -303,9 +308,9 @@ func newRouter(options *DaemonOptions, logger *flog.Logrus, credService *credent
 	opts := createRouterOptions(conf, clientWrapper, ncWrapper, logger, regoFilePath, credService)
 	newRouter, err := router.New(opts)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
-	return newRouter, nil
+	return newRouter, clientWrapper, ncWrapper, nil
 }
 
 func handleSignal(socket string, server *http.Server, logger *flog.Logrus) {
