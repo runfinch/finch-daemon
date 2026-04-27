@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 
 	containerd "github.com/containerd/containerd/v2/client"
 	"github.com/containerd/containerd/v2/core/containers"
@@ -89,16 +88,26 @@ func (s *service) customStart(ctx context.Context, cid string, cont containerd.C
 	}
 
 	// CNI setup — must happen after NewTask (needs task.Pid()) and before task.Start.
-	// Tear down any existing CNI state first (handles restart of stopped
-	// containers where the old task no longer exists but CNI state persists),
-	// then set up fresh networking.
+	// If setupNetworking fails (e.g., stale CNI state from a previous run),
+	// tear down and retry once.
 	globalOpts := s.nctlContainerSvc.GetGlobalOptions()
-	if hasCNIState(cont.ID()) {
-		runPostStop(cont.ID(), containerLabels, ns, dataStore, globalOpts)
-	}
+	networkingConfigured := false
 	if err := s.setupNetworking(ctx, cont, task, containerLabels, ns, dataStore, globalOpts); err != nil {
-		task.Delete(ctx)
-		return err
+		// Retry after teardown — handles restart of stopped containers
+		// where CNI state persists from the previous run.
+		runPostStop(cont.ID(), containerLabels, ns, dataStore, globalOpts)
+		if retryErr := s.setupNetworking(ctx, cont, task, containerLabels, ns, dataStore, globalOpts); retryErr != nil {
+			task.Delete(ctx)
+			return retryErr
+		}
+		networkingConfigured = true
+	} else if globalOpts.CNIPath != "" && globalOpts.CNINetConfPath != "" {
+		// setupNetworking returned nil — check if it actually did work
+		// (vs early-returning for non-CNI network modes).
+		networksJSON := containerLabels[labels.Networks]
+		if networksJSON != "" && networksJSON != "[]" {
+			networkingConfigured = true
+		}
 	}
 
 	if err := task.Start(ctx); err != nil {
@@ -109,8 +118,10 @@ func (s *service) customStart(ctx context.Context, cid string, cont containerd.C
 	logPath := containerLogPath(dataStore, ns, cont.ID())
 	startLogCopiers(logPath, directIO)
 
-	// Watch for container exit and run CNI teardown.
-	watchPostStop(task, cont.ID(), containerLabels, ns, dataStore, globalOpts)
+	// Watch for container exit and run CNI teardown (only if we set up networking).
+	if networkingConfigured {
+		watchPostStop(task, cont.ID(), containerLabels, ns, dataStore, globalOpts)
+	}
 
 	return nil
 }
@@ -168,6 +179,28 @@ func (s *service) setupNetworking(ctx context.Context, cont containerd.Container
 		return nil
 	}
 
+	// Skip CNI setup for non-CNI network modes. These don't need any
+	// networking configuration and ocihook.Run would no-op anyway, but
+	// calling it still has overhead (lock acquisition, state dir creation).
+	networksJSON := containerLabels[labels.Networks]
+	if networksJSON == "" || networksJSON == "[]" {
+		return nil
+	}
+	// Check for host/none/container network modes
+	var networks []string
+	if err := json.Unmarshal([]byte(networksJSON), &networks); err == nil {
+		if len(networks) == 1 {
+			switch networks[0] {
+			case "host", "none":
+				return nil
+			}
+			if len(networks[0]) > 0 && networks[0][0] == '/' {
+				// container:<id> network mode stored as absolute path
+				return nil
+			}
+		}
+	}
+
 	state := specs.State{
 		Version:     "1.0.0",
 		ID:          cont.ID(),
@@ -195,21 +228,6 @@ func (s *service) setupNetworking(ctx context.Context, cont containerd.Container
 
 	s.logger.Infof("hookless CNI setup complete for container %s", cont.ID())
 	return nil
-}
-
-// hasCNIState checks if any CNI result files exist for the given container ID.
-// Used to avoid calling postStop teardown on first start (no state to clean).
-func hasCNIState(containerID string) bool {
-	entries, err := os.ReadDir("/var/lib/cni/results")
-	if err != nil {
-		return false
-	}
-	for _, entry := range entries {
-		if strings.Contains(entry.Name(), containerID) {
-			return true
-		}
-	}
-	return false
 }
 
 // watchPostStop spawns a goroutine that waits for the container to exit and
