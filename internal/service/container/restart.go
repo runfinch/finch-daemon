@@ -25,7 +25,7 @@ func (s *service) Restart(ctx context.Context, cid string, options types.Contain
 	}
 
 	// restart the container and if error occurs then return error otherwise return nil
-	// swallow IsNotModified error on StopContainer for already stopped container, simply call StartContainer
+	// swallow IsNotModified error on StopContainer for already stopped container, simply call customStart
 	s.logger.Debugf("restarting container: %s", cid)
 	if err := s.nctlContainerSvc.StopContainer(ctx, con.ID(), stopOptions); err != nil && !errdefs.IsNotModified(err) {
 		s.logger.Errorf("Failed to stop container: %s. Error: %v", cid, err)
@@ -39,7 +39,7 @@ func (s *service) Restart(ctx context.Context, cid string, options types.Contain
 		Attach:     false,
 	}
 
-	if err = s.nctlContainerSvc.StartContainer(ctx, cid, startContainerOptions); err != nil {
+	if err = s.customStart(ctx, cid, con, startContainerOptions); err != nil {
 		s.logger.Errorf("Failed to start container: %s. Error: %v", cid, err)
 		return err
 	}
