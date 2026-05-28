@@ -246,6 +246,8 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 		CPUShares:            uint64(req.HostConfig.CPUShares), // CPU shares (relative weight)
 		CPUQuota:             CpuQuota,                         // CPUQuota limits the CPU CFS (Completely Fair Scheduler) quota
 		CPUPeriod:            uint64(req.HostConfig.CPUPeriod),
+		CPURealtimePeriod:    uint64(req.HostConfig.CPURealtimePeriod),
+		CPURealtimeRuntime:   uint64(req.HostConfig.CPURealtimeRuntime),
 		Memory:               memory,            // memory limit (in bytes)
 		MemorySwap:           memorySwap,        // Total memory usage (memory + swap); set `-1` to enable unlimited swap
 		MemoryReservation:    memoryReservation, // Memory soft limit (in bytes)
