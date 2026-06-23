@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	containerd "github.com/containerd/containerd/v2/client"
 	"github.com/containerd/containerd/v2/core/containers"
@@ -51,6 +52,7 @@ func (s *service) Start(ctx context.Context, cid string, options types.Container
 // customStart creates a container task with FIFO-based logging, sets up
 // CNI networking, and starts the container process.
 func (s *service) customStart(ctx context.Context, cid string, cont containerd.Container, options types.ContainerStartOptions) error {
+	startTime := time.Now()
 	s.cleanupOldTask(ctx, cont)
 
 	// Strip OCI hooks before creating the task. Networking is handled inline
@@ -74,11 +76,13 @@ func (s *service) customStart(ctx context.Context, cid string, cont containerd.C
 			return fmt.Errorf("failed to strip OCI hooks: %w", err)
 		}
 	}
+	s.logger.Debugf("customStart(%s): hooks stripped at +%dms", cid, time.Since(startTime).Milliseconds())
 
 	task, directIO, err := s.createTaskWithFIFO(ctx, cont, spec)
 	if err != nil {
 		return err
 	}
+	s.logger.Debugf("customStart(%s): task created at +%dms", cid, time.Since(startTime).Milliseconds())
 
 	containerLabels, err := cont.Labels(ctx)
 	if err != nil {
@@ -119,6 +123,7 @@ func (s *service) customStart(ctx context.Context, cid string, cont containerd.C
 	if err := task.Start(ctx); err != nil {
 		return err
 	}
+	s.logger.Debugf("customStart(%s): task.Start complete at +%dms", cid, time.Since(startTime).Milliseconds())
 
 	// Start log copiers after task.Start to avoid goroutine leaks if Start fails.
 	logPath := containerLogPath(dataStore, ns, cont.ID())
@@ -128,6 +133,7 @@ func (s *service) customStart(ctx context.Context, cid string, cont containerd.C
 	if networkingConfigured {
 		watchPostStop(task, cont.ID(), containerLabels, ns, dataStore, globalOpts)
 	}
+	s.logger.Debugf("customStart(%s): complete at +%dms", cid, time.Since(startTime).Milliseconds())
 
 	return nil
 }
@@ -192,6 +198,7 @@ func (s *service) setupNetworking(ctx context.Context, cont containerd.Container
 	if networksJSON == "" || networksJSON == "[]" {
 		return nil
 	}
+	s.logger.Debugf("setupNetworking(%s): networks=%s", cont.ID(), networksJSON)
 	// Check for host/none/container network modes
 	var networks []string
 	if err := json.Unmarshal([]byte(networksJSON), &networks); err == nil {
@@ -221,9 +228,12 @@ func (s *service) setupNetworking(ctx context.Context, cont containerd.Container
 	}
 
 	if err := func() error {
+		lockStart := time.Now()
 		ocihookMu.Lock()
+		s.logger.Debugf("setupNetworking(%s): acquired mutex after %dms", cont.ID(), time.Since(lockStart).Milliseconds())
 		defer ocihookMu.Unlock()
-		return ocihook.Run(
+		hookStart := time.Now()
+		err := ocihook.Run(
 			bytes.NewReader(stateJSON),
 			os.Stderr,
 			"createRuntime",
@@ -232,6 +242,8 @@ func (s *service) setupNetworking(ctx context.Context, cont containerd.Container
 			globalOpts.CNINetConfPath,
 			globalOpts.BridgeIP,
 		)
+		s.logger.Debugf("setupNetworking(%s): ocihook.Run took %dms", cont.ID(), time.Since(hookStart).Milliseconds())
+		return err
 	}(); err != nil {
 		return fmt.Errorf("CNI setup failed: %w", err)
 	}

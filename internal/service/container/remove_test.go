@@ -57,6 +57,7 @@ var _ = Describe("Container Remove API ", func() {
 			// set up the mock to verify the remove container is called and proper error msg was logged
 			ncClient.EXPECT().RemoveContainer(ctx, con, false, false)
 			logger.EXPECT().Debugf("removing container: %s", cid)
+			logger.EXPECT().Debugf("Remove(%s): calling killPortReserver after removal", cid)
 
 			// service should not return any error
 			err := service.Remove(ctx, cid, false, false)

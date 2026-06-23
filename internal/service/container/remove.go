@@ -41,6 +41,7 @@ func (s *service) Remove(ctx context.Context, cid string, force, removeVolumes b
 	// Kill port reserver synchronously after container removal. The async
 	// postStop watcher may not fire fast enough under load, leaving the
 	// port reserver alive and blocking clients connected to the port.
+	s.logger.Debugf("Remove(%s): calling killPortReserver after removal", con.ID())
 	killPortReserver(ns, con.ID())
 
 	return nil
