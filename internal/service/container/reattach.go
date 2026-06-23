@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 
 	containerd "github.com/containerd/containerd/v2/client"
@@ -145,7 +147,7 @@ func runPostStop(containerID string, containerLabels map[string]string, ns, data
 	}
 
 	// ocihook.Run("postStop") calls cni.Remove to release IP, clean iptables,
-	// and remove hostsstore/namestore entries.
+	// and remove hostsstore/namestore entries, then kills the port reserver.
 	ocihookMu.Lock()
 	err = ocihook.Run(
 		bytes.NewReader(stateJSON),
@@ -159,8 +161,51 @@ func runPostStop(containerID string, containerLabels map[string]string, ns, data
 	ocihookMu.Unlock()
 	if err != nil {
 		logrus.Warnf("postStop: CNI teardown failed for container %s: %v", containerID, err)
+		// ocihook.Run("postStop") can fail if hostsstore files were already
+		// removed by RemoveContainer. In that case, the port reserver process
+		// (which holds host port sockets open) is never killed — causing
+		// clients connected to those ports to hang. Kill it manually.
+		killPortReserver(ns, containerID)
 	} else {
 		logrus.Infof("postStop: CNI teardown complete for container %s", containerID)
+	}
+}
+
+// killPortReserver kills the port reserver process for a container.
+// The port reserver is a "sleep infinity" process started by ocihook.Run("createRuntime")
+// that holds host port sockets open. If postStop fails before reaching its cleanup code,
+// this process leaks and clients connected to those ports hang indefinitely.
+func killPortReserver(ns, containerID string) {
+	pidFile := filepath.Join("/run/nerdctl", ns, containerID, "port-reserver.pid")
+	data, err := os.ReadFile(pidFile)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			logrus.Debugf("postStop: no port-reserver pid file for container %s: %v", containerID, err)
+		}
+		return
+	}
+
+	pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
+	if err != nil {
+		logrus.Warnf("postStop: invalid port-reserver pid for container %s: %v", containerID, err)
+		return
+	}
+
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		logrus.Debugf("postStop: port-reserver process %d not found for container %s", pid, containerID)
+		return
+	}
+
+	if err := process.Kill(); err != nil {
+		logrus.Debugf("postStop: failed to kill port-reserver process %d for container %s: %v", pid, containerID, err)
+	} else {
+		logrus.Infof("postStop: killed orphaned port-reserver process (pid=%d) for container %s", pid, containerID)
+	}
+
+	// Clean up the pid file directory
+	if err := os.RemoveAll(filepath.Dir(pidFile)); err != nil {
+		logrus.Debugf("postStop: failed to remove port-reserver dir for container %s: %v", containerID, err)
 	}
 }
 
