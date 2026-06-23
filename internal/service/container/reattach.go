@@ -6,6 +6,7 @@ package container
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -145,7 +146,8 @@ func runPostStop(containerID string, containerLabels map[string]string, ns, data
 
 	// ocihook.Run("postStop") calls cni.Remove to release IP, clean iptables,
 	// and remove hostsstore/namestore entries.
-	if err := ocihook.Run(
+	ocihookMu.Lock()
+	err = ocihook.Run(
 		bytes.NewReader(stateJSON),
 		os.Stderr,
 		"postStop",
@@ -153,7 +155,9 @@ func runPostStop(containerID string, containerLabels map[string]string, ns, data
 		globalOpts.CNIPath,
 		globalOpts.CNINetConfPath,
 		globalOpts.BridgeIP,
-	); err != nil {
+	)
+	ocihookMu.Unlock()
+	if err != nil {
 		logrus.Warnf("postStop: CNI teardown failed for container %s: %v", containerID, err)
 	} else {
 		logrus.Infof("postStop: CNI teardown complete for container %s", containerID)
@@ -179,37 +183,53 @@ func cleanupOrphanedCNIState(ctx context.Context, containers []containerd.Contai
 		allContainers[c.ID()] = c
 	}
 
-	// For each CNI result file, check if it belongs to a non-running container.
-	// CNI result filenames contain the container ID (e.g., bridge-finch-{id}-eth0).
-	// Only clean up containers that were in our snapshot and confirmed not running.
-	// Skip containers not in our snapshot — they may have been created after we
-	// listed containers and could still be starting up.
+	// For each CNI result file, extract the container ID and check if it
+	// belongs to a non-running container. CNI result filenames follow the
+	// format: {network}-{namespace}-{containerID}-{ifName}
+	// (e.g., "bridge-finch-abc123...def-eth0"). We parse the container ID
+	// by finding the 64-char hex segment rather than using substring matching.
 	cleaned := 0
 	for _, entry := range entries {
-		name := entry.Name()
-		for containerID := range allContainers {
-			if strings.Contains(name, containerID) && !runningIDs[containerID] {
-				c := allContainers[containerID]
-				containerLabels, err := c.Labels(ctx)
-				if err != nil {
-					continue
-				}
-				// Skip containers created by nerdctl CLI — their CNI state
-				// is managed by nerdctl's own hooks, not by finch-daemon.
-				logURI := containerLabels[labels.LogURI]
-				if strings.HasPrefix(logURI, "binary://") {
-					break
-				}
-				ns := containerLabels[labels.Namespace]
-				logrus.Infof("reattach: cleaning up orphaned CNI state for container %s", containerID)
-				runPostStop(containerID, containerLabels, ns, dataStore, globalOpts)
-				cleaned++
-				break
-			}
+		containerID := extractContainerID(entry.Name())
+		if containerID == "" {
+			continue
 		}
+		c, known := allContainers[containerID]
+		if !known || runningIDs[containerID] {
+			continue
+		}
+		containerLabels, err := c.Labels(ctx)
+		if err != nil {
+			continue
+		}
+		// Skip containers created by nerdctl CLI — their CNI state
+		// is managed by nerdctl's own hooks, not by finch-daemon.
+		logURI := containerLabels[labels.LogURI]
+		if strings.HasPrefix(logURI, "binary://") {
+			continue
+		}
+		ns := containerLabels[labels.Namespace]
+		logrus.Infof("reattach: cleaning up orphaned CNI state for container %s", containerID)
+		runPostStop(containerID, containerLabels, ns, dataStore, globalOpts)
+		cleaned++
 	}
 
 	if cleaned > 0 {
 		logrus.Infof("reattach: cleaned up orphaned CNI state for %d containers", cleaned)
 	}
+}
+
+// extractContainerID parses a CNI result filename to find the 64-character
+// hex container ID. CNI filenames follow: {network}-{namespace}-{containerID}-{ifName}.
+// Returns empty string if no valid container ID is found.
+func extractContainerID(filename string) string {
+	parts := strings.Split(filename, "-")
+	for _, part := range parts {
+		if len(part) == 64 {
+			if _, err := hex.DecodeString(part); err == nil {
+				return part
+			}
+		}
+	}
+	return ""
 }

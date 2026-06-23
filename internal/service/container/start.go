@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 
 	containerd "github.com/containerd/containerd/v2/client"
 	"github.com/containerd/containerd/v2/core/containers"
@@ -22,6 +23,11 @@ import (
 
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
+
+// ocihookMu serializes all ocihook.Run calls within finch-daemon.
+// ocihook.Run temporarily redirects a package-level global logger to a
+// multi-writer (restored in a defer), which races if called concurrently.
+var ocihookMu sync.Mutex
 
 func (s *service) Start(ctx context.Context, cid string, options types.ContainerStartOptions) error {
 	cont, err := s.getContainer(ctx, cid)
@@ -214,15 +220,19 @@ func (s *service) setupNetworking(ctx context.Context, cont containerd.Container
 		return fmt.Errorf("failed to marshal hook state: %w", err)
 	}
 
-	if err := ocihook.Run(
-		bytes.NewReader(stateJSON),
-		os.Stderr,
-		"createRuntime",
-		dataStore,
-		globalOpts.CNIPath,
-		globalOpts.CNINetConfPath,
-		globalOpts.BridgeIP,
-	); err != nil {
+	if err := func() error {
+		ocihookMu.Lock()
+		defer ocihookMu.Unlock()
+		return ocihook.Run(
+			bytes.NewReader(stateJSON),
+			os.Stderr,
+			"createRuntime",
+			dataStore,
+			globalOpts.CNIPath,
+			globalOpts.CNINetConfPath,
+			globalOpts.BridgeIP,
+		)
+	}(); err != nil {
 		return fmt.Errorf("CNI setup failed: %w", err)
 	}
 
