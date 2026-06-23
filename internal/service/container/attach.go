@@ -137,10 +137,18 @@ func (s *service) attachLogs(
 			return fmt.Errorf("failed to get wait channel for task %#v: %s", task, err)
 		}
 
-		// setup goroutine to send stop event if container task finishes:
+		// Subscribe to container removal events so we can stop the log
+		// viewer if the container is force-removed while we're following.
+		removeCh, _ := s.client.GetContainerRemoveEvent(ctx, con)
+
+		// setup goroutine to send stop event if container task finishes or container is removed:
 		go func() {
-			<-waitCh
-			s.logger.Debugf("container task has finished, sending kill signal to log viewer")
+			select {
+			case <-waitCh:
+				s.logger.Debugf("container task has finished, sending kill signal to log viewer")
+			case <-removeCh:
+				s.logger.Debugf("container was removed, sending kill signal to log viewer")
+			}
 
 			// NOTE: This is a temporary workaround to fix the logger issue where strings without newline are not logged:
 			// https://github.com/containerd/nerdctl/issues/2313
