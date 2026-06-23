@@ -249,6 +249,10 @@ func watchPostStop(task containerd.Task, containerID string, containerLabels map
 			return
 		}
 		<-exitCh
+		// Kill port reserver immediately — before the potentially slow/contended
+		// runPostStop call. This ensures clients connected to the container's
+		// mapped ports get a connection reset without delay.
+		killPortReserver(ns, containerID)
 		runPostStop(containerID, containerLabels, ns, dataStore, globalOpts)
 	}()
 }
