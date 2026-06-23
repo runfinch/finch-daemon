@@ -78,7 +78,7 @@ func TestKillPortReserver(t *testing.T) {
 		// Create a temp dir mimicking /run/nerdctl/{ns}/{id}/
 		dir := t.TempDir()
 		nsDir := filepath.Join(dir, "finch", "testcontainer123")
-		os.MkdirAll(nsDir, 0755)
+		os.MkdirAll(nsDir, 0750)
 		pidFile := filepath.Join(nsDir, "port-reserver.pid")
 		// Write a PID that doesn't exist (99999999)
 		os.WriteFile(pidFile, []byte(strconv.Itoa(99999999)), 0644)

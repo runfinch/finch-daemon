@@ -43,6 +43,7 @@ var _ = Describe("Container Remove API ", func() {
 		ncClient = mocks_backend.NewMockNerdctlContainerSvc(mockCtrl)
 		con = mocks_container.NewMockContainer(mockCtrl)
 		con.EXPECT().ID().Return(cid).AnyTimes()
+		con.EXPECT().Labels(gomock.Any()).Return(map[string]string{}, nil).AnyTimes()
 		tarExtractor = mocks_archive.NewMockTarExtractor(mockCtrl)
 
 		service = NewService(cdClient, mockNerdctlService{ncClient, nil}, logger, nil, nil, tarExtractor)

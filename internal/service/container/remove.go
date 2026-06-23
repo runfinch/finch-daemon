@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/containerd/nerdctl/v2/pkg/cmd/container"
+	"github.com/containerd/nerdctl/v2/pkg/labels"
 
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
 )
@@ -19,6 +20,10 @@ func (s *service) Remove(ctx context.Context, cid string, force, removeVolumes b
 	if err != nil {
 		return err
 	}
+
+	// Get namespace label before removal (needed for port reserver cleanup).
+	containerLabels, _ := con.Labels(ctx)
+	ns := containerLabels[labels.Namespace]
 
 	s.logger.Debugf("removing container: %s", con.ID())
 	if err := s.nctlContainerSvc.RemoveContainer(ctx, con, force, removeVolumes); err != nil {
@@ -32,5 +37,11 @@ func (s *service) Remove(ctx context.Context, cid string, force, removeVolumes b
 		s.logger.Errorf("Failed to remove container: %s. Error: %s", con.ID(), err.Error())
 		return err
 	}
+
+	// Kill port reserver synchronously after container removal. The async
+	// postStop watcher may not fire fast enough under load, leaving the
+	// port reserver alive and blocking clients connected to the port.
+	killPortReserver(ns, con.ID())
+
 	return nil
 }
