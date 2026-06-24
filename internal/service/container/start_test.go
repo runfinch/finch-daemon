@@ -156,6 +156,7 @@ var _ = Describe("Container Start API ", func() {
 				[]containerd.Container{con}, nil)
 
 			con.EXPECT().Task(gomock.Any(), nil).Return(nil, fmt.Errorf("no task"))
+			con.EXPECT().Labels(gomock.Any()).Return(map[string]string{}, nil)
 			con.EXPECT().Spec(gomock.Any()).Return(nil, fmt.Errorf("spec error"))
 
 			logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
@@ -168,16 +169,13 @@ var _ = Describe("Container Start API ", func() {
 			Expect(err.Error()).Should(ContainSubstring("spec"))
 		})
 		It("should delete task when Labels fails", func() {
-			// set up the mock to mimic Labels failure after task creation
+			// Labels is now called early in customStart (before Spec).
 			cdClient.EXPECT().GetContainerStatus(gomock.Any(), gomock.Any()).Return(containerd.Stopped)
 			cdClient.EXPECT().SearchContainer(gomock.Any(), gomock.Any()).Return(
 				[]containerd.Container{con}, nil)
 
 			con.EXPECT().Task(gomock.Any(), nil).Return(nil, fmt.Errorf("no task"))
-			con.EXPECT().Spec(gomock.Any()).Return(&specs.Spec{Process: &specs.Process{}}, nil)
-			con.EXPECT().NewTask(gomock.Any(), gomock.Any()).Return(task, nil)
 			con.EXPECT().Labels(gomock.Any()).Return(nil, fmt.Errorf("labels error"))
-			task.EXPECT().Delete(gomock.Any()).Return(nil, nil)
 
 			logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
 			logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()

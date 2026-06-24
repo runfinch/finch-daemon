@@ -44,5 +44,10 @@ func (s *service) Remove(ctx context.Context, cid string, force, removeVolumes b
 	s.logger.Debugf("Remove(%s): calling killPortReserver after removal", con.ID())
 	killPortReserver(ns, con.ID())
 
+	// Clean up pre-created network namespace if it exists.
+	if netnsPath := containerLabels["nerdctl/network-namespace"]; netnsPath != "" {
+		removeNetns(netnsPath)
+	}
+
 	return nil
 }
