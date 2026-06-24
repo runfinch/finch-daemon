@@ -9,8 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -57,11 +55,6 @@ func (s *service) customStart(ctx context.Context, cid string, cont containerd.C
 	startTime := time.Now()
 	s.cleanupOldTask(ctx, cont)
 
-	containerLabels, err := cont.Labels(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get container labels: %w", err)
-	}
-
 	// Strip OCI hooks before creating the task. Networking is handled inline
 	// by setupNetworking, not by runc forking a binary at lifecycle points.
 	// This is needed for containers created via nerdctl CLI (which sets hooks)
@@ -70,40 +63,8 @@ func (s *service) customStart(ctx context.Context, cid string, cont containerd.C
 	if err != nil {
 		return fmt.Errorf("failed to get container spec: %w", err)
 	}
-
-	specModified := false
 	if spec.Hooks != nil {
 		spec.Hooks = nil
-		specModified = true
-	}
-
-	// If networking was pre-configured at create time, set the netns path
-	// in the spec so the container joins the existing namespace.
-	if netnsPath := containerLabels["nerdctl/network-namespace"]; netnsPath != "" {
-		if _, statErr := os.Stat(netnsPath); statErr == nil {
-			if spec.Linux == nil {
-				spec.Linux = &specs.Linux{}
-			}
-			// Replace or add the network namespace entry.
-			found := false
-			for i, ns := range spec.Linux.Namespaces {
-				if ns.Type == specs.NetworkNamespace {
-					spec.Linux.Namespaces[i].Path = netnsPath
-					found = true
-					break
-				}
-			}
-			if !found {
-				spec.Linux.Namespaces = append(spec.Linux.Namespaces, specs.LinuxNamespace{
-					Type: specs.NetworkNamespace,
-					Path: netnsPath,
-				})
-			}
-			specModified = true
-		}
-	}
-
-	if specModified {
 		if err := cont.Update(ctx, func(ctx context.Context, client *containerd.Client, c *containers.Container) error {
 			newSpec, err := typeurl.MarshalAny(spec)
 			if err != nil {
@@ -112,7 +73,7 @@ func (s *service) customStart(ctx context.Context, cid string, cont containerd.C
 			c.Spec = newSpec
 			return nil
 		}); err != nil {
-			return fmt.Errorf("failed to update OCI spec: %w", err)
+			return fmt.Errorf("failed to strip OCI hooks: %w", err)
 		}
 	}
 	s.logger.Debugf("customStart(%s): hooks stripped at +%dms", cid, time.Since(startTime).Milliseconds())
@@ -123,6 +84,11 @@ func (s *service) customStart(ctx context.Context, cid string, cont containerd.C
 	}
 	s.logger.Debugf("customStart(%s): task created at +%dms", cid, time.Since(startTime).Milliseconds())
 
+	containerLabels, err := cont.Labels(ctx)
+	if err != nil {
+		task.Delete(ctx)
+		return fmt.Errorf("failed to get container labels: %w", err)
+	}
 	ns := containerLabels[labels.Namespace]
 
 	dataStore, err := s.nctlContainerSvc.GetDataStore()
@@ -233,16 +199,6 @@ func (s *service) setupNetworking(ctx context.Context, cont containerd.Container
 		return nil
 	}
 	s.logger.Debugf("setupNetworking(%s): networks=%s", cont.ID(), networksJSON)
-
-	// If networking was already configured at create time, skip.
-	if netnsPath := containerLabels["nerdctl/network-namespace"]; netnsPath != "" {
-		if _, err := os.Stat(netnsPath); err == nil {
-			s.logger.Debugf("setupNetworking(%s): skipping, already configured at create time", cont.ID())
-			return nil
-		}
-		// Netns file doesn't exist — fall through to configure inline.
-		s.logger.Debugf("setupNetworking(%s): netns annotation set but file missing, configuring inline", cont.ID())
-	}
 	// Check for host/none/container network modes
 	var networks []string
 	if err := json.Unmarshal([]byte(networksJSON), &networks); err == nil {
@@ -294,118 +250,6 @@ func (s *service) setupNetworking(ctx context.Context, cont containerd.Container
 
 	s.logger.Infof("hookless CNI setup complete for container %s", cont.ID())
 	return nil
-}
-
-// setupNetworkingAtCreate runs CNI setup at container create time using a
-// pre-created network namespace. This eliminates networking latency from the
-// Start path. The netns path is stored as an annotation so ocihook.Run can
-// use it without needing a container PID.
-func (s *service) setupNetworkingAtCreate(ctx context.Context, cont containerd.Container, globalOpts types.GlobalCommandOptions) error {
-	if globalOpts.CNIPath == "" || globalOpts.CNINetConfPath == "" {
-		return nil
-	}
-
-	containerLabels, err := cont.Labels(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get container labels: %w", err)
-	}
-
-	networksJSON := containerLabels[labels.Networks]
-	if networksJSON == "" || networksJSON == "[]" {
-		return nil
-	}
-
-	// Skip for non-CNI network modes
-	var networks []string
-	if err := json.Unmarshal([]byte(networksJSON), &networks); err == nil {
-		if len(networks) == 1 {
-			switch networks[0] {
-			case "host", "none":
-				return nil
-			}
-			if len(networks[0]) > 0 && networks[0][0] == '/' {
-				return nil
-			}
-		}
-	}
-
-	ns := containerLabels[labels.Namespace]
-	dataStore, err := s.nctlContainerSvc.GetDataStore()
-	if err != nil {
-		return fmt.Errorf("failed to get data store: %w", err)
-	}
-
-	// Create a named network namespace for CNI to configure.
-	netnsPath := fmt.Sprintf("/var/run/netns/%s", cont.ID())
-	if err := createNetns(netnsPath); err != nil {
-		return fmt.Errorf("failed to create netns: %w", err)
-	}
-
-	// Store the netns path as a container label so Start can find it
-	// and ocihook.Run can use it instead of /proc/<pid>/ns/net.
-	annotationLabels := make(map[string]string, len(containerLabels)+1)
-	for k, v := range containerLabels {
-		annotationLabels[k] = v
-	}
-	annotationLabels["nerdctl/network-namespace"] = netnsPath
-
-	// Update container labels to include the netns annotation.
-	if _, err := cont.SetLabels(ctx, map[string]string{
-		"nerdctl/network-namespace": netnsPath,
-	}); err != nil {
-		removeNetns(netnsPath)
-		return fmt.Errorf("failed to set netns label: %w", err)
-	}
-
-	state := specs.State{
-		Version:     "1.0.0",
-		ID:          cont.ID(),
-		Status:      specs.StateCreated,
-		Pid:         0, // No process yet — ocihook uses the netns annotation instead
-		Bundle:      fmt.Sprintf("/run/containerd/io.containerd.runtime.v2.task/%s/%s", ns, cont.ID()),
-		Annotations: annotationLabels,
-	}
-	stateJSON, err := json.Marshal(state)
-	if err != nil {
-		removeNetns(netnsPath)
-		return fmt.Errorf("failed to marshal hook state: %w", err)
-	}
-
-	ocihookMu.Lock()
-	err = ocihook.Run(
-		bytes.NewReader(stateJSON),
-		os.Stderr,
-		"createRuntime",
-		dataStore,
-		globalOpts.CNIPath,
-		globalOpts.CNINetConfPath,
-		globalOpts.BridgeIP,
-	)
-	ocihookMu.Unlock()
-	if err != nil {
-		removeNetns(netnsPath)
-		return fmt.Errorf("pre-create CNI setup failed: %w", err)
-	}
-
-	s.logger.Infof("pre-create CNI setup complete for container %s (netns=%s)", cont.ID(), netnsPath)
-	return nil
-}
-
-// createNetns creates a persistent named network namespace.
-func createNetns(path string) error {
-	// Use the container ID as the netns name (basename of path).
-	name := filepath.Base(path)
-	cmd := exec.Command("ip", "netns", "add", name)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("ip netns add: %s: %w", string(out), err)
-	}
-	return nil
-}
-
-// removeNetns removes a named network namespace.
-func removeNetns(path string) {
-	name := filepath.Base(path)
-	exec.Command("ip", "netns", "delete", name).Run() //nolint:errcheck // best-effort cleanup
 }
 
 // watchPostStop spawns a goroutine that waits for the container to exit and

@@ -119,7 +119,6 @@ var _ = Describe("Container Restart API ", func() {
 
 			// customStart fails at Spec
 			con.EXPECT().Task(gomock.Any(), nil).Return(nil, fmt.Errorf("no task"))
-			con.EXPECT().Labels(gomock.Any()).Return(map[string]string{}, nil)
 			con.EXPECT().Spec(gomock.Any()).Return(nil, fmt.Errorf("spec error"))
 
 			logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()

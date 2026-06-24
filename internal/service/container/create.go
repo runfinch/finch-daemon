@@ -58,13 +58,6 @@ func (s *service) Create(ctx context.Context, image string, cmd []string, create
 
 	updateContainerMetadata(ctx, createOpt, netOpt, cont)
 
-	// Pre-create network namespace and run CNI setup at create time.
-	// This eliminates ~200ms latency from the Start path, which is
-	// timing-sensitive for durable Lambda execution tests.
-	if err := s.setupNetworkingAtCreate(ctx, cont, createOpt.GOptions); err != nil {
-		logrus.Warnf("pre-create networking failed for %s: %v (will retry at start)", cont.ID(), err)
-	}
-
 	return cont.ID(), nil
 }
 
