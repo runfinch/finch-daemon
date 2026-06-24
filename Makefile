@@ -4,7 +4,7 @@
 GINKGO = go run github.com/onsi/ginkgo/v2/ginkgo
 # Common ginkgo options: -v for verbose mode, --focus="test name" for running single tests
 GFLAGS ?= -v -timeout 2h --race --randomize-all --randomize-suites 
-BIN = $(PWD)/bin
+BIN = $(CURDIR)/bin
 FINCH_DAEMON_PROJECT_ROOT ?= $(shell pwd)
 
 # Base path used to install.

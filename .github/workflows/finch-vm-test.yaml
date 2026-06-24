@@ -12,7 +12,8 @@ on:
       - '**.md'
   workflow_dispatch:
 env:
-  GO_VERSION: '1.25.8'
+  GO_VERSION: '1.25.11'
+  GOTOOLCHAIN: 'auto'
 jobs:
   mac-test-e2e:
     runs-on: codebuild-finch-daemon-macOS26-arm64-2-instance-${{ github.run_id }}-${{ github.run_attempt }}

@@ -16,7 +16,8 @@ on:
   workflow_dispatch:
 
 env:
-  GO_VERSION: '1.25.8'
+  GO_VERSION: '1.25.11'
+  GOTOOLCHAIN: 'auto'
 
 permissions:
   id-token: write
