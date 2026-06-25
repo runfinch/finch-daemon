@@ -139,6 +139,8 @@ jobs:
 
       - name: Run ${{ matrix.test_type }} tests
         run: ./scripts/samcli-direct/run-${{ matrix.test_type }}-tests.sh
+        env:
+          DURABLE_EXECUTIONS_EMULATOR_IMAGE_TAG: v1.1.1
 
       - name: Show finch-daemon logs
         if: always()
