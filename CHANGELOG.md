@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.23.3](https://github.com/runfinch/finch-daemon/compare/v0.23.2...v0.23.3) (2026-06-26)
+
+
+### Build System or External Dependencies
+
+* **deps:** bump github.com/containerd/containerd/v2 ([570ac44](https://github.com/runfinch/finch-daemon/commit/570ac449e45361e4b771cf2639f1b896456e1199))
+* **deps:** bump github.com/containerd/containerd/v2 from 2.2.4 to 2.2.5 ([#460](https://github.com/runfinch/finch-daemon/issues/460)) ([570ac44](https://github.com/runfinch/finch-daemon/commit/570ac449e45361e4b771cf2639f1b896456e1199))
+* **deps:** bump the project-dependency group across 1 directory with 15 updates ([#463](https://github.com/runfinch/finch-daemon/issues/463)) ([cb4c9c3](https://github.com/runfinch/finch-daemon/commit/cb4c9c3709aac055505b613743e1b5586cf0199d))
+
 ## [0.23.2](https://github.com/runfinch/finch-daemon/compare/v0.23.1...v0.23.2) (2026-05-28)
 
 
