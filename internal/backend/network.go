@@ -6,10 +6,14 @@ package backend
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
+	containerd "github.com/containerd/containerd/v2/client"
 	"github.com/containerd/nerdctl/v2/pkg/api/types"
+	"github.com/containerd/nerdctl/v2/pkg/containerinspector"
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
+	"github.com/containerd/nerdctl/v2/pkg/labels"
 	"github.com/containerd/nerdctl/v2/pkg/netutil"
 	"github.com/containernetworking/cni/libcni"
 	cnitypes "github.com/containernetworking/cni/pkg/types"
@@ -54,11 +58,18 @@ func (w *NerdctlWrapper) RemoveNetwork(networkConfig *netutil.NetworkConfig) err
 }
 
 func (w *NerdctlWrapper) InspectNetwork(ctx context.Context, networkConfig *netutil.NetworkConfig) (*dockercompat.Network, error) {
+	// Get containers associated with this network
+	containers, err := getContainersFromNetConfig(ctx, networkConfig, w.clientWrapper)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get containers for network: %w", err)
+	}
+
 	network := &native.Network{
 		CNI:           json.RawMessage(networkConfig.Bytes),
 		NerdctlID:     networkConfig.NerdctlID,
 		NerdctlLabels: networkConfig.NerdctlLabels,
 		File:          networkConfig.File,
+		Containers:    containers,
 	}
 	return dockercompat.NetworkFromNative(network)
 }
@@ -73,4 +84,28 @@ func (w *NerdctlWrapper) NetconfPath() string {
 
 func (w *NerdctlWrapper) Namespace() string {
 	return w.netClient.Namespace
+}
+
+// getContainersFromNetConfig returns containers associated with the given network.
+func getContainersFromNetConfig(ctx context.Context, networkConfig *netutil.NetworkConfig, client ContainerdClient) ([]*native.Container, error) {
+	filters := []string{fmt.Sprintf(`labels.%q~="\\\"%s\\\""`, labels.Networks, networkConfig.Name)}
+	filteredContainers, err := client.GetContainers(ctx, filters...)
+	if err != nil {
+		return nil, err
+	}
+
+	var containers []*native.Container
+	for _, container := range filteredContainers {
+		nativeContainer, err := containerinspector.Inspect(ctx, container)
+		if err != nil {
+			continue
+		}
+		if nativeContainer.Process == nil || nativeContainer.Process.Status.Status != containerd.Running {
+			continue
+		}
+
+		containers = append(containers, nativeContainer)
+	}
+
+	return containers, nil
 }

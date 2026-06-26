@@ -186,6 +186,26 @@ func (mr *MockContainerdClientMockRecorder) GetContainerTaskWait(ctx, attach, c 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerTaskWait", reflect.TypeOf((*MockContainerdClient)(nil).GetContainerTaskWait), ctx, attach, c)
 }
 
+// GetContainers mocks base method.
+func (m *MockContainerdClient) GetContainers(ctx context.Context, filters ...string) ([]client.Container, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx}
+	for _, a := range filters {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetContainers", varargs...)
+	ret0, _ := ret[0].([]client.Container)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetContainers indicates an expected call of GetContainers.
+func (mr *MockContainerdClientMockRecorder) GetContainers(ctx any, filters ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx}, filters...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainers", reflect.TypeOf((*MockContainerdClient)(nil).GetContainers), varargs...)
+}
+
 // GetCurrentCapabilities mocks base method.
 func (m *MockContainerdClient) GetCurrentCapabilities() ([]string, error) {
 	m.ctrl.T.Helper()

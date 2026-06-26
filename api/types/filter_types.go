@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"sort"
 )
 
 // Filters represents a collection of filter types and their values.
@@ -101,6 +102,7 @@ func (filters Filters) ToLegacyFormat() map[string][]string {
 	for key := range filters.filterSet {
 		values := filters.getFiltersKeys(key)
 		if len(values) > 0 {
+			sort.Strings(values)
 			result[key] = values
 		}
 	}

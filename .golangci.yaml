@@ -1,30 +1,9 @@
+version: "2"
+
 # The sections in this file are ordered in the order presented in
 # https://golangci-lint.run/usage/configuration/.
 # The nested fields are ordered alphabetically.
 
-linters-settings:
-  goheader:
-    template-path: copyright_header
-  goimports:
-    local-prefixes: github.com/runfinch/finch-daemon
-  gosec:
-    config:
-      G306: "0o644"
-    excludes:
-      - G304
-      - G101
-      - G104
-      - G115 # added to prevent false uint conversion errors
-  lll:
-    line-length: 250
-    tab-width: 4
-  makezero:
-    always: true
-  nolintlint:
-    require-explanation: true
-    require-specific: true
-  stylecheck:
-    checks: ["all", "-ST1003", "-ST1000", "-ST1001", "-ST1021"]
 linters:
   enable:
     # - errname
@@ -33,9 +12,7 @@ linters:
     # - forcetypeassert
     # - gocritic
     - godot
-    # - gofumpt
     - goheader
-    # - goimports
     - gosec
     - lll
     # - makezero
@@ -54,20 +31,47 @@ linters:
     - usestdlibvars
     - wastedassign
     - whitespace
-    - stylecheck
+    - staticcheck
   disable:
     - errcheck
-issues:
-  exclude-rules:
-    - linters:
-        - lll
-      # A go:generate statement has to be in the same line:
-      # https://github.com/golang/go/issues/46050.
-      source: "^//go:generate "
-  # Some checks enabled in the stylecheck setting are disabled by default
-  # (e.g., https://golangci-lint.run/usage/false-positives/#exc0013),
-  # so we need to enable them explicitly here.
-  exclude-use-default: false
-  # fix: true
+  settings:
+    goheader:
+      template-path: copyright_header
+    gosec:
+      config:
+        G306: "0o644"
+      excludes:
+        - G304
+        - G101
+        - G104
+        - G115 # added to prevent false uint conversion errors
+    lll:
+      line-length: 250
+      tab-width: 4
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+    staticcheck:
+      checks:
+        - ST*
+        - -ST1003
+        - -ST1000
+        - -ST1001
+        - -ST1021
+        - -QF*
+        - -S*
+        - -SA*
+  exclusions:
+    rules:
+      - linters:
+          - lll
+        source: "^//go:generate "
+
 run:
   timeout: 5m
+
+formatters:
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/runfinch/finch-daemon

@@ -7,6 +7,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 
@@ -53,6 +54,12 @@ func setupTestSuite(opt *option.Option) {
 		tests.SetupLocalRegistry(opt)
 		return nil
 	}, func(bytes []byte) {})
+
+	ginkgo.JustAfterEach(func() {
+		if ginkgo.CurrentSpecReport().Failed() {
+			collectServiceLogs(*SubjectPrefix, *PrefixedSubjectEnv)
+		}
+	})
 
 	ginkgo.SynchronizedAfterSuite(func() {
 		tests.CleanupLocalRegistry(opt)
@@ -178,6 +185,33 @@ func runDistributionTests(opt *option.Option) {
 // functional test for credential helper.
 func runCredentialTests(opt *option.Option, pOpt func([]string, ...option.Modifier) (*option.Option, error)) {
 	tests.CredentialHelper(opt, pOpt)
+}
+
+// collectServiceLogs fetches the last 100 lines of finch service logs via journalctl.
+// On macOS/Windows the daemon runs inside a Lima VM, so the journalctl command is
+// executed through the subject prefix (e.g. "limactl shell finch sudo").
+// On Linux (no prefix) it runs journalctl directly.
+func collectServiceLogs(subjectPrefix, prefixedSubjectEnv string) {
+	journalctlArgs := []string{"journalctl", "-u", "finch", "--no-pager", "-n", "100"}
+
+	var args []string
+	if subjectPrefix != "" {
+		args = append(strings.Split(subjectPrefix, " "), journalctlArgs...)
+	} else {
+		args = journalctlArgs
+	}
+
+	cmd := exec.Command(args[0], args[1:]...) //nolint:gosec // G204: controlled test inputs
+	if prefixedSubjectEnv != "" {
+		cmd.Env = append(os.Environ(), strings.Split(prefixedSubjectEnv, " ")...)
+	}
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		ginkgo.GinkgoWriter.Printf("failed to get journalctl logs: %v\n%s\n", err, string(out))
+	} else {
+		ginkgo.AddReportEntry("finch-daemon journalctl logs", string(out))
+	}
 }
 
 // parseTestFlags parses go test flags because pflag package ignores flags with '-test.' prefix

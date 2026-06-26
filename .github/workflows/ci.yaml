@@ -12,8 +12,8 @@ on:
       - '**.md'
   workflow_dispatch:
 env:
-  GO_VERSION: '1.25.7'
-  GOLANGCI_LINT_VERSION: '1.64.8'
+  GO_VERSION: '1.25.8'
+  GOLANGCI_LINT_VERSION: '2.7.0'
 jobs:
   git-secrets:
     runs-on: ubuntu-latest
@@ -42,7 +42,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: golangci/golangci-lint-action@v6 # v6.1.0
+      - uses: golangci/golangci-lint-action@v7
         with:
           version: v${{ env.GOLANGCI_LINT_VERSION }}
           working-directory: ${{ matrix.working_dir }}
@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ['1.25.7', '1.26.0']
+        go-version: ['1.25.8', '1.26.0']
     timeout-minutes: 10
     steps:
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
@@ -72,7 +72,7 @@ jobs:
       - name: Create build artifacts
         run: tar -cvf build-artifacts.tar bin/
       - name: Upload build artifacts
-        if: matrix.go-version == '1.25.7'
+        if: matrix.go-version == '1.25.8'
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: build-artifacts
