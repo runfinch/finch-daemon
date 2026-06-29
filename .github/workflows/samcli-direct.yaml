@@ -124,6 +124,10 @@ jobs:
       - name: Set up SAM CLI from source
         working-directory: aws-sam-cli
         run: |
+          # Patch expected durable test history to match emulator behavior (aws/aws-sam-cli#9097)
+          sed -i 's/"SubType": "RunInChildContext"/"SubType": "WaitForCallback"/g' \
+            tests/integration/testdata/durable/functions/wait_for_callback/expected_history.json \
+            tests/integration/testdata/durable/functions/wait_for_callback/expected_history_failure.json
           python -m pip install --upgrade pip
           make init
           # Pin chardet to avoid 6.0.0 which breaks requests compatibility (released Feb 22, 2026)
