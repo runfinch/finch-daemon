@@ -23,7 +23,7 @@ jobs:
           git config --global --add safe.directory "*"
         shell: bash
 
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
@@ -65,7 +65,7 @@ jobs:
         shell: bash
 
       - name: Checkout mainline finch repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # TODO: revert to main
           ref: updated-finch-core-nerdctl
@@ -75,7 +75,7 @@ jobs:
           submodules: recursive
 
       - name: Checkout finch-daemon PR
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ github.event.pull_request.head.sha || 'main' }}
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
