@@ -62,7 +62,7 @@ func OpaMiddlewareTest(opt *option.Option) {
 			fmt.Println(version)
 		})
 
-		It("shold allow GET containers API request", func() {
+		It("should allow GET containers API request", func() {
 			id := command.StdoutStr(opt, "run", "-d", "--name", testContainerName, defaultImage, "sleep", "infinity")
 			want := []types.ContainerListItem{
 				{
@@ -82,7 +82,7 @@ func OpaMiddlewareTest(opt *option.Option) {
 			Expect(got).Should(ContainElements(want))
 		})
 
-		It("shold disallow POST containers/create API request", func() {
+		It("should disallow POST containers/create API request", func() {
 			containerCreateOptions.Cmd = []string{"echo", "hello world"}
 
 			reqBody, err := json.Marshal(containerCreateOptions)
