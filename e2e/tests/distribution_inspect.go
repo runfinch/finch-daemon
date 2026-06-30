@@ -79,7 +79,9 @@ func DistributionInspect(opt *option.Option) {
 	CMD ["echo", "bar"]
 		`, defaultImage))
 			DeferCleanup(os.RemoveAll, buildContext)
-			command.Run(opt, "build", "-t", authImageTag, buildContext)
+			// Since Buildkit v0.31.0, "oci-mediatypes" defaults to true. But pass "true" explicitly to make this test
+			// compatible with older buildkit versions.
+			command.Run(opt, "build", "--output", "type=image,oci-mediatypes=true", "-t", authImageTag, buildContext)
 		})
 
 		AfterEach(func() {
@@ -181,7 +183,7 @@ func DistributionInspect(opt *option.Option) {
 			err = json.NewDecoder(res.Body).Decode(&d)
 			Expect(err).Should(BeNil())
 			Expect(d.Descriptor).ShouldNot(BeNil())
-			Expect(d.Descriptor.MediaType).Should(Equal("application/vnd.docker.distribution.manifest.v2+json"))
+			Expect(d.Descriptor.MediaType).Should(Equal("application/vnd.oci.image.manifest.v1+json"))
 			// since the image is built and pushed on the test runner, the following aspects are OS/architecture dependent
 			// and not strictly checked
 			Expect(d.Descriptor.Digest).Should(MatchRegexp(`sha256:\w{64}`))
