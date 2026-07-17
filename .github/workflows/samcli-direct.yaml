@@ -11,6 +11,15 @@ on:
       - main
     paths-ignore:
       - '**.md'
+      - 'LICENSE'
+      - 'NOTICE'
+      - 'copyright_header'
+      - 'CODE_OF_CONDUCT.md'
+      - 'CONTRIBUTING.md'
+      - 'CHANGELOG.md'
+      - '.gitignore'
+      - '.release-please-manifest.json'
+      - 'release-please-config.json'
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:
