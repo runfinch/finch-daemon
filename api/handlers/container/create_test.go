@@ -17,9 +17,9 @@ import (
 	"github.com/containerd/nerdctl/v2/pkg/config"
 	"github.com/containerd/nerdctl/v2/pkg/defaults"
 	"github.com/docker/go-connections/nat"
-	"go.uber.org/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/mocks/mocks_container"
 	"github.com/runfinch/finch-daemon/mocks/mocks_logger"
@@ -428,6 +428,29 @@ var _ = Describe("Container Create API ", func() {
 			// expected create options
 			createOpt.CPUSetCPUs = "0,1"
 			createOpt.CPUSetMems = "0,3"
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
+		It("should set both CPURealtimePeriod and CPURealtimeRuntime create options for resources", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"CpuRealtimePeriod": 1000000,
+					"CpuRealtimeRuntime": 950000
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.CPURealtimePeriod = 1000000
+			createOpt.CPURealtimeRuntime = 950000
+
 			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
 				cid, nil)
 
