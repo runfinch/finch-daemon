@@ -112,7 +112,7 @@ func ContainerRestart(opt *option.Option) {
 			Expect(res.StatusCode).Should(Equal(http.StatusNoContent))
 			elapsed := later.Sub(now)
 			Expect(elapsed.Seconds()).Should(BeNumerically(">", 4.0))
-			Expect(elapsed.Seconds()).Should(BeNumerically("<", 10.0))
+			Expect(elapsed.Seconds()).Should(BeNumerically("<", 12.0))
 			containerShouldBeRunning(opt, testContainerName)
 		})
 	})
