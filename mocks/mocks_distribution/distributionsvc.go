@@ -14,7 +14,7 @@ import (
 	reflect "reflect"
 
 	types "github.com/docker/cli/cli/config/types"
-	registry "github.com/docker/docker/api/types/registry"
+	registry "github.com/moby/moby/api/types/registry"
 	gomock "go.uber.org/mock/gomock"
 )
 

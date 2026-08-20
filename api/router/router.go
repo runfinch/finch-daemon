@@ -13,8 +13,8 @@ import (
 	"github.com/containerd/nerdctl/v2/pkg/config"
 	ghandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/moby/moby/api/server/httputils"
-	"github.com/moby/moby/api/types/versions"
+	"github.com/moby/moby/client/pkg/versions"
+	"github.com/moby/moby/v2/daemon/server/httputils"
 
 	"github.com/open-policy-agent/opa/v1/rego"
 	"github.com/runfinch/finch-daemon/api/handlers/builder"

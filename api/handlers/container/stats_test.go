@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"github.com/containerd/nerdctl/v2/pkg/config"
-	dockertypes "github.com/docker/docker/api/types/container"
-	"go.uber.org/mock/gomock"
 	"github.com/gorilla/mux"
+	dockertypes "github.com/moby/moby/api/types/container"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/mocks/mocks_container"

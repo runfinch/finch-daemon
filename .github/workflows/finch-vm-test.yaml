@@ -12,7 +12,7 @@ on:
       - '**.md'
   workflow_dispatch:
 env:
-  GO_VERSION: '1.25.11'
+  GO_VERSION: '1.26.3'
   GOTOOLCHAIN: 'auto'
 jobs:
   mac-test-e2e:
@@ -67,8 +67,6 @@ jobs:
       - name: Checkout mainline finch repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          # TODO: revert to main
-          ref: updated-finch-core-nerdctl
           repository: runfinch/finch
           fetch-depth: 0
           persist-credentials: false

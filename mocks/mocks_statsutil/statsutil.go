@@ -13,7 +13,7 @@ import (
 	reflect "reflect"
 
 	native "github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
-	container "github.com/docker/docker/api/types/container"
+	container "github.com/moby/moby/api/types/container"
 	gomock "go.uber.org/mock/gomock"
 )
 

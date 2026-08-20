@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
 
 env:
-  GO_VERSION: '1.25.11'
+  GO_VERSION: '1.26.3'
   GOTOOLCHAIN: 'auto'
 
 permissions:
