@@ -11,13 +11,13 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
-	"os/exec"
 
 	// #nosec
 	// register HTTP handler for /debug/pprof on the DefaultServeMux.
@@ -26,32 +26,32 @@ import (
 	"github.com/coreos/go-systemd/v22/activation"
 	"github.com/coreos/go-systemd/v22/daemon"
 	"github.com/gofrs/flock"
-	"github.com/moby/moby/pkg/pidfile"
+	"github.com/moby/moby/v2/pkg/pidfile"
 	credentialhandler "github.com/runfinch/finch-daemon/api/credential"
 	credentialRouter "github.com/runfinch/finch-daemon/api/credential-router"
 	"github.com/runfinch/finch-daemon/api/router"
 	"github.com/runfinch/finch-daemon/internal/fs/passwd"
+	"github.com/runfinch/finch-daemon/pkg/config"
 	"github.com/runfinch/finch-daemon/pkg/credential"
 	"github.com/runfinch/finch-daemon/pkg/flog"
 	"github.com/runfinch/finch-daemon/version"
-	"github.com/runfinch/finch-daemon/pkg/config"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 type DaemonOptions struct {
-	debug              bool
-	socketAddr         string
-	credentialAddr     string
-	socketOwner        int
+	debug                 bool
+	socketAddr            string
+	credentialAddr        string
+	socketOwner           int
 	credentialSocketOwner int
-	debugAddress       string
-	configPath         string
-	pidFile            string
-	regoFilePath       string
-	enableExperimental bool
-	skipRegoPermCheck  bool
+	debugAddress          string
+	configPath            string
+	pidFile               string
+	regoFilePath          string
+	enableExperimental    bool
+	skipRegoPermCheck     bool
 }
 
 var options = new(DaemonOptions)
@@ -175,7 +175,7 @@ func run(options *DaemonOptions) error {
 	// Start of Build Credential Socket Implementation
 	// Set the credential address in the config package
 	config.SetCredentialAddr(options.credentialAddr)
-	
+
 	// Remove existing credential socket if it exists
 	if _, err := os.Stat(options.credentialAddr); err == nil {
 		if err := os.Remove(options.credentialAddr); err != nil {

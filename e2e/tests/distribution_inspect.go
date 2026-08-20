@@ -20,7 +20,7 @@ import (
 	"github.com/runfinch/common-tests/fnet"
 	"github.com/runfinch/common-tests/option"
 
-	registrytypes "github.com/docker/docker/api/types/registry"
+	registrytypes "github.com/moby/moby/api/types/registry"
 	"github.com/runfinch/finch-daemon/api/response"
 	"github.com/runfinch/finch-daemon/e2e/client"
 )

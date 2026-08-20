@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
-	dockertypes "github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 	"github.com/docker/go-units"
 	"github.com/moby/moby/api/types/blkiodev"
+	dockertypes "github.com/moby/moby/api/types/container"
 )
 
 // AttachOptions defines the available options for the container attach call.

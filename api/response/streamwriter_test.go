@@ -9,10 +9,10 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/docker/docker/pkg/jsonmessage"
-	"go.uber.org/mock/gomock"
+	"github.com/moby/moby/api/types/jsonstream"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/mocks/mocks_http"
 )
@@ -54,7 +54,7 @@ var _ = Describe("API Response ", func() {
 		// error response
 		var err error
 		errResp, err = json.Marshal(StreamResponse{
-			Error: &jsonmessage.JSONError{
+			Error: &jsonstream.Error{
 				Code:    http.StatusInternalServerError,
 				Message: errMsg.Error(),
 			},

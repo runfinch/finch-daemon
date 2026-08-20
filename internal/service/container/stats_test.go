@@ -17,10 +17,10 @@ import (
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
 	"github.com/containerd/nerdctl/v2/pkg/labels"
 	"github.com/containerd/typeurl/v2"
-	dockertypes "github.com/docker/docker/api/types/container"
-	"go.uber.org/mock/gomock"
+	dockertypes "github.com/moby/moby/api/types/container"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	"google.golang.org/protobuf/types/known/anypb"
 
 	eventtype "github.com/runfinch/finch-daemon/api/events"
