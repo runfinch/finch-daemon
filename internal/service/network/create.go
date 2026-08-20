@@ -50,7 +50,7 @@ func (s *service) Create(ctx context.Context, request types.NetworkCreateRequest
 				options.IPRange = ipRange
 			}
 			if gateway, ok := request.IPAM.Config[0]["Gateway"]; ok {
-				options.Gateway = gateway
+				options.Gateway = []string{gateway}
 			}
 		}
 
