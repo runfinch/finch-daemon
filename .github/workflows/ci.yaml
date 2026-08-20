@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 env:
   GO_VERSION: '1.26.3'
-  GOLANGCI_LINT_VERSION: '2.7.0'
+  GOLANGCI_LINT_VERSION: '2.13.1'
   GOTOOLCHAIN: 'auto'
 jobs:
   git-secrets:
@@ -110,8 +110,8 @@ jobs:
         run: tar -xvf build-artifacts.tar
       - name: Remove default podman network config
         run: |
-          sudo ls /etc/cni/net.d
-          sudo rm /etc/cni/net.d/87-podman-bridge.conflist
+          sudo ls /etc/cni/net.d || true
+          sudo rm -rf /etc/cni/net.d/87-podman-bridge.conflist
       - name: Verify Rego file presence
         run: ls -l ${{ github.workspace }}/docs/sample-rego-policies/example.rego
       - name: Set Rego file path
