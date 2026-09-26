@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -80,10 +81,26 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			Expect(statusCode).Should(Equal(http.StatusCreated))
 			Expect(ctr.ID).ShouldNot(BeEmpty())
 
-			// start container and verify output
-			command.Run(opt, "start", testContainerName)
-			out := command.StdoutStr(opt, "logs", testContainerName)
-			Expect(out).Should(Equal("hello world"))
+			// start container via HTTP API and verify log output
+			startUrl := fmt.Sprintf("/containers/%s/start", testContainerName)
+			res, err := uClient.Post(client.ConvertToFinchUrl(version, startUrl), "application/json", nil)
+			Expect(err).Should(BeNil())
+			res.Body.Close()
+			Expect(res.StatusCode).Should(Equal(http.StatusNoContent))
+
+			// wait for the short-lived container to finish
+			waitUrl := fmt.Sprintf("/containers/%s/wait", testContainerName)
+			res, err = uClient.Post(client.ConvertToFinchUrl(version, waitUrl), "application/json", nil)
+			Expect(err).Should(BeNil())
+			res.Body.Close()
+
+			logsUrl := fmt.Sprintf("/containers/%s/logs?stdout=1&stderr=1&follow=0&tail=0", testContainerName)
+			res, err = uClient.Get(client.ConvertToFinchUrl(version, logsUrl))
+			Expect(err).Should(BeNil())
+			body, err := io.ReadAll(res.Body)
+			Expect(err).Should(BeNil())
+			res.Body.Close()
+			Expect(string(body)).Should(ContainSubstring("hello world"))
 		})
 		It("should fail to create a container with duplicate name", func() {
 			// create container
@@ -990,7 +1007,10 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			// Create and start source container
 			statusCode, _ := createContainer(uClient, url, fromContainerName, sourceOptions)
 			Expect(statusCode).Should(Equal(http.StatusCreated))
-			command.Run(opt, "start", fromContainerName)
+			startUrl := fmt.Sprintf("/containers/%s/start", fromContainerName)
+			startRes, startErr := uClient.Post(client.ConvertToFinchUrl(version, startUrl), "application/json", nil)
+			Expect(startErr).Should(BeNil())
+			startRes.Body.Close()
 			defer command.Run(opt, "rm", "-f", fromContainerName)
 
 			// Create target container with volumes-from
@@ -1003,7 +1023,10 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 			// Create and start target container
 			statusCode, _ = createContainer(uClient, url, toContainerName, targetOptions)
 			Expect(statusCode).Should(Equal(http.StatusCreated))
-			command.Run(opt, "start", toContainerName)
+			startUrl2 := fmt.Sprintf("/containers/%s/start", toContainerName)
+			startRes2, startErr2 := uClient.Post(client.ConvertToFinchUrl(version, startUrl2), "application/json", nil)
+			Expect(startErr2).Should(BeNil())
+			startRes2.Body.Close()
 			defer command.Run(opt, "rm", "-f", toContainerName)
 
 			// Test write permissions
@@ -1023,8 +1046,23 @@ func ContainerCreate(opt *option.Option, pOpt util.NewOpt) {
 
 			statusCode, _ = createContainer(uClient, url, "verify-container", verifyOptions)
 			Expect(statusCode).Should(Equal(http.StatusCreated))
-			out := command.StdoutStr(opt, "start", "-a", "verify-container")
-			Expect(out).Should(Equal("str1str3"))
+			startUrl3 := fmt.Sprintf("/containers/%s/start", "verify-container")
+			startRes3, startErr3 := uClient.Post(client.ConvertToFinchUrl(version, startUrl3), "application/json", nil)
+			Expect(startErr3).Should(BeNil())
+			startRes3.Body.Close()
+
+			waitUrl := fmt.Sprintf("/containers/%s/wait", "verify-container")
+			waitRes, waitErr := uClient.Post(client.ConvertToFinchUrl(version, waitUrl), "application/json", nil)
+			Expect(waitErr).Should(BeNil())
+			waitRes.Body.Close()
+
+			logsUrl := fmt.Sprintf("/containers/%s/logs?stdout=1&stderr=1&follow=0&tail=0", "verify-container")
+			logsRes, logsErr := uClient.Get(client.ConvertToFinchUrl(version, logsUrl))
+			Expect(logsErr).Should(BeNil())
+			logsBody, logsErr := io.ReadAll(logsRes.Body)
+			Expect(logsErr).Should(BeNil())
+			logsRes.Body.Close()
+			Expect(string(logsBody)).Should(ContainSubstring("str1str3"))
 			defer command.Run(opt, "rm", "-f", "verify-container")
 		})
 
