@@ -109,9 +109,7 @@ jobs:
       - name: Extract build artifacts
         run: tar -xvf build-artifacts.tar
       - name: Remove default podman network config
-        run: |
-          sudo ls /etc/cni/net.d
-          sudo rm /etc/cni/net.d/87-podman-bridge.conflist
+        run: sudo rm -f /etc/cni/net.d/87-podman-bridge.conflist
       - name: Verify Rego file presence
         run: ls -l ${{ github.workspace }}/docs/sample-rego-policies/example.rego
       - name: Set Rego file path
