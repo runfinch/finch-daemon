@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/containerd/cgroups/v3 v3.1.3
 	github.com/containerd/containerd/api v1.11.1
-	github.com/containerd/containerd/v2 v2.2.5
+	github.com/containerd/containerd/v2 v2.2.9
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/fifo v1.1.0
 	github.com/containerd/go-cni v1.1.13
@@ -46,7 +46,7 @@ require (
 	go.uber.org/mock v0.6.0
 	golang.org/x/net v0.56.0
 	golang.org/x/sys v0.46.0
-	google.golang.org/protobuf v1.36.11
+	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
 )
 
 require (
