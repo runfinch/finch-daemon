@@ -92,7 +92,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Microsoft/hcsshim v0.14.1 // indirect
-	github.com/cilium/ebpf v0.20.0 // indirect
+	github.com/cilium/ebpf v0.22.0 // indirect
 	github.com/containerd/accelerated-container-image v1.3.0 // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
