@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.23.4](https://github.com/runfinch/finch-daemon/compare/v0.23.3...v0.23.4) (2026-10-30)
+
+
+### Build System or External Dependencies
+
+* **deps:** bump google.golang.org/grpc from 1.81.1 to 1.82.1 ([#475](https://github.com/runfinch/finch-daemon/issues/475)) ([8df6be1](https://github.com/runfinch/finch-daemon/commit/8df6be1a9de8ed987c8f4d38516c09f570d28869))
+
+
+### Bug Fixes
+
+* **e2e:** explicitly pass oci-mediatypes=true during image build ([#466](https://github.com/runfinch/finch-daemon/issues/466)) ([d847cb4](https://github.com/runfinch/finch-daemon/commit/d847cb412623932af5276f180f82fe2536dbc06b))
+* **e2e:** explicitly pass oci-mediatypes=true during image builds ([d847cb4](https://github.com/runfinch/finch-daemon/commit/d847cb412623932af5276f180f82fe2536dbc06b))
+
 ## [0.23.3](https://github.com/runfinch/finch-daemon/compare/v0.23.2...v0.23.3) (2026-06-26)
 
 
