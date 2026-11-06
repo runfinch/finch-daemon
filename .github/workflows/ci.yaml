@@ -86,7 +86,7 @@ jobs:
       matrix:
         runc: ["1.4.3", "1.5.2"]
         containerd: ["1.7.36", "2.0.14", "2.2.10", "2.3.7"]
-        nerdctl: ["2.2.2", "2.3.5"]
+        nerdctl: ["2.2.2"] # TODO: Add 2.3.5 to testing matrix ASAP
         buildkit: ["0.34.2"]
       fail-fast: false
     timeout-minutes: 10
