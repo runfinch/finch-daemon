@@ -64,7 +64,7 @@ func (h FinchCredentialHelper) Get(serverURL string) (string, string, error) {
 	client := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial("unix", credentialSocketPath)
+				return net.Dial("unix", credentialSocketPath) //nolint:gosec // G704: dials a local unix socket, not a remote URL
 			},
 		},
 	}

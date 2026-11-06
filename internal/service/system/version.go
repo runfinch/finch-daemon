@@ -42,8 +42,10 @@ func (s *service) GetVersion(ctx context.Context) (*types.VersionInfo, error) {
 	return &vInfo, nil
 }
 
+// Convenience function for wrapping a cmd call and logger warnings.
+// Do NOT use this with untrusted inputs
 func getCmdOutput(logger flog.Logger, name string, arg ...string) string {
-	out, err := exec.Command(name, arg...).Output()
+	out, err := exec.Command(name, arg...).Output() //nolint:gosec // G204: callers pass fixed binary names for version lookup
 	if err != nil {
 		logger.Warnf("unable to execute command:%s, error: %v", name, err)
 		return ""

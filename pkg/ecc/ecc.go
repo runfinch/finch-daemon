@@ -31,7 +31,7 @@ type execCmdCreator struct{}
 
 func (*execCmdCreator) Command(name string, args ...string) ExecCmd {
 	return &execCmd{
-		cmd: exec.Command(name, args...),
+		cmd: exec.Command(name, args...), //nolint:gosec // G204: this is a generic exec wrapper; callers control the command
 	}
 }
 
