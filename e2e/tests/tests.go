@@ -221,7 +221,7 @@ func GetFinchExe() string {
 	}
 
 	finchexe := filepath.Join(finchdir, "bin/finch")
-	if _, err := os.Stat(finchexe); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(finchexe); errors.Is(err, os.ErrNotExist) { //nolint:gosec // G703: test-only path derived from the local Finch install dir
 		panic(fmt.Sprintf("%s not found. Is Finch installed?", finchexe))
 	}
 	return finchexe
