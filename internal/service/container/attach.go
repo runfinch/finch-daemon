@@ -16,9 +16,10 @@ import (
 	"github.com/containerd/nerdctl/v2/pkg/labels"
 	"github.com/containerd/nerdctl/v2/pkg/labels/k8slabels"
 	"github.com/containerd/nerdctl/v2/pkg/logging"
-	"github.com/moby/moby/pkg/stdcopy"
+	"github.com/moby/moby/api/pkg/stdcopy"
 
 	"github.com/runfinch/finch-daemon/api/types"
+	"github.com/runfinch/finch-daemon/pkg/stdcopymux"
 )
 
 // Attach attaches the stdout and stderr to the container using nerdctl logs
@@ -46,8 +47,8 @@ func (s *service) Attach(ctx context.Context, cid string, opts *types.AttachOpti
 	}
 
 	if opts.MuxStreams {
-		errStream = stdcopy.NewStdWriter(errStream, stdcopy.Stderr)
-		outStream = stdcopy.NewStdWriter(outStream, stdcopy.Stdout)
+		errStream = stdcopymux.NewStdWriter(errStream, stdcopy.Stderr)
+		outStream = stdcopymux.NewStdWriter(outStream, stdcopy.Stdout)
 	}
 	// TODO: implement stdin for a full attach implementation
 	var (

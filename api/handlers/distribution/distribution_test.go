@@ -11,12 +11,12 @@ import (
 	"testing"
 
 	"github.com/containerd/nerdctl/v2/pkg/config"
-	registrytypes "github.com/docker/docker/api/types/registry"
-	"go.uber.org/mock/gomock"
 	"github.com/gorilla/mux"
+	registrytypes "github.com/moby/moby/api/types/registry"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/mocks/mocks_distribution"
 	"github.com/runfinch/finch-daemon/mocks/mocks_logger"

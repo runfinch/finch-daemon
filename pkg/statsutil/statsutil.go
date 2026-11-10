@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
-	dockertypes "github.com/docker/docker/api/types/container"
+	dockertypes "github.com/moby/moby/api/types/container"
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 	"golang.org/x/sys/unix"

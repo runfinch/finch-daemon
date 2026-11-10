@@ -15,10 +15,10 @@ import (
 
 	"github.com/containerd/nerdctl/v2/pkg/config"
 	dockertypes "github.com/docker/cli/cli/config/types"
-	"github.com/docker/docker/pkg/jsonmessage"
-	"go.uber.org/mock/gomock"
+	"github.com/moby/moby/api/types/jsonstream"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/api/response"
 	"github.com/runfinch/finch-daemon/mocks/mocks_image"
@@ -317,7 +317,7 @@ var _ = Describe("Image Pull API", func() {
 			Expect(outputs[0]).Should(Equal(response.StreamResponse{Stream: "resolved image\n"}))
 			Expect(outputs[1]).Should(Equal(response.StreamResponse{Stream: "pulling image\n"}))
 			Expect(outputs[2]).Should(Equal(response.StreamResponse{
-				Error:        &jsonmessage.JSONError{Code: http.StatusInternalServerError, Message: "error pulling"},
+				Error:        &jsonstream.Error{Code: http.StatusInternalServerError, Message: "error pulling"},
 				ErrorMessage: "error pulling",
 			}))
 		})

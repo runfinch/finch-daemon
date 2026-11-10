@@ -12,13 +12,14 @@ import (
 
 	"github.com/containerd/containerd/v2/pkg/namespaces"
 	"github.com/gorilla/mux"
-	"github.com/moby/moby/api/server/httputils"
-	"github.com/moby/moby/api/types/versions"
-	"github.com/moby/moby/pkg/stdcopy"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/client/pkg/versions"
+	"github.com/moby/moby/v2/daemon/server/httputils"
 
 	"github.com/runfinch/finch-daemon/api/response"
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/pkg/errdefs"
+	"github.com/runfinch/finch-daemon/pkg/stdcopymux"
 )
 
 func (h *handler) start(w http.ResponseWriter, r *http.Request) {
@@ -85,8 +86,8 @@ func (h *handler) start(w http.ResponseWriter, r *http.Request) {
 		}
 
 		stdin = conn
-		stdout = stdcopy.NewStdWriter(conn, stdcopy.Stdout)
-		stderr = stdcopy.NewStdWriter(conn, stdcopy.Stderr)
+		stdout = stdcopymux.NewStdWriter(conn, stdcopy.Stdout)
+		stderr = stdcopymux.NewStdWriter(conn, stdcopy.Stderr)
 	}
 
 	startOptions := &types.ExecStartOptions{

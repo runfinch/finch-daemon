@@ -247,7 +247,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 				ncNetClient.EXPECT().CreateNetwork(gomock.Any()).DoAndReturn(func(actual ncTypes.NetworkCreateOptions) (*netutil.NetworkConfig, error) {
 					Expect(actual.Subnets).Should(Equal(expectedSubnets))
 					Expect(actual.IPRange).Should(Equal(expectedIPRange))
-					Expect(actual.Gateway).Should(Equal(expectedGateway))
+					Expect(actual.Gateway).Should(Equal([]string{expectedGateway}))
 					return &netutil.NetworkConfig{NerdctlID: &nid}, nil
 				})
 
@@ -335,7 +335,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 					ncNetClient.EXPECT().CreateNetwork(gomock.Any()).DoAndReturn(func(actual ncTypes.NetworkCreateOptions) (*netutil.NetworkConfig, error) {
 						Expect(actual.Subnets).Should(BeEmpty())
 						Expect(actual.IPRange).Should(BeEmpty())
-						Expect(actual.Gateway).Should(Equal(expectedGateway))
+						Expect(actual.Gateway).Should(Equal([]string{expectedGateway}))
 						return &netutil.NetworkConfig{NerdctlID: &nid}, nil
 					})
 

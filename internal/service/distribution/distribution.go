@@ -16,7 +16,7 @@ import (
 	cerrdefs "github.com/containerd/errdefs"
 	"github.com/containerd/nerdctl/v2/pkg/imgutil/dockerconfigresolver"
 	dockertypes "github.com/docker/cli/cli/config/types"
-	registrytypes "github.com/docker/docker/api/types/registry"
+	registrytypes "github.com/moby/moby/api/types/registry"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"github.com/runfinch/finch-daemon/api/handlers/distribution"

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/moby/moby/api/types/jsonstream"
 )
 
 // StreamResponse holds the stream and error messages, if any, for events and status updates.
@@ -24,8 +24,8 @@ type StreamResponse struct {
 	// TODO: From            string        `json:"from,omitempty"`
 	// TODO: Time            int64         `json:"time,omitempty"`
 	// TODO: TimeNano        int64         `json:"timeNano,omitempty"`
-	Error        *jsonmessage.JSONError `json:"errorDetail,omitempty"`
-	ErrorMessage string                 `json:"error,omitempty"` // deprecated
+	Error        *jsonstream.Error `json:"errorDetail,omitempty"`
+	ErrorMessage string            `json:"error,omitempty"` // deprecated
 	// Aux contains out-of-band data, such as digests for push signing and image id after building.
 	Aux *json.RawMessage `json:"aux,omitempty"`
 }
@@ -89,7 +89,7 @@ func (sw *StreamWriter) WriteError(code int, err error) error {
 		return nil
 	}
 
-	jsonErr := jsonmessage.JSONError{
+	jsonErr := jsonstream.Error{
 		Code:    code,
 		Message: err.Error(),
 	}

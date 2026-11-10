@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/moby/moby/api/types/jsonstream"
 )
 
 // Error implements the error structure used in Docker Engine API.
@@ -40,7 +40,7 @@ func SendErrorResponse(w http.ResponseWriter, code int, err error) {
 
 // SendErrorAsInStreamResponse sends a status code and a json-formatted error message in stream response.
 func SendErrorAsInStreamResponse(w http.ResponseWriter, code int, err error) error {
-	jsonErr := jsonmessage.JSONError{
+	jsonErr := jsonstream.Error{
 		Code:    code,
 		Message: err.Error(),
 	}

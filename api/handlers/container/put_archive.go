@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/moby/moby/api/server/httputils"
+	"github.com/moby/moby/v2/daemon/server/httputils"
 
 	"github.com/runfinch/finch-daemon/api/response"
 	"github.com/runfinch/finch-daemon/api/types"
