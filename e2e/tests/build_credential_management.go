@@ -118,7 +118,7 @@ func CredentialHelper(opt *option.Option, pOpt func([]string, ...option.Modifier
 				},
 			}
 
-			authJSON, err := json.Marshal(authConfig)
+			authJSON, err := json.Marshal(authConfig) //nolint:gosec // G117: registry auth config must include the test password
 			Expect(err).Should(BeNil())
 			authHeader := b64.StdEncoding.EncodeToString(authJSON)
 
@@ -205,7 +205,7 @@ func CredentialHelper(opt *option.Option, pOpt func([]string, ...option.Modifier
 				},
 			}
 
-			authJSON, err := json.Marshal(authConfig)
+			authJSON, err := json.Marshal(authConfig) //nolint:gosec // G117: registry auth config must include the test password
 			Expect(err).Should(BeNil())
 			authHeader := b64.StdEncoding.EncodeToString(authJSON)
 
@@ -286,7 +286,7 @@ func CredentialHelper(opt *option.Option, pOpt func([]string, ...option.Modifier
 				},
 			}
 
-			authJSON, err := json.Marshal(authConfig)
+			authJSON, err := json.Marshal(authConfig) //nolint:gosec // G117: registry auth config must include the test password
 			Expect(err).Should(BeNil())
 			authHeader := b64.StdEncoding.EncodeToString(authJSON)
 

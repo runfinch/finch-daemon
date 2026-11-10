@@ -93,7 +93,7 @@ func (h *handler) getCredentials(w http.ResponseWriter, r *http.Request) {
 
 	// Return the full AuthConfig object (which is already dockertypes.AuthConfig)
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(authConfig); err != nil {
+	if err := json.NewEncoder(w).Encode(authConfig); err != nil { //nolint:gosec // G117: credential helper protocol requires returning the password
 		h.logger.Errorf("Failed to encode response")
 		response.SendErrorResponse(w, http.StatusInternalServerError, fmt.Errorf("failed to encode response"))
 		return
