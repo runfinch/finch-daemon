@@ -32,7 +32,7 @@ import (
 
 // encodeRegistryConfig encodes auth configurations to a base64-encoded JSON string.
 func encodeRegistryConfig(authConfigs map[string]dockertypes.AuthConfig) (string, error) {
-	configJSON, err := json.Marshal(authConfigs)
+	configJSON, err := json.Marshal(authConfigs) //nolint:gosec // G117: registry auth config must include the password
 	if err != nil {
 		return "", err
 	}
