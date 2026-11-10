@@ -4,6 +4,7 @@
 package container
 
 import (
+	"io"
 	"net/http"
 
 	"github.com/containerd/containerd/v2/pkg/namespaces"
@@ -22,7 +23,7 @@ func (h *handler) rename(w http.ResponseWriter, r *http.Request) {
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	opts := ncTypes.ContainerRenameOptions{
 		GOptions: globalOpt,
-		Stdout:   nil,
+		Stdout:   io.Discard,
 	}
 	err := h.service.Rename(ctx, cid, newName, opts)
 	// map the error into http status code and send response.

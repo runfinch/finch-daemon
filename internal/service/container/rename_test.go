@@ -6,12 +6,13 @@ package container
 import (
 	"context"
 	"fmt"
+	"io"
 
 	containerd "github.com/containerd/containerd/v2/client"
 	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
-	"go.uber.org/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/api/handlers/container"
 	"github.com/runfinch/finch-daemon/mocks/mocks_archive"
@@ -51,7 +52,7 @@ var _ = Describe("Container Rename API ", func() {
 		service = NewService(cdClient, mockNerdctlService{ncClient, nil}, logger, nil, nil, tarExtractor)
 		opts = ncTypes.ContainerRenameOptions{
 			GOptions: ncTypes.GlobalCommandOptions{},
-			Stdout:   nil,
+			Stdout:   io.Discard,
 		}
 	})
 	Context("service", func() {

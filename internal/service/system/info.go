@@ -12,5 +12,5 @@ import (
 )
 
 func (s *service) GetInfo(ctx context.Context, config *config.Config) (*dockercompat.Info, error) {
-	return infoutil.Info(ctx, s.client.GetClient(), config.Snapshotter, config.CgroupManager)
+	return infoutil.Info(ctx, s.client.GetClient(), config.Snapshotter, config.CgroupManager, config.SelinuxEnabled)
 }

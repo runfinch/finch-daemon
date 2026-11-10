@@ -10,9 +10,9 @@ import (
 
 	ncTypes "github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/containerd/nerdctl/v2/pkg/netutil"
-	"go.uber.org/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/api/handlers/network"
 	"github.com/runfinch/finch-daemon/api/types"
@@ -215,10 +215,8 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 	})
 
 	Context("IPAM configuration", func() {
-		const (
-			expectedIPRange = "172.20.10.0/24"
-			expectedGateway = "172.20.10.11"
-		)
+		expectedIPRange := "172.20.10.0/24"
+		expectedGateway := []string{"172.20.10.11"}
 		expectedSubnets := []string{"172.20.0.0/16"}
 		When("multiple IPAM configuration entries are specified", func() {
 			It("should use the first IPAM object", func() {
@@ -230,7 +228,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 							{
 								"Subnet":  expectedSubnets[0],
 								"IPRange": expectedIPRange,
-								"Gateway": expectedGateway,
+								"Gateway": expectedGateway[0],
 							},
 							{
 								"Subnet":  "2001:db8:abcd::/64",
@@ -322,7 +320,7 @@ var _ = Describe("Network Service Create Network Implementation", func() {
 							Driver: "default",
 							Config: []map[string]string{
 								{
-									"Gateway": expectedGateway,
+									"Gateway": expectedGateway[0],
 								},
 							},
 						}),

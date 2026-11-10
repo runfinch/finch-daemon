@@ -6,6 +6,7 @@ package container
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -214,8 +215,8 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 
 	globalOpt := ncTypes.GlobalCommandOptions(*h.Config)
 	createOpt := ncTypes.ContainerCreateOptions{
-		Stdout:   nil,
-		Stderr:   nil,
+		Stdout:   io.Discard,
+		Stderr:   io.Discard,
 		GOptions: globalOpt,
 
 		// #region for basic flags
@@ -310,8 +311,8 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 			GOptions:      globalOpt,
 			VerifyOptions: ncTypes.ImageVerifyOptions{Provider: "none"},
 			IPFSAddress:   "",
-			Stdout:        nil,
-			Stderr:        nil,
+			Stdout:        io.Discard,
+			Stderr:        io.Discard,
 		},
 		// #endregion
 
