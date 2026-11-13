@@ -18,9 +18,6 @@ updates:
         exclude-patterns:
           - "github.com/docker/docker"
           - "github.com/docker/cli"
-          # TODO: containerd/api v1.12.0 is broken with containerd 2.3
-          # Remove this once we upgrade to containerd 2.4.x
-          - "github.com/containerd/containerd/api"
     ignore:
       # Only allow patch version bumps for containerd/nerdctl as minor version bumps should be intentional
       - dependency-name: "github.com/containerd/containerd/v2"
@@ -31,6 +28,9 @@ updates:
         update-types:
           - "version-update:semver-minor"
           - "version-update:semver-major"
+        # TODO: containerd/api v1.12.0 is broken with containerd 2.3
+        # Remove this once we upgrade to containerd 2.4.x
+      - dependency-name: "github.com/containerd/containerd/api"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
