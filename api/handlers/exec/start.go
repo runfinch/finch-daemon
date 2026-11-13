@@ -25,7 +25,8 @@ func (h *handler) start(w http.ResponseWriter, r *http.Request) {
 	var (
 		execId               = mux.Vars(r)["id"]
 		stdin                io.ReadCloser
-		stdout, stderr       io.Writer
+		stdout               = io.Discard
+		stderr               = io.Discard
 		printSuccessResponse func()
 		attachHeaderWritten  = false
 	)

@@ -16,10 +16,10 @@ import (
 
 	"github.com/containerd/nerdctl/v2/pkg/config"
 	hj "github.com/getlantern/httptest"
-	"go.uber.org/mock/gomock"
 	"github.com/gorilla/mux"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/api/types"
 	"github.com/runfinch/finch-daemon/mocks/mocks_exec"
@@ -96,8 +96,8 @@ var _ = Describe("Exec Start API", func() {
 					ConID:          "123",
 					ExecID:         "exec-123",
 					Stdin:          nil,
-					Stdout:         nil,
-					Stderr:         nil,
+					Stdout:         io.Discard,
+					Stderr:         io.Discard,
 				}
 			})
 			It("should return 200 on successful start", func() {

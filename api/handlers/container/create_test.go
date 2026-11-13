@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -17,9 +18,9 @@ import (
 	"github.com/containerd/nerdctl/v2/pkg/config"
 	"github.com/containerd/nerdctl/v2/pkg/defaults"
 	"github.com/docker/go-connections/nat"
-	"go.uber.org/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/runfinch/finch-daemon/mocks/mocks_container"
 	"github.com/runfinch/finch-daemon/mocks/mocks_logger"
@@ -1185,8 +1186,8 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 		HostGatewayIP:    conf.HostGatewayIP,
 	}
 	return types.ContainerCreateOptions{
-		Stdout:   nil,
-		Stderr:   nil,
+		Stdout:   io.Discard,
+		Stderr:   io.Discard,
 		GOptions: globalOpt,
 
 		// #region for basic flags
@@ -1268,8 +1269,8 @@ func getDefaultCreateOpt(conf config.Config) types.ContainerCreateOptions {
 			GOptions:      globalOpt,
 			VerifyOptions: types.ImageVerifyOptions{Provider: "none"},
 			IPFSAddress:   "",
-			Stdout:        nil,
-			Stderr:        nil,
+			Stdout:        io.Discard,
+			Stderr:        io.Discard,
 		},
 		// #endregion
 	}
