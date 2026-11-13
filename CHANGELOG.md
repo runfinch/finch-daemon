@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.23.4](https://github.com/runfinch/finch-daemon/compare/v0.23.3...v0.23.4) (2026-11-13)
+
+
+### Build System or External Dependencies
+
+* **deps:** bump github.com/cilium/ebpf from 0.20.0 to 0.22.0 ([#480](https://github.com/runfinch/finch-daemon/issues/480)) ([f61f09f](https://github.com/runfinch/finch-daemon/commit/f61f09f15724ad653e7c9168fd251e09f315e314))
+* **deps:** bump github.com/containerd/containerd/v2 ([4029701](https://github.com/runfinch/finch-daemon/commit/402970164f8804e5f3ddead5755b5c36b7647541))
+* **deps:** bump github.com/containerd/containerd/v2 from 2.2.5 to 2.2.9 ([#492](https://github.com/runfinch/finch-daemon/issues/492)) ([4029701](https://github.com/runfinch/finch-daemon/commit/402970164f8804e5f3ddead5755b5c36b7647541))
+* **deps:** bump github.com/go-jose/go-jose/v4 from 4.1.4 to 4.1.6 ([#499](https://github.com/runfinch/finch-daemon/issues/499)) ([7a291b1](https://github.com/runfinch/finch-daemon/commit/7a291b1fca76f3cf2bf29986bce22d1ec7545f92))
+* **deps:** bump github.com/klauspost/compress from 1.18.5 to 1.18.7 ([#494](https://github.com/runfinch/finch-daemon/issues/494)) ([26a0844](https://github.com/runfinch/finch-daemon/commit/26a0844dfb417581b1c4efc2a274dca646069614))
+* **deps:** bump github.com/klauspost/compress from 1.18.5 to 1.18.7 ([#494](https://github.com/runfinch/finch-daemon/issues/494)) ([0bededc](https://github.com/runfinch/finch-daemon/commit/0bededc0fbdc37d1aaa2136c5b470f5d4c4d3bf0))
+* **deps:** bump github.com/moby/go-archive from 0.2.0 to 0.3.0 ([#482](https://github.com/runfinch/finch-daemon/issues/482)) ([3c52afc](https://github.com/runfinch/finch-daemon/commit/3c52afcf63c906ee50d5983647270a0f151f3c2d))
+* **deps:** bump google.golang.org/grpc from 1.81.1 to 1.82.1 ([#475](https://github.com/runfinch/finch-daemon/issues/475)) ([8df6be1](https://github.com/runfinch/finch-daemon/commit/8df6be1a9de8ed987c8f4d38516c09f570d28869))
+* **deps:** bump google.golang.org/grpc from 1.82.1 to 1.83.2 ([#486](https://github.com/runfinch/finch-daemon/issues/486)) ([26a0844](https://github.com/runfinch/finch-daemon/commit/26a0844dfb417581b1c4efc2a274dca646069614))
+* **deps:** bump the project-dependency group across 1 directory with 20 updates ([#498](https://github.com/runfinch/finch-daemon/issues/498)) ([af05d02](https://github.com/runfinch/finch-daemon/commit/af05d02ffa9434adb7954d5e3bb5ea3001921a68))
+
+
+### Bug Fixes
+
+* **ci:** ignore containerd api bump ([#507](https://github.com/runfinch/finch-daemon/issues/507)) ([19d626a](https://github.com/runfinch/finch-daemon/commit/19d626a0bd3edf55bd450e62fd44beb729acac3d))
+* **e2e:** explicitly pass oci-mediatypes=true during image build ([#466](https://github.com/runfinch/finch-daemon/issues/466)) ([d847cb4](https://github.com/runfinch/finch-daemon/commit/d847cb412623932af5276f180f82fe2536dbc06b))
+* **e2e:** explicitly pass oci-mediatypes=true during image builds ([d847cb4](https://github.com/runfinch/finch-daemon/commit/d847cb412623932af5276f180f82fe2536dbc06b))
+
 ## [0.23.3](https://github.com/runfinch/finch-daemon/compare/v0.23.2...v0.23.3) (2026-06-26)
 
 
