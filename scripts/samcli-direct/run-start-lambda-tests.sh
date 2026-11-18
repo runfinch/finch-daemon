@@ -3,7 +3,7 @@ set -e
 
 cd aws-sam-cli
 
-python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short 2>&1 | tee start_lambda_output.txt || true
+SAM_DEBUG=1 python -m pytest tests/integration/local/start_lambda -k 'not Terraform' -v --tb=short --log-cli-level=DEBUG 2>&1 | tee start_lambda_output.txt || true
 
 # Create empty expected failures file (should pass completely)
 touch expected_start_lambda_failures.txt
