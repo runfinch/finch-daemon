@@ -78,11 +78,13 @@ func updateContainerMetadata(ctx context.Context, createOpt types.ContainerCreat
 		return err
 	}
 
-	// Handle log URI reset
-	// NOTE: this is a temporary workaround to fix logging issue described in https://github.com/containerd/nerdctl/issues/2264.
-	// The refactored create method in nerdctl uses self exe (finch-daemon) binary for logging instead of nerdctl binary path.
-	// The following workaround resets this logging binary in the OCI spec and handles port labels for backward compatibility.
-	// TODO: remove this workaround when the issue is resolved upstream.
+	// Reset LogURI to point to the nerdctl binary instead of finch-daemon.
+	// nerdctl's Create() sets LogURI to os.Executable() (finch-daemon), which
+	// doesn't handle the logging magic argv. This workaround ensures that
+	// containers started via nerdctl CLI still get binary-based logging.
+	// When started via the HTTP API, customStart uses FIFO-based IO instead
+	// and the LogURI is not used.
+	// See: https://github.com/containerd/nerdctl/issues/2264
 	dataStore, err := clientutil.DataStore(createOpt.GOptions.DataRoot, createOpt.GOptions.Address)
 	if err != nil {
 		logrus.Errorf("failed to get nerdctl data store: %s", err)
