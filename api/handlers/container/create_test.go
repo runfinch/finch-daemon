@@ -438,6 +438,29 @@ var _ = Describe("Container Create API ", func() {
 			Expect(rr.Body).Should(MatchJSON(jsonResponse))
 		})
 
+		It("should set both CPURealtimePeriod and CPURealtimeRuntime create options for resources", func() {
+			body := []byte(`{
+				"Image": "test-image",
+				"HostConfig": {
+					"CpuRealtimePeriod": 1000000,
+					"CpuRealtimeRuntime": 950000
+				}
+			}`)
+			req, _ := http.NewRequest(http.MethodPost, "/containers/create", bytes.NewReader(body))
+
+			// expected create options
+			createOpt.CPURealtimePeriod = 1000000
+			createOpt.CPURealtimeRuntime = 950000
+
+			service.EXPECT().Create(gomock.Any(), "test-image", nil, equalTo(createOpt), equalTo(netOpt)).Return(
+				cid, nil)
+
+			// handler should return success message with 201 status code.
+			h.create(rr, req)
+			Expect(rr).Should(HaveHTTPStatus(http.StatusCreated))
+			Expect(rr.Body).Should(MatchJSON(jsonResponse))
+		})
+
 		It("should set MemoryReservation, MemorySwap and MemorySwappiness create options for resources", func() {
 			body := []byte(`{
 				"Image": "test-image",
